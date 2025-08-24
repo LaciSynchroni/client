@@ -100,7 +100,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<HubFactory>();
             collection.AddSingleton<FileUploadManager>();
             collection.AddSingleton<FileTransferOrchestrator>();
-            collection.AddSingleton<MarePlugin>();
+            collection.AddSingleton<SinusPlugin>();
             collection.AddSingleton<MareProfileManager>();
             collection.AddSingleton<GameObjectHandlerFactory>();
             collection.AddSingleton<FileDownloadManagerFactory>();
@@ -239,7 +239,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddHostedService(p => p.GetRequiredService<DtrEntry>());
             collection.AddHostedService(p => p.GetRequiredService<EventAggregator>());
             collection.AddHostedService(p => p.GetRequiredService<IpcProvider>());
-            collection.AddHostedService(p => p.GetRequiredService<MarePlugin>());
+            collection.AddHostedService(p => p.GetRequiredService<SinusPlugin>());
         })
         .Build();
 

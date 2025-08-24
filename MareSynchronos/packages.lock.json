@@ -518,7 +518,7 @@
         "resolved": "9.0.3",
         "contentHash": "Ao0iegVONKYVw0eWxJv0ArtMVfkFjgyyYKtUXru6xX5H95flSZWW3QCavD4PAgwpc0ETP38kGHaYbPzSE7sw2w=="
       },
-      "maresynchronos.api": {
+      "sinussynchronous.api": {
         "type": "Project",
         "dependencies": {
           "MessagePack.Annotations": "[3.1.3, )"

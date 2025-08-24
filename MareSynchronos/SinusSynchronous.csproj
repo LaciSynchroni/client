@@ -55,7 +55,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MareAPI\MareSynchronosAPI\MareSynchronos.API.csproj" />
+    <ProjectReference Include="..\MareAPI\MareSynchronosAPI\SinusSynchronous.API.csproj" />
   </ItemGroup>
 
   <ItemGroup>

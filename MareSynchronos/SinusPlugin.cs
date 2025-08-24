@@ -66,7 +66,7 @@ namespace MareSynchronos;
 */
 #pragma warning restore S125 // Sections of code should not be commented out
 
-public class MarePlugin : MediatorSubscriberBase, IHostedService
+public class SinusPlugin : MediatorSubscriberBase, IHostedService
 {
     private readonly DalamudUtilService _dalamudUtil;
     private readonly MareConfigService _mareConfigService;
@@ -75,7 +75,7 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
     private IServiceScope? _runtimeServiceScope;
     private Task? _launchTask = null;
 
-    public MarePlugin(ILogger<MarePlugin> logger, MareConfigService mareConfigService,
+    public SinusPlugin(ILogger<SinusPlugin> logger, MareConfigService mareConfigService,
         ServerConfigurationManager serverConfigurationManager,
         DalamudUtilService dalamudUtil,
         IServiceScopeFactory serviceScopeFactory, MareMediator mediator) : base(logger, mediator)
@@ -89,8 +89,8 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version!;
-        Logger.LogInformation("Launching {name} {major}.{minor}.{build}", "Mare Synchronos", version.Major, version.Minor, version.Build);
-        Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(MarePlugin), Services.Events.EventSeverity.Informational,
+        Logger.LogInformation("Launching {name} {major}.{minor}.{build}", "Sinus Synchronos", version.Major, version.Minor, version.Build);
+        Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(SinusPlugin), Services.Events.EventSeverity.Informational,
             $"Starting Mare Synchronos {version.Major}.{version.Minor}.{version.Build}")));
 
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (msg) => { if (_launchTask == null || _launchTask.IsCompleted) _launchTask = Task.Run(WaitForPlayerAndLaunchCharacterManager); });
