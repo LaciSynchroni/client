@@ -1,3 +1,4 @@
-[submodule "MareAPI"]
-	path = MareAPI
+[submodule "SinusAPI"]
+	path = SinusAPI
 	url = https://github.com/MareSynchronos2/api.git
+	branch = rename
