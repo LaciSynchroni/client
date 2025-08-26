@@ -1,13 +1,11 @@
 {
-  "Author": "darkarchon, Syrilai",
-  "Name": "Sinus Synchronous",
-  "Punchline": "Let others see you as you see yourself.",
-  "Description": "This plugin will synchronize your Penumbra mods and current Glamourer state with other paired clients automatically.",
-  "InternalName": "SinusSynchronous",
-  "ApplicableVersion": "any",
-  "Tags": [
-    "customization"
-  ],
-  "IconUrl": "https://raw.githubusercontent.com/Penumbra-Sync/client/main/MareSynchronos/images/logo.png",
-  "RepoUrl": "https://github.com/Penumbra-Sync/client"
+	"Author": "Syrilai",
+	"Name": "Sinus Synchronous",
+	"Punchline": "Let others see you as you see yourself.",
+	"Description": "This plugin will synchronize your Penumbra mods and current Glamourer state with other paired clients automatically.",
+	"InternalName": "SinusSynchronous",
+	"ApplicableVersion": "any",
+	"Tags": ["customization"],
+	"IconUrl": "https://raw.githubusercontent.com/MareSynchronos2/client/sinus/SinusSynchronous/images/icon.png",
+	"RepoUrl": "https://github.com/MareSynchronos2/client"
 }

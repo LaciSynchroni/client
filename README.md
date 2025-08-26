@@ -1,7 +1,7 @@
-# Mare Synchronos Dalamud Plugin
+# Sinus Synchronous Dalamud Plugin
 
-Available at [This dalamud Repo](https://raw.githubusercontent.com/Penumbra-Sync/repo/main/plogonmaster.json)
+Available at [This dalamud Repo](https://raw.githubusercontent.com/MareSynchronos2/repo/main/plogonmaster.json)
 
-# [Mare Synchronos Discord](https://discord.gg/5HVveFefcB)
+# [Sinus Synchronous Discord](https://discord.gg/qQQSz3jZnK)
 
 Readme TBD
