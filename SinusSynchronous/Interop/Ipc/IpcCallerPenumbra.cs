@@ -209,7 +209,6 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         }).ConfigureAwait(false);
     }
 
-    // TODO Update function for Guid to be optional
     public async Task<Guid> CreateTemporaryCollectionAsync(ILogger logger, string uid)
     {
         if (!APIAvailable) return Guid.Empty;
@@ -217,11 +216,11 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         return await _dalamudUtil.RunOnFrameworkThread(() =>
         {
             var collName = "Sinus_" + uid;
-            var _error = _penumbraCreateNamedTemporaryCollection.Invoke(collName, collName, out var collId);
+            var _error = _penumbraCreateNamedTemporaryCollection.Invoke("SinusSynchronous", collName, out var collId);
 
             if (_error != PenumbraApiEc.Success)
             {
-                throw new Exception($"Unable to create temporary collection: ${_error.ToString()}");
+                return Guid.Empty;
             }
             
             logger.LogTrace("Creating Temp Collection {collName}, GUID: {collId}", collName, collId);
