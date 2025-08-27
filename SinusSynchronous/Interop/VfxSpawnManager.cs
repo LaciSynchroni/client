@@ -1,8 +1,8 @@
 ﻿using Dalamud.Memory;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
-using SinusSynchronous.Services.Mediator;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.Services.Mediator;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -19,7 +19,7 @@ public unsafe class VfxSpawnManager : DisposableMediatorSubscriberBase
     [Signature("E8 ?? ?? ?? ?? F3 0F 10 35 ?? ?? ?? ?? 48 89 43 08")]
     private readonly delegate* unmanaged<byte*, byte*, VfxStruct*> _staticVfxCreate;
 
-    [Signature("E8 ?? ?? ?? ?? ?? ?? ?? 8B 4A ?? 85 C9")]
+    [Signature("E8 ?? ?? ?? ?? B0 ?? EB ?? B0 ?? 88 83")]
     private readonly delegate* unmanaged<VfxStruct*, float, int, ulong> _staticVfxRun;
 
     [Signature("40 53 48 83 EC 20 48 8B D9 48 8B 89 ?? ?? ?? ?? 48 85 C9 74 28 33 D2 E8 ?? ?? ?? ?? 48 8B 8B ?? ?? ?? ?? 48 85 C9")]
