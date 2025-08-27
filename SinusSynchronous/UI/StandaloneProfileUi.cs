@@ -2,19 +2,19 @@
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
-using Microsoft.Extensions.Logging;
 using System.Numerics;
 
 namespace SinusSynchronous.UI;
 
 public class StandaloneProfileUi : WindowMediatorSubscriberBase
 {
-    private readonly MareProfileManager _mareProfileManager;
+    private readonly SinusProfileManager _sinusProfileManager;
     private readonly PairManager _pairManager;
     private readonly ServerConfigurationManager _serverManager;
     private readonly UiSharedService _uiSharedService;
@@ -24,14 +24,14 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
     private IDalamudTextureWrap? _supporterTextureWrap;
     private IDalamudTextureWrap? _textureWrap;
 
-    public StandaloneProfileUi(ILogger<StandaloneProfileUi> logger, MareMediator mediator, UiSharedService uiBuilder,
-        ServerConfigurationManager serverManager, MareProfileManager mareProfileManager, PairManager pairManager, Pair pair,
+    public StandaloneProfileUi(ILogger<StandaloneProfileUi> logger, SinusMediator mediator, UiSharedService uiBuilder,
+        ServerConfigurationManager serverManager, SinusProfileManager sinusProfileManager, PairManager pairManager, Pair pair,
         PerformanceCollectorService performanceCollector)
         : base(logger, mediator, "Sinus Profile of " + pair.UserData.AliasOrUID + "##SinusSynchronousStandaloneProfileUI" + pair.UserData.AliasOrUID, performanceCollector)
     {
         _uiSharedService = uiBuilder;
         _serverManager = serverManager;
-        _mareProfileManager = mareProfileManager;
+        _sinusProfileManager = sinusProfileManager;
         Pair = pair;
         _pairManager = pairManager;
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.AlwaysAutoResize;
@@ -51,22 +51,22 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
         {
             var spacing = ImGui.GetStyle().ItemSpacing;
 
-            var mareProfile = _mareProfileManager.GetMareProfile(Pair.UserData);
+            var sinusProfile = _sinusProfileManager.GetSinusProfile(Pair.UserData);
 
-            if (_textureWrap == null || !mareProfile.ImageData.Value.SequenceEqual(_lastProfilePicture))
+            if (_textureWrap == null || !sinusProfile.ImageData.Value.SequenceEqual(_lastProfilePicture))
             {
                 _textureWrap?.Dispose();
-                _lastProfilePicture = mareProfile.ImageData.Value;
+                _lastProfilePicture = sinusProfile.ImageData.Value;
                 _textureWrap = _uiSharedService.LoadImage(_lastProfilePicture);
             }
 
-            if (_supporterTextureWrap == null || !mareProfile.SupporterImageData.Value.SequenceEqual(_lastSupporterPicture))
+            if (_supporterTextureWrap == null || !sinusProfile.SupporterImageData.Value.SequenceEqual(_lastSupporterPicture))
             {
                 _supporterTextureWrap?.Dispose();
                 _supporterTextureWrap = null;
-                if (!string.IsNullOrEmpty(mareProfile.Base64SupporterPicture))
+                if (!string.IsNullOrEmpty(sinusProfile.Base64SupporterPicture))
                 {
-                    _lastSupporterPicture = mareProfile.SupporterImageData.Value;
+                    _lastSupporterPicture = sinusProfile.SupporterImageData.Value;
                     _supporterTextureWrap = _uiSharedService.LoadImage(_lastSupporterPicture);
                 }
             }
@@ -86,7 +86,7 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             ImGuiHelpers.ScaledDummy(new Vector2(256, 256 + spacing.Y));
             var postDummy = ImGui.GetCursorPosY();
             ImGui.SameLine();
-            var descriptionTextSize = ImGui.CalcTextSize(mareProfile.Description, wrapWidth: 256f);
+            var descriptionTextSize = ImGui.CalcTextSize(sinusProfile.Description, wrapWidth: 256f);
             var descriptionChildHeight = rectMax.Y - pos.Y - rectMin.Y - spacing.Y * 2;
             if (descriptionTextSize.Y > descriptionChildHeight && !_adjustedForScrollBars)
             {
@@ -107,7 +107,7 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             if (ImGui.BeginChildFrame(1000, childFrame))
             {
                 using var _ = _uiSharedService.GameFont.Push();
-                ImGui.TextWrapped(mareProfile.Description);
+                ImGui.TextWrapped(sinusProfile.Description);
             }
             ImGui.EndChildFrame();
 

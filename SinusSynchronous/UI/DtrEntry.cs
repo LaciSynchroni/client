@@ -2,13 +2,13 @@
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Configurations;
-using SinusSynchronous.PlayerData.Pairs;
-using SinusSynchronous.Services.Mediator;
-using SinusSynchronous.WebAPI;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.PlayerData.Pairs;
+using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Configurations;
+using SinusSynchronous.WebAPI;
 using System.Runtime.InteropServices;
 
 namespace SinusSynchronous.UI;
@@ -17,24 +17,24 @@ public sealed class DtrEntry : IDisposable, IHostedService
 {
     private readonly ApiController _apiController;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly ConfigurationServiceBase<MareConfig> _configService;
+    private readonly ConfigurationServiceBase<SinusConfig> _configService;
     private readonly IDtrBar _dtrBar;
     private readonly Lazy<IDtrBarEntry> _entry;
     private readonly ILogger<DtrEntry> _logger;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
     private readonly PairManager _pairManager;
     private Task? _runTask;
     private string? _text;
     private string? _tooltip;
     private Colors _colors;
 
-    public DtrEntry(ILogger<DtrEntry> logger, IDtrBar dtrBar, ConfigurationServiceBase<MareConfig> configService, MareMediator mareMediator, PairManager pairManager, ApiController apiController)
+    public DtrEntry(ILogger<DtrEntry> logger, IDtrBar dtrBar, ConfigurationServiceBase<SinusConfig> configService, SinusMediator sinusMediator, PairManager pairManager, ApiController apiController)
     {
         _logger = logger;
         _dtrBar = dtrBar;
         _entry = new(CreateEntry);
         _configService = configService;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         _pairManager = pairManager;
         _apiController = apiController;
     }
@@ -89,7 +89,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
     {
         _logger.LogTrace("Creating new DtrBar entry");
         var entry = _dtrBar.Get("Sinus Synchronous");
-        entry.OnClick = _ => _mareMediator.Publish(new UiToggleMessage(typeof(CompactUi)));
+        entry.OnClick = _ => _sinusMediator.Publish(new UiToggleMessage(typeof(CompactUi)));
 
         return entry;
     }

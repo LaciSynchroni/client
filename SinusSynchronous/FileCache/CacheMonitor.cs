@@ -1,9 +1,9 @@
-﻿using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
+﻿using Microsoft.Extensions.Logging;
+using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.Utils;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 
@@ -11,7 +11,7 @@ namespace SinusSynchronous.FileCache;
 
 public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 {
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly FileCompactor _fileCompactor;
     private readonly FileCacheManager _fileDbManager;
@@ -22,8 +22,8 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     private readonly CancellationTokenSource _periodicCalculationTokenSource = new();
     public static readonly IImmutableList<string> AllowedFileExtensions = [".mdl", ".tex", ".mtrl", ".tmb", ".pap", ".avfx", ".atex", ".sklb", ".eid", ".phyb", ".pbd", ".scd", ".skp", ".shpk"];
 
-    public CacheMonitor(ILogger<CacheMonitor> logger, IpcManager ipcManager, MareConfigService configService,
-        FileCacheManager fileDbManager, MareMediator mediator, PerformanceCollectorService performanceCollector, DalamudUtilService dalamudUtil,
+    public CacheMonitor(ILogger<CacheMonitor> logger, IpcManager ipcManager, SinusConfigService configService,
+        FileCacheManager fileDbManager, SinusMediator mediator, PerformanceCollectorService performanceCollector, DalamudUtilService dalamudUtil,
         FileCompactor fileCompactor) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
@@ -35,14 +35,14 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         Mediator.Subscribe<PenumbraInitializedMessage>(this, (_) =>
         {
             StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
-            StartMareWatcher(configService.Current.CacheFolder);
+            StartSinusWatcher(configService.Current.CacheFolder);
             InvokeScan();
         });
         Mediator.Subscribe<HaltScanMessage>(this, (msg) => HaltScan(msg.Source));
         Mediator.Subscribe<ResumeScanMessage>(this, (msg) => ResumeScan(msg.Source));
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) =>
         {
-            StartMareWatcher(configService.Current.CacheFolder);
+            StartSinusWatcher(configService.Current.CacheFolder);
             StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
             InvokeScan();
         });
@@ -57,7 +57,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         }
         if (configService.Current.HasValidSetup())
         {
-            StartMareWatcher(configService.Current.CacheFolder);
+            StartSinusWatcher(configService.Current.CacheFolder);
             InvokeScan();
         }
 
@@ -102,37 +102,37 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
     record WatcherChange(WatcherChangeTypes ChangeType, string? OldPath = null);
     private readonly Dictionary<string, WatcherChange> _watcherChanges = new Dictionary<string, WatcherChange>(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, WatcherChange> _mareChanges = new Dictionary<string, WatcherChange>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, WatcherChange> _sinusChanges = new Dictionary<string, WatcherChange>(StringComparer.OrdinalIgnoreCase);
 
     public void StopMonitoring()
     {
-        Logger.LogInformation("Stopping monitoring of Penumbra and Mare storage folders");
-        MareWatcher?.Dispose();
+        Logger.LogInformation("Stopping monitoring of Penumbra and Sinus storage folders");
+        SinusWatcher?.Dispose();
         PenumbraWatcher?.Dispose();
-        MareWatcher = null;
+        SinusWatcher = null;
         PenumbraWatcher = null;
     }
 
     public bool StorageisNTFS { get; private set; } = false;
 
-    public void StartMareWatcher(string? marePath)
+    public void StartSinusWatcher(string? sinusPath)
     {
-        MareWatcher?.Dispose();
-        if (string.IsNullOrEmpty(marePath) || !Directory.Exists(marePath))
+        SinusWatcher?.Dispose();
+        if (string.IsNullOrEmpty(sinusPath) || !Directory.Exists(sinusPath))
         {
-            MareWatcher = null;
-            Logger.LogWarning("Mare file path is not set, cannot start the FSW for Mare.");
+            SinusWatcher = null;
+            Logger.LogWarning("Sinus file path is not set, cannot start the FSW for Sinus.");
             return;
         }
 
         DriveInfo di = new(new DirectoryInfo(_configService.Current.CacheFolder).Root.FullName);
         StorageisNTFS = string.Equals("NTFS", di.DriveFormat, StringComparison.OrdinalIgnoreCase);
-        Logger.LogInformation("Mare Storage is on NTFS drive: {isNtfs}", StorageisNTFS);
+        Logger.LogInformation("Sinus Storage is on NTFS drive: {isNtfs}", StorageisNTFS);
 
-        Logger.LogDebug("Initializing Mare FSW on {path}", marePath);
-        MareWatcher = new()
+        Logger.LogDebug("Initializing Sinus FSW on {path}", sinusPath);
+        SinusWatcher = new()
         {
-            Path = marePath,
+            Path = sinusPath,
             InternalBufferSize = 8388608,
             NotifyFilter = NotifyFilters.CreationTime
                 | NotifyFilters.LastWrite
@@ -143,23 +143,23 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             IncludeSubdirectories = false,
         };
 
-        MareWatcher.Deleted += MareWatcher_FileChanged;
-        MareWatcher.Created += MareWatcher_FileChanged;
-        MareWatcher.EnableRaisingEvents = true;
+        SinusWatcher.Deleted += SinusWatcher_FileChanged;
+        SinusWatcher.Created += SinusWatcher_FileChanged;
+        SinusWatcher.EnableRaisingEvents = true;
     }
 
-    private void MareWatcher_FileChanged(object sender, FileSystemEventArgs e)
+    private void SinusWatcher_FileChanged(object sender, FileSystemEventArgs e)
     {
-        Logger.LogTrace("Mare FSW: FileChanged: {change} => {path}", e.ChangeType, e.FullPath);
+        Logger.LogTrace("Sinus FSW: FileChanged: {change} => {path}", e.ChangeType, e.FullPath);
 
         if (!AllowedFileExtensions.Any(ext => e.FullPath.EndsWith(ext, StringComparison.OrdinalIgnoreCase))) return;
 
         lock (_watcherChanges)
         {
-            _mareChanges[e.FullPath] = new(e.ChangeType);
+            _sinusChanges[e.FullPath] = new(e.ChangeType);
         }
 
-        _ = MareWatcherExecution();
+        _ = SinusWatcherExecution();
     }
 
     public void StartPenumbraWatcher(string? penumbraPath)
@@ -247,18 +247,18 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     }
 
     private CancellationTokenSource _penumbraFswCts = new();
-    private CancellationTokenSource _mareFswCts = new();
+    private CancellationTokenSource _sinusFswCts = new();
     public FileSystemWatcher? PenumbraWatcher { get; private set; }
-    public FileSystemWatcher? MareWatcher { get; private set; }
+    public FileSystemWatcher? SinusWatcher { get; private set; }
 
-    private async Task MareWatcherExecution()
+    private async Task SinusWatcherExecution()
     {
-        _mareFswCts = _mareFswCts.CancelRecreate();
-        var token = _mareFswCts.Token;
+        _sinusFswCts = _sinusFswCts.CancelRecreate();
+        var token = _sinusFswCts.Token;
         var delay = TimeSpan.FromSeconds(5);
         Dictionary<string, WatcherChange> changes;
-        lock (_mareChanges)
-            changes = _mareChanges.ToDictionary(t => t.Key, t => t.Value, StringComparer.Ordinal);
+        lock (_sinusChanges)
+            changes = _sinusChanges.ToDictionary(t => t.Key, t => t.Value, StringComparer.Ordinal);
         try
         {
             do
@@ -271,11 +271,11 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             return;
         }
 
-        lock (_mareChanges)
+        lock (_sinusChanges)
         {
             foreach (var key in changes.Keys)
             {
-                _mareChanges.Remove(key);
+                _sinusChanges.Remove(key);
             }
         }
 
@@ -458,9 +458,9 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         base.Dispose(disposing);
         _scanCancellationTokenSource?.Cancel();
         PenumbraWatcher?.Dispose();
-        MareWatcher?.Dispose();
+        SinusWatcher?.Dispose();
         _penumbraFswCts?.CancelDispose();
-        _mareFswCts?.CancelDispose();
+        _sinusFswCts?.CancelDispose();
         _periodicCalculationTokenSource?.CancelDispose();
     }
 
@@ -478,7 +478,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         if (string.IsNullOrEmpty(_configService.Current.CacheFolder) || !Directory.Exists(_configService.Current.CacheFolder))
         {
             cacheDirExists = false;
-            Logger.LogWarning("Mare Cache directory is not set or does not exist.");
+            Logger.LogWarning("Sinus Cache directory is not set or does not exist.");
         }
         if (!penDirExists || !cacheDirExists)
         {
@@ -681,7 +681,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         {
             _configService.Current.InitialScanComplete = true;
             _configService.Save();
-            StartMareWatcher(_configService.Current.CacheFolder);
+            StartSinusWatcher(_configService.Current.CacheFolder);
             StartPenumbraWatcher(penumbraDir);
         }
     }

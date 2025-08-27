@@ -4,7 +4,7 @@ namespace SinusSynchronous.Services.Mediator;
 
 public abstract class MediatorSubscriberBase : IMediatorSubscriber
 {
-    protected MediatorSubscriberBase(ILogger logger, MareMediator mediator)
+    protected MediatorSubscriberBase(ILogger logger, SinusMediator mediator)
     {
         Logger = logger;
 
@@ -12,7 +12,7 @@ public abstract class MediatorSubscriberBase : IMediatorSubscriber
         Mediator = mediator;
     }
 
-    public MareMediator Mediator { get; }
+    public SinusMediator Mediator { get; }
     protected ILogger Logger { get; }
 
     protected void UnsubscribeAll()

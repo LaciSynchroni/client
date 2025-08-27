@@ -2,17 +2,17 @@
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
 
 namespace SinusSynchronous.UI.Handlers;
 
 public class IdDisplayHandler
 {
-    private readonly MareConfigService _mareConfigService;
-    private readonly MareMediator _mediator;
+    private readonly SinusConfigService _sinusConfigService;
+    private readonly SinusMediator _mediator;
     private readonly ServerConfigurationManager _serverManager;
     private readonly Dictionary<string, bool> _showIdForEntry = new(StringComparer.Ordinal);
     private string _editComment = string.Empty;
@@ -22,11 +22,11 @@ public class IdDisplayHandler
     private bool _popupShown = false;
     private DateTime? _popupTime;
 
-    public IdDisplayHandler(MareMediator mediator, ServerConfigurationManager serverManager, MareConfigService mareConfigService)
+    public IdDisplayHandler(SinusMediator mediator, ServerConfigurationManager serverManager, SinusConfigService sinusConfigService)
     {
         _mediator = mediator;
         _serverManager = serverManager;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
     }
 
     public void DrawGroupText(string id, GroupFullInfoDto group, float textPosX, Func<float> editBoxWidth)
@@ -99,12 +99,12 @@ public class IdDisplayHandler
             {
                 if (!string.Equals(_lastMouseOverUid, id))
                 {
-                    _popupTime = DateTime.UtcNow.AddSeconds(_mareConfigService.Current.ProfileDelay);
+                    _popupTime = DateTime.UtcNow.AddSeconds(_sinusConfigService.Current.ProfileDelay);
                 }
 
                 _lastMouseOverUid = id;
 
-                if (_popupTime > DateTime.UtcNow || !_mareConfigService.Current.ProfilesShow)
+                if (_popupTime > DateTime.UtcNow || !_sinusConfigService.Current.ProfilesShow)
                 {
                     ImGui.SetTooltip("Left click to switch between UID display and nick" + Environment.NewLine
                         + "Right click to change nick for " + pair.UserData.AliasOrUID + Environment.NewLine
@@ -222,11 +222,11 @@ public class IdDisplayHandler
             playerText = pair.UserData.AliasOrUID;
         }
 
-        if (_mareConfigService.Current.ShowCharacterNameInsteadOfNotesForVisible && pair.IsVisible && !showUidInsteadOfName)
+        if (_sinusConfigService.Current.ShowCharacterNameInsteadOfNotesForVisible && pair.IsVisible && !showUidInsteadOfName)
         {
             playerText = pair.PlayerName;
             textIsUid = false;
-            if (_mareConfigService.Current.PreferNotesOverNamesForVisible)
+            if (_sinusConfigService.Current.PreferNotesOverNamesForVisible)
             {
                 var note = pair.GetNote();
                 if (note != null)

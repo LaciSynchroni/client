@@ -1,6 +1,6 @@
-﻿using SinusSynchronous.MareConfiguration;
+﻿using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services;
-using Microsoft.Extensions.Logging;
+using SinusSynchronous.SinusConfiguration;
 using System.Runtime.InteropServices;
 
 namespace SinusSynchronous.FileCache;
@@ -15,14 +15,14 @@ public sealed class FileCompactor
     private readonly WOF_FILE_COMPRESSION_INFO_V1 _efInfo;
     private readonly ILogger<FileCompactor> _logger;
 
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly DalamudUtilService _dalamudUtilService;
 
-    public FileCompactor(ILogger<FileCompactor> logger, MareConfigService mareConfigService, DalamudUtilService dalamudUtilService)
+    public FileCompactor(ILogger<FileCompactor> logger, SinusConfigService sinusConfigService, DalamudUtilService dalamudUtilService)
     {
         _clusterSizes = new(StringComparer.Ordinal);
         _logger = logger;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _dalamudUtilService = dalamudUtilService;
         _efInfo = new WOF_FILE_COMPRESSION_INFO_V1
         {
@@ -50,7 +50,7 @@ public sealed class FileCompactor
         MassCompactRunning = true;
 
         int currentFile = 1;
-        var allFiles = Directory.EnumerateFiles(_mareConfigService.Current.CacheFolder).ToList();
+        var allFiles = Directory.EnumerateFiles(_sinusConfigService.Current.CacheFolder).ToList();
         int allFilesCount = allFiles.Count;
         foreach (var file in allFiles)
         {
@@ -82,7 +82,7 @@ public sealed class FileCompactor
     {
         await File.WriteAllBytesAsync(filePath, decompressedFile, token).ConfigureAwait(false);
 
-        if (_dalamudUtilService.IsWine || !_mareConfigService.Current.UseCompactor)
+        if (_dalamudUtilService.IsWine || !_sinusConfigService.Current.UseCompactor)
         {
             return;
         }

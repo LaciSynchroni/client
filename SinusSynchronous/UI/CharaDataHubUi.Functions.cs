@@ -1,6 +1,6 @@
 ﻿using Dalamud.Interface.Utility.Raii;
 using SinusSynchronous.API.Dto.CharaData;
-using SinusSynchronous.MareConfiguration.Models;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Services.CharaData.Models;
 using System.Text;
 

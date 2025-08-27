@@ -1,11 +1,11 @@
-﻿using SinusSynchronous.MareConfiguration.Models;
+﻿using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.UI;
 using Microsoft.Extensions.Logging;
 
-namespace SinusSynchronous.MareConfiguration.Configurations;
+namespace SinusSynchronous.SinusConfiguration.Configurations;
 
 [Serializable]
-public class MareConfig : IMareConfiguration
+public class SinusConfig : ISinusConfiguration
 {
     public bool AcceptedAgreement { get; set; } = false;
     public string CacheFolder { get; set; } = string.Empty;

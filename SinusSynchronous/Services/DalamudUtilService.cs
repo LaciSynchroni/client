@@ -13,7 +13,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.Sheets;
 using SinusSynchronous.API.Dto.CharaData;
 using SinusSynchronous.Interop;
-using SinusSynchronous.MareConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Utils;
@@ -39,7 +39,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     private readonly ILogger<DalamudUtilService> _logger;
     private readonly IObjectTable _objectTable;
     private readonly PerformanceCollectorService _performanceCollector;
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private uint? _classJobId = 0;
     private DateTime _delayedFrameworkUpdateCheck = DateTime.UtcNow;
     private string _lastGlobalBlockPlayer = string.Empty;
@@ -52,8 +52,8 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
 
     public DalamudUtilService(ILogger<DalamudUtilService> logger, IClientState clientState, IObjectTable objectTable, IFramework framework,
         IGameGui gameGui, ICondition condition, IDataManager gameData, ITargetManager targetManager, IGameConfig gameConfig,
-        BlockedCharacterHandler blockedCharacterHandler, MareMediator mediator, PerformanceCollectorService performanceCollector,
-        MareConfigService configService)
+        BlockedCharacterHandler blockedCharacterHandler, SinusMediator mediator, PerformanceCollectorService performanceCollector,
+        SinusConfigService configService)
     {
         _logger = logger;
         _clientState = clientState;
@@ -169,7 +169,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     public Lazy<Dictionary<uint, string>> TerritoryData { get; private set; }
     public Lazy<Dictionary<uint, (Map Map, string MapName)>> MapData { get; private set; }
     public bool IsLodEnabled { get; private set; }
-    public MareMediator Mediator { get; }
+    public SinusMediator Mediator { get; }
 
     public IGameObject? CreateGameObject(IntPtr reference)
     {

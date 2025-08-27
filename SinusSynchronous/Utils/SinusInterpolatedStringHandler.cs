@@ -4,11 +4,11 @@ using System.Text;
 namespace SinusSynchronous.Utils;
 
 [InterpolatedStringHandler]
-public readonly ref struct MareInterpolatedStringHandler
+public readonly ref struct SinusInterpolatedStringHandler
 {
     readonly StringBuilder _logMessageStringbuilder;
 
-    public MareInterpolatedStringHandler(int literalLength, int formattedCount)
+    public SinusInterpolatedStringHandler(int literalLength, int formattedCount)
     {
         _logMessageStringbuilder = new StringBuilder(literalLength);
     }

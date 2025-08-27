@@ -1,9 +1,9 @@
-﻿using SinusSynchronous.MareConfiguration.Configurations;
+﻿using SinusSynchronous.SinusConfiguration.Configurations;
 using System.Text.Json;
 
-namespace SinusSynchronous.MareConfiguration;
+namespace SinusSynchronous.SinusConfiguration;
 
-public abstract class ConfigurationServiceBase<T> : IConfigService<T> where T : IMareConfiguration
+public abstract class ConfigurationServiceBase<T> : IConfigService<T> where T : ISinusConfiguration
 {
     private readonly CancellationTokenSource _periodicCheckCts = new();
     private DateTime _configLastWriteTime;

@@ -1,21 +1,21 @@
 ﻿using Dalamud.Plugin.Services;
-using SinusSynchronous.MareConfiguration;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.SinusConfiguration;
 using System.Text;
 
 namespace SinusSynchronous.Interop;
 
 internal sealed class DalamudLogger : ILogger
 {
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly string _name;
     private readonly IPluginLog _pluginLog;
     private readonly bool _hasModifiedGameFiles;
 
-    public DalamudLogger(string name, MareConfigService mareConfigService, IPluginLog pluginLog, bool hasModifiedGameFiles)
+    public DalamudLogger(string name, SinusConfigService sinusConfigService, IPluginLog pluginLog, bool hasModifiedGameFiles)
     {
         _name = name;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _pluginLog = pluginLog;
         _hasModifiedGameFiles = hasModifiedGameFiles;
     }
@@ -24,7 +24,7 @@ internal sealed class DalamudLogger : ILogger
 
     public bool IsEnabled(LogLevel logLevel)
     {
-        return (int)_mareConfigService.Current.LogLevel <= (int)logLevel;
+        return (int)_sinusConfigService.Current.LogLevel <= (int)logLevel;
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)

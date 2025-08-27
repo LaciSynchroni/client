@@ -3,14 +3,14 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Localization;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
-using Microsoft.Extensions.Logging;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using System.Numerics;
 using System.Text.RegularExpressions;
 
@@ -18,7 +18,7 @@ namespace SinusSynchronous.UI;
 
 public partial class IntroUi : WindowMediatorSubscriberBase
 {
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private readonly CacheMonitor _cacheMonitor;
     private readonly Dictionary<string, string> _languages = new(StringComparer.Ordinal) { { "English", "en" }, { "Deutsch", "de" }, { "Français", "fr" } };
     private readonly ServerConfigurationManager _serverConfigurationManager;
@@ -33,9 +33,9 @@ public partial class IntroUi : WindowMediatorSubscriberBase
     private string[]? _tosParagraphs;
     private bool _useLegacyLogin = false;
 
-    public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService,
-        CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator,
-        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService) : base(logger, mareMediator, "Sinus Synchronous Setup", performanceCollectorService)
+    public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, SinusConfigService configService,
+        CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, SinusMediator sinusMediator,
+        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService) : base(logger, sinusMediator, "Sinus Synchronous Setup", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;

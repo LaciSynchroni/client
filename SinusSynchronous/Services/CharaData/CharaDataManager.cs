@@ -1,17 +1,17 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using K4os.Compression.LZ4.Legacy;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Dto.CharaData;
 using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.CharaData.Models;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -42,10 +42,10 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
 
     public CharaDataManager(ILogger<CharaDataManager> logger, ApiController apiController,
         CharaDataFileHandler charaDataFileHandler,
-        MareMediator mareMediator, IpcManager ipcManager, DalamudUtilService dalamudUtilService,
+        SinusMediator sinusMediator, IpcManager ipcManager, DalamudUtilService dalamudUtilService,
         FileDownloadManagerFactory fileDownloadManagerFactory,
         CharaDataConfigService charaDataConfigService, CharaDataNearbyManager charaDataNearbyManager,
-        CharaDataCharacterHandler charaDataCharacterHandler, PairManager pairManager) : base(logger, mareMediator)
+        CharaDataCharacterHandler charaDataCharacterHandler, PairManager pairManager) : base(logger, sinusMediator)
     {
         _apiController = apiController;
         _fileHandler = charaDataFileHandler;
@@ -55,7 +55,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         _nearbyManager = charaDataNearbyManager;
         _characterHandler = charaDataCharacterHandler;
         _pairManager = pairManager;
-        mareMediator.Subscribe<ConnectedMessage>(this, (msg) =>
+        sinusMediator.Subscribe<ConnectedMessage>(this, (msg) =>
         {
             _connectCts?.Cancel();
             _connectCts?.Dispose();
@@ -75,7 +75,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
                 _ = GetAllSharedData(token);
             }
         });
-        mareMediator.Subscribe<DisconnectedMessage>(this, (msg) =>
+        sinusMediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
             _ownCharaData.Clear();
             _metaInfoCache.Clear();
@@ -98,7 +98,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
     public IEnumerable<HandledCharaDataEntry> HandledCharaData => _characterHandler.HandledCharaData;
     public bool Initialized { get; private set; }
     public CharaDataMetaInfoExtendedDto? LastDownloadedMetaInfo { get; private set; }
-    public Task<(MareCharaFileHeader LoadedFile, long ExpectedLength)>? LoadedMcdfHeader { get; private set; }
+    public Task<(SinusCharaFileHeader LoadedFile, long ExpectedLength)>? LoadedMcdfHeader { get; private set; }
     public int MaxCreatableCharaData { get; private set; }
     public Task? McdfApplicationTask { get; private set; }
     public List<CharaDataMetaInfoExtendedDto> NearbyData => _nearbyData;
@@ -519,7 +519,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         }
     }
 
-    public void SaveMareCharaFile(string description, string filePath)
+    public void SaveSinusCharaFile(string description, string filePath)
     {
         UiBlockingComputation = Task.Run(async () => await _fileHandler.SaveCharaFileAsync(description, filePath).ConfigureAwait(false));
     }

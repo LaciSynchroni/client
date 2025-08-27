@@ -1,5 +1,5 @@
 ﻿using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.MareConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
@@ -16,7 +16,7 @@ public class DrawEntityFactory
 {
     private readonly ILogger<DrawEntityFactory> _logger;
     private readonly ApiController _apiController;
-    private readonly MareMediator _mediator;
+    private readonly SinusMediator _mediator;
     private readonly SelectPairForTagUi _selectPairForTagUi;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiSharedService;
@@ -27,7 +27,7 @@ public class DrawEntityFactory
     private readonly IdDisplayHandler _uidDisplayHandler;
 
     public DrawEntityFactory(ILogger<DrawEntityFactory> logger, ApiController apiController, IdDisplayHandler uidDisplayHandler,
-        SelectTagForPairUi selectTagForPairUi, MareMediator mediator,
+        SelectTagForPairUi selectTagForPairUi, SinusMediator mediator,
         TagHandler tagHandler, SelectPairForTagUi selectPairForTagUi,
         ServerConfigurationManager serverConfigurationManager, UiSharedService uiSharedService,
         PlayerPerformanceConfigService playerPerformanceConfigService, CharaDataManager charaDataManager)

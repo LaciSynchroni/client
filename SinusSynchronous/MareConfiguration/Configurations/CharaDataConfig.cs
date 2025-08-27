@@ -1,10 +1,10 @@
-﻿using SinusSynchronous.MareConfiguration.Models;
+﻿using SinusSynchronous.SinusConfiguration.Models;
 
-namespace SinusSynchronous.MareConfiguration.Configurations;
+namespace SinusSynchronous.SinusConfiguration.Configurations;
 
-public class CharaDataConfig : IMareConfiguration
+public class CharaDataConfig : ISinusConfiguration
 {
-    public bool OpenMareHubOnGposeStart { get; set; } = false;
+    public bool OpenSinusHubOnGposeStart { get; set; } = false;
     public string LastSavedCharaDataLocation { get; set; } = string.Empty;
     public Dictionary<string, CharaDataFavorite> FavoriteCodes { get; set; } = [];
     public bool DownloadMcdDataOnConnection { get; set; } = true;

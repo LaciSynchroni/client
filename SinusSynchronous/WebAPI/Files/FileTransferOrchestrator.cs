@@ -1,8 +1,8 @@
-﻿using SinusSynchronous.MareConfiguration;
+﻿using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.WebAPI.Files.Models;
 using SinusSynchronous.WebAPI.SignalR;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -14,23 +14,23 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
 {
     private readonly ConcurrentDictionary<Guid, bool> _downloadReady = new();
     private readonly HttpClient _httpClient;
-    private readonly MareConfigService _mareConfig;
+    private readonly SinusConfigService _sinusConfig;
     private readonly object _semaphoreModificationLock = new();
     private readonly TokenProvider _tokenProvider;
     private int _availableDownloadSlots;
     private SemaphoreSlim _downloadSemaphore;
     private int CurrentlyUsedDownloadSlots => _availableDownloadSlots - _downloadSemaphore.CurrentCount;
 
-    public FileTransferOrchestrator(ILogger<FileTransferOrchestrator> logger, MareConfigService mareConfig,
-        MareMediator mediator, TokenProvider tokenProvider, HttpClient httpClient) : base(logger, mediator)
+    public FileTransferOrchestrator(ILogger<FileTransferOrchestrator> logger, SinusConfigService sinusConfig,
+        SinusMediator mediator, TokenProvider tokenProvider, HttpClient httpClient) : base(logger, mediator)
     {
-        _mareConfig = mareConfig;
+        _sinusConfig = sinusConfig;
         _tokenProvider = tokenProvider;
         _httpClient = httpClient;
         var ver = Assembly.GetExecutingAssembly().GetName().Version;
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("SinusSynchronous", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
 
-        _availableDownloadSlots = mareConfig.Current.ParallelDownloads;
+        _availableDownloadSlots = sinusConfig.Current.ParallelDownloads;
         _downloadSemaphore = new(_availableDownloadSlots, _availableDownloadSlots);
 
         Mediator.Subscribe<ConnectedMessage>(this, (msg) =>
@@ -108,9 +108,9 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
     {
         lock (_semaphoreModificationLock)
         {
-            if (_availableDownloadSlots != _mareConfig.Current.ParallelDownloads && _availableDownloadSlots == _downloadSemaphore.CurrentCount)
+            if (_availableDownloadSlots != _sinusConfig.Current.ParallelDownloads && _availableDownloadSlots == _downloadSemaphore.CurrentCount)
             {
-                _availableDownloadSlots = _mareConfig.Current.ParallelDownloads;
+                _availableDownloadSlots = _sinusConfig.Current.ParallelDownloads;
                 _downloadSemaphore = new(_availableDownloadSlots, _availableDownloadSlots);
             }
         }
@@ -121,13 +121,13 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
 
     public long DownloadLimitPerSlot()
     {
-        var limit = _mareConfig.Current.DownloadSpeedLimitInBytes;
+        var limit = _sinusConfig.Current.DownloadSpeedLimitInBytes;
         if (limit <= 0) return 0;
-        limit = _mareConfig.Current.DownloadSpeedType switch
+        limit = _sinusConfig.Current.DownloadSpeedType switch
         {
-            MareConfiguration.Models.DownloadSpeeds.Bps => limit,
-            MareConfiguration.Models.DownloadSpeeds.KBps => limit * 1024,
-            MareConfiguration.Models.DownloadSpeeds.MBps => limit * 1024 * 1024,
+            SinusConfiguration.Models.DownloadSpeeds.Bps => limit,
+            SinusConfiguration.Models.DownloadSpeeds.KBps => limit * 1024,
+            SinusConfiguration.Models.DownloadSpeeds.MBps => limit * 1024 * 1024,
             _ => limit,
         };
         var currentUsedDlSlots = CurrentlyUsedDownloadSlots;

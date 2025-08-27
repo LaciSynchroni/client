@@ -8,7 +8,7 @@ public abstract class WindowMediatorSubscriberBase : Window, IMediatorSubscriber
     protected readonly ILogger _logger;
     private readonly PerformanceCollectorService _performanceCollectorService;
 
-    protected WindowMediatorSubscriberBase(ILogger logger, MareMediator mediator, string name,
+    protected WindowMediatorSubscriberBase(ILogger logger, SinusMediator mediator, string name,
         PerformanceCollectorService performanceCollectorService) : base(name)
     {
         _logger = logger;
@@ -25,7 +25,7 @@ public abstract class WindowMediatorSubscriberBase : Window, IMediatorSubscriber
         });
     }
 
-    public MareMediator Mediator { get; }
+    public SinusMediator Mediator { get; }
 
     public void Dispose()
     {

@@ -3,7 +3,7 @@ using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Dto;
 using SinusSynchronous.API.Dto.CharaData;
 using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.MareConfiguration.Models;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Events;

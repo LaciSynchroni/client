@@ -4,8 +4,8 @@ using SinusSynchronous.API.Data.Comparer;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.API.Dto.User;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.Services.Events;
 using SinusSynchronous.Services.Mediator;
@@ -18,7 +18,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
 {
     private readonly ConcurrentDictionary<UserData, Pair> _allClientPairs = new(UserDataComparer.Instance);
     private readonly ConcurrentDictionary<GroupData, GroupFullInfoDto> _allGroups = new(GroupDataComparer.Instance);
-    private readonly MareConfigService _configurationService;
+    private readonly SinusConfigService _configurationService;
     private readonly IContextMenu _dalamudContextMenu;
     private readonly PairFactory _pairFactory;
     private Lazy<List<Pair>> _directPairsInternal;
@@ -26,7 +26,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     private Lazy<Dictionary<Pair, List<GroupFullInfoDto>>> _pairsWithGroupsInternal;
 
     public PairManager(ILogger<PairManager> logger, PairFactory pairFactory,
-                MareConfigService configurationService, MareMediator mediator,
+                SinusConfigService configurationService, SinusMediator mediator,
                 IContextMenu dalamudContextMenu) : base(logger, mediator)
     {
         _pairFactory = pairFactory;

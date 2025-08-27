@@ -9,12 +9,12 @@ using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.UI.Components;
 using SinusSynchronous.UI.Handlers;
 using SinusSynchronous.WebAPI;
@@ -32,7 +32,7 @@ namespace SinusSynchronous.UI;
 public class CompactUi : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private readonly ConcurrentDictionary<GameObjectHandler, Dictionary<string, FileDownloadStatus>> _currentDownloads = new();
     private readonly DrawEntityFactory _drawEntityFactory;
     private readonly FileUploadManager _fileTransferManager;
@@ -60,8 +60,8 @@ public class CompactUi : WindowMediatorSubscriberBase
     private bool _wasOpen;
     private float _windowContentWidth;
 
-    public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController, PairManager pairManager,
-        ServerConfigurationManager serverManager, MareMediator mediator, FileUploadManager fileTransferManager,
+    public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, SinusConfigService configService, ApiController apiController, PairManager pairManager,
+        ServerConfigurationManager serverManager, SinusMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
         PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService, ServerConfigService serverConfigService)
         : base(logger, mediator, "###SinusSynchronousMainUI", performanceCollectorService)
@@ -156,20 +156,20 @@ public class CompactUi : WindowMediatorSubscriberBase
     protected override void DrawInternal()
     {
         _windowContentWidth = UiSharedService.GetWindowContentRegionWidth();
-        if (!_apiController.IsCurrentVersion)
-        {
-            var ver = _apiController.CurrentClientVersion;
-            var unsupported = "UNSUPPORTED VERSION";
-            using (_uiSharedService.UidFont.Push())
-            {
-                var uidTextSize = ImGui.CalcTextSize(unsupported);
-                ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X + ImGui.GetWindowContentRegionMin().X) / 2 - uidTextSize.X / 2);
-                ImGui.AlignTextToFramePadding();
-                ImGui.TextColored(ImGuiColors.DalamudRed, unsupported);
-            }
-            UiSharedService.ColorTextWrapped($"Your Sinus Synchronous installation is out of date, the current version is {ver.Major}.{ver.Minor}.{ver.Build}. " +
-                $"It is highly recommended to keep Sinus Synchronous up to date. Open /xlplugins and update the plugin.", ImGuiColors.DalamudRed);
-        }
+        //if (!_apiController.IsCurrentVersion)
+        //{
+        //    var ver = _apiController.CurrentClientVersion;
+        //    var unsupported = "UNSUPPORTED VERSION";
+        //    using (_uiSharedService.UidFont.Push())
+        //    {
+        //        var uidTextSize = ImGui.CalcTextSize(unsupported);
+        //        ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X + ImGui.GetWindowContentRegionMin().X) / 2 - uidTextSize.X / 2);
+        //        ImGui.AlignTextToFramePadding();
+        //        ImGui.TextColored(ImGuiColors.DalamudRed, unsupported);
+        //    }
+        //    UiSharedService.ColorTextWrapped($"Your Sinus Synchronous installation is out of date, the current version is {ver.Major}.{ver.Minor}.{ver.Build}. " +
+        //        $"It is highly recommended to keep Sinus Synchronous up to date. Open /xlplugins and update the plugin.", ImGuiColors.DalamudRed);
+        //}
 
         if (!_ipcManager.Initialized)
         {

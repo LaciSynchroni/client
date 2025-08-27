@@ -1,9 +1,9 @@
 ﻿using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Comparer;
 using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using System.Collections.Concurrent;
 
 namespace SinusSynchronous.PlayerData.Pairs;
@@ -12,12 +12,12 @@ public class PluginWarningNotificationService
 {
     private readonly ConcurrentDictionary<UserData, OptionalPluginWarning> _cachedOptionalPluginWarnings = new(UserDataComparer.Instance);
     private readonly IpcManager _ipcManager;
-    private readonly MareConfigService _mareConfigService;
-    private readonly MareMediator _mediator;
+    private readonly SinusConfigService _sinusConfigService;
+    private readonly SinusMediator _mediator;
 
-    public PluginWarningNotificationService(MareConfigService mareConfigService, IpcManager ipcManager, MareMediator mediator)
+    public PluginWarningNotificationService(SinusConfigService sinusConfigService, IpcManager ipcManager, SinusMediator mediator)
     {
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _ipcManager = ipcManager;
         _mediator = mediator;
     }
@@ -28,11 +28,11 @@ public class PluginWarningNotificationService
         {
             _cachedOptionalPluginWarnings[user] = warning = new()
             {
-                ShownCustomizePlusWarning = _mareConfigService.Current.DisableOptionalPluginWarnings,
-                ShownHeelsWarning = _mareConfigService.Current.DisableOptionalPluginWarnings,
-                ShownHonorificWarning = _mareConfigService.Current.DisableOptionalPluginWarnings,
-                ShownMoodlesWarning = _mareConfigService.Current.DisableOptionalPluginWarnings,
-                ShowPetNicknamesWarning = _mareConfigService.Current.DisableOptionalPluginWarnings
+                ShownCustomizePlusWarning = _sinusConfigService.Current.DisableOptionalPluginWarnings,
+                ShownHeelsWarning = _sinusConfigService.Current.DisableOptionalPluginWarnings,
+                ShownHonorificWarning = _sinusConfigService.Current.DisableOptionalPluginWarnings,
+                ShownMoodlesWarning = _sinusConfigService.Current.DisableOptionalPluginWarnings,
+                ShowPetNicknamesWarning = _sinusConfigService.Current.DisableOptionalPluginWarnings
             };
         }
 

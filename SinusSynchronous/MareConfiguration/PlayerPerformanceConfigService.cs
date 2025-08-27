@@ -1,6 +1,6 @@
-﻿using SinusSynchronous.MareConfiguration.Configurations;
+﻿using SinusSynchronous.SinusConfiguration.Configurations;
 
-namespace SinusSynchronous.MareConfiguration;
+namespace SinusSynchronous.SinusConfiguration;
 
 public class PlayerPerformanceConfigService : ConfigurationServiceBase<PlayerPerformanceConfig>
 {

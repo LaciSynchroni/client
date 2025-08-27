@@ -1,11 +1,11 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
-using SinusSynchronous.MareConfiguration;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.UI;
 using SinusSynchronous.UI.Components.Popup;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.Services;
 
@@ -15,20 +15,20 @@ public sealed class UiService : DisposableMediatorSubscriberBase
     private readonly IUiBuilder _uiBuilder;
     private readonly FileDialogManager _fileDialogManager;
     private readonly ILogger<UiService> _logger;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly WindowSystem _windowSystem;
     private readonly UiFactory _uiFactory;
 
     public UiService(ILogger<UiService> logger, IUiBuilder uiBuilder,
-        MareConfigService mareConfigService, WindowSystem windowSystem,
+        SinusConfigService sinusConfigService, WindowSystem windowSystem,
         IEnumerable<WindowMediatorSubscriberBase> windows,
         UiFactory uiFactory, FileDialogManager fileDialogManager,
-        MareMediator mareMediator) : base(logger, mareMediator)
+        SinusMediator sinusMediator) : base(logger, sinusMediator)
     {
         _logger = logger;
         _logger.LogTrace("Creating {type}", GetType().Name);
         _uiBuilder = uiBuilder;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _windowSystem = windowSystem;
         _uiFactory = uiFactory;
         _fileDialogManager = fileDialogManager;
@@ -86,7 +86,7 @@ public sealed class UiService : DisposableMediatorSubscriberBase
 
     public void ToggleMainUi()
     {
-        if (_mareConfigService.Current.HasValidSetup())
+        if (_sinusConfigService.Current.HasValidSetup())
             Mediator.Publish(new UiToggleMessage(typeof(CompactUi)));
         else
             Mediator.Publish(new UiToggleMessage(typeof(IntroUi)));
@@ -94,7 +94,7 @@ public sealed class UiService : DisposableMediatorSubscriberBase
 
     public void ToggleUi()
     {
-        if (_mareConfigService.Current.HasValidSetup())
+        if (_sinusConfigService.Current.HasValidSetup())
             Mediator.Publish(new UiToggleMessage(typeof(SettingsUi)));
         else
             Mediator.Publish(new UiToggleMessage(typeof(IntroUi)));

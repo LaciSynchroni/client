@@ -1,7 +1,7 @@
-﻿using SinusSynchronous.FileCache;
+﻿using Microsoft.Extensions.Logging;
+using SinusSynchronous.FileCache;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.WebAPI.Files;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.PlayerData.Factories;
 
@@ -11,13 +11,13 @@ public class FileDownloadManagerFactory
     private readonly FileCompactor _fileCompactor;
     private readonly FileTransferOrchestrator _fileTransferOrchestrator;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
 
-    public FileDownloadManagerFactory(ILoggerFactory loggerFactory, MareMediator mareMediator, FileTransferOrchestrator fileTransferOrchestrator,
+    public FileDownloadManagerFactory(ILoggerFactory loggerFactory, SinusMediator sinusMediator, FileTransferOrchestrator fileTransferOrchestrator,
         FileCacheManager fileCacheManager, FileCompactor fileCompactor)
     {
         _loggerFactory = loggerFactory;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         _fileTransferOrchestrator = fileTransferOrchestrator;
         _fileCacheManager = fileCacheManager;
         _fileCompactor = fileCompactor;
@@ -25,6 +25,6 @@ public class FileDownloadManagerFactory
 
     public FileDownloadManager Create()
     {
-        return new FileDownloadManager(_loggerFactory.CreateLogger<FileDownloadManager>(), _mareMediator, _fileTransferOrchestrator, _fileCacheManager, _fileCompactor);
+        return new FileDownloadManager(_loggerFactory.CreateLogger<FileDownloadManager>(), _sinusMediator, _fileTransferOrchestrator, _fileCacheManager, _fileCompactor);
     }
 }

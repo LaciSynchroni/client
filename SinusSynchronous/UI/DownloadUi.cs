@@ -1,6 +1,6 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
-using SinusSynchronous.MareConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
@@ -14,15 +14,15 @@ namespace SinusSynchronous.UI;
 
 public class DownloadUi : WindowMediatorSubscriberBase
 {
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private readonly ConcurrentDictionary<GameObjectHandler, Dictionary<string, FileDownloadStatus>> _currentDownloads = new();
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly FileUploadManager _fileTransferManager;
     private readonly UiSharedService _uiShared;
     private readonly ConcurrentDictionary<GameObjectHandler, bool> _uploadingPlayers = new();
 
-    public DownloadUi(ILogger<DownloadUi> logger, DalamudUtilService dalamudUtilService, MareConfigService configService,
-        FileUploadManager fileTransferManager, MareMediator mediator, UiSharedService uiShared, PerformanceCollectorService performanceCollectorService)
+    public DownloadUi(ILogger<DownloadUi> logger, DalamudUtilService dalamudUtilService, SinusConfigService configService,
+        FileUploadManager fileTransferManager, SinusMediator mediator, UiSharedService uiShared, PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Sinus Synchronous Downloads", performanceCollectorService)
     {
         _dalamudUtilService = dalamudUtilService;

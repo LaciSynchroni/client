@@ -24,7 +24,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
     private string _previousPassword = string.Empty;
     private string _syncshellPassword = string.Empty;
 
-    public JoinSyncshellUI(ILogger<JoinSyncshellUI> logger, MareMediator mediator,
+    public JoinSyncshellUI(ILogger<JoinSyncshellUI> logger, SinusMediator mediator,
         UiSharedService uiSharedService, ApiController apiController, PerformanceCollectorService performanceCollectorService) 
         : base(logger, mediator, "Join existing Syncshell###SinusSynchronousJoinSyncshell", performanceCollectorService)
     {

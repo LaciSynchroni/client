@@ -4,12 +4,12 @@ namespace SinusSynchronous.UI.Handlers;
 
 public class TagHandler
 {
-    public const string CustomAllTag = "Mare_All";
-    public const string CustomOfflineTag = "Mare_Offline";
-    public const string CustomOfflineSyncshellTag = "Mare_OfflineSyncshell";
-    public const string CustomOnlineTag = "Mare_Online";
-    public const string CustomUnpairedTag = "Mare_Unpaired";
-    public const string CustomVisibleTag = "Mare_Visible";
+    public const string CustomAllTag = "Sinus_All";
+    public const string CustomOfflineTag = "Sinus_Offline";
+    public const string CustomOfflineSyncshellTag = "Sinus_OfflineSyncshell";
+    public const string CustomOnlineTag = "Sinus_Online";
+    public const string CustomUnpairedTag = "Sinus_Unpaired";
+    public const string CustomVisibleTag = "Sinus_Visible";
     private readonly ServerConfigurationManager _serverConfigurationManager;
 
     public TagHandler(ServerConfigurationManager serverConfigurationManager)

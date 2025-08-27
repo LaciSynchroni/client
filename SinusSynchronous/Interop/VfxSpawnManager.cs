@@ -25,23 +25,23 @@ public unsafe class VfxSpawnManager : DisposableMediatorSubscriberBase
     [Signature("40 53 48 83 EC 20 48 8B D9 48 8B 89 ?? ?? ?? ?? 48 85 C9 74 28 33 D2 E8 ?? ?? ?? ?? 48 8B 8B ?? ?? ?? ?? 48 85 C9")]
     private readonly delegate* unmanaged<VfxStruct*, nint> _staticVfxRemove;
 
-    public VfxSpawnManager(ILogger<VfxSpawnManager> logger, IGameInteropProvider gameInteropProvider, MareMediator mareMediator)
-        : base(logger, mareMediator)
+    public VfxSpawnManager(ILogger<VfxSpawnManager> logger, IGameInteropProvider gameInteropProvider, SinusMediator sinusMediator)
+        : base(logger, sinusMediator)
     {
         gameInteropProvider.InitializeFromAttributes(this);
-        mareMediator.Subscribe<GposeStartMessage>(this, (msg) =>
+        sinusMediator.Subscribe<GposeStartMessage>(this, (msg) =>
         {
             ChangeSpawnVisibility(0f);
         });
-        mareMediator.Subscribe<GposeEndMessage>(this, (msg) =>
+        sinusMediator.Subscribe<GposeEndMessage>(this, (msg) =>
         {
             RestoreSpawnVisiblity();
         });
-        mareMediator.Subscribe<CutsceneStartMessage>(this, (msg) =>
+        sinusMediator.Subscribe<CutsceneStartMessage>(this, (msg) =>
         {
             ChangeSpawnVisibility(0f);
         });
-        mareMediator.Subscribe<CutsceneEndMessage>(this, (msg) =>
+        sinusMediator.Subscribe<CutsceneEndMessage>(this, (msg) =>
         {
             RestoreSpawnVisiblity();
         });

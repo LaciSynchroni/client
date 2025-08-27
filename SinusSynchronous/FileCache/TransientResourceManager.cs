@@ -1,6 +1,6 @@
 ﻿using SinusSynchronous.API.Data.Enum;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Configurations;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Configurations;
 using SinusSynchronous.PlayerData.Data;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services;
@@ -26,7 +26,7 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     public bool IsTransientRecording { get; private set; } = false;
 
     public TransientResourceManager(ILogger<TransientResourceManager> logger, TransientConfigService configurationService,
-            DalamudUtilService dalamudUtil, MareMediator mediator) : base(logger, mediator)
+            DalamudUtilService dalamudUtil, SinusMediator mediator) : base(logger, mediator)
     {
         _configurationService = configurationService;
         _dalamudUtil = dalamudUtil;

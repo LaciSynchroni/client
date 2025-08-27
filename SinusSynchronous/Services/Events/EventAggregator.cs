@@ -1,7 +1,7 @@
-﻿using SinusSynchronous.Services.Mediator;
-using SinusSynchronous.Utils;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.Utils;
 
 namespace SinusSynchronous.Services.Events;
 
@@ -18,7 +18,7 @@ public class EventAggregator : MediatorSubscriberBase, IHostedService
     private string CurrentLogName => $"{DateTime.Now:yyyy-MM-dd}-events.log";
     private DateTime _currentTime;
 
-    public EventAggregator(string configDirectory, ILogger<EventAggregator> logger, MareMediator mareMediator) : base(logger, mareMediator)
+    public EventAggregator(string configDirectory, ILogger<EventAggregator> logger, SinusMediator sinusMediator) : base(logger, sinusMediator)
     {
         Mediator.Subscribe<EventMessage>(this, (msg) =>
         {

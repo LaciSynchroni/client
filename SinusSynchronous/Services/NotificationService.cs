@@ -1,12 +1,12 @@
 ﻿using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin.Services;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NotificationType = SinusSynchronous.MareConfiguration.Models.NotificationType;
+using NotificationType = SinusSynchronous.SinusConfiguration.Models.NotificationType;
 
 namespace SinusSynchronous.Services;
 
@@ -15,12 +15,12 @@ public class NotificationService : DisposableMediatorSubscriberBase, IHostedServ
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly INotificationManager _notificationManager;
     private readonly IChatGui _chatGui;
-    private readonly MareConfigService _configurationService;
+    private readonly SinusConfigService _configurationService;
 
-    public NotificationService(ILogger<NotificationService> logger, MareMediator mediator,
+    public NotificationService(ILogger<NotificationService> logger, SinusMediator mediator,
         DalamudUtilService dalamudUtilService,
         INotificationManager notificationManager,
-        IChatGui chatGui, MareConfigService configurationService) : base(logger, mediator)
+        IChatGui chatGui, SinusConfigService configurationService) : base(logger, mediator)
     {
         _dalamudUtilService = dalamudUtilService;
         _notificationManager = notificationManager;

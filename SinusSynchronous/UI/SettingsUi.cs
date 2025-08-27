@@ -11,13 +11,13 @@ using SinusSynchronous.API.Data.Comparer;
 using SinusSynchronous.API.Routes;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
 using SinusSynchronous.WebAPI.Files;
@@ -38,7 +38,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly CacheMonitor _cacheMonitor;
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private readonly ConcurrentDictionary<GameObjectHandler, Dictionary<string, FileDownloadStatus>> _currentDownloads = new();
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly HttpClient _httpClient;
@@ -67,11 +67,11 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private bool _wasOpen = false;
 
     public SettingsUi(ILogger<SettingsUi> logger,
-        UiSharedService uiShared, MareConfigService configService,
+        UiSharedService uiShared, SinusConfigService configService,
         PairManager pairManager,
         ServerConfigurationManager serverConfigurationManager,
         PlayerPerformanceConfigService playerPerformanceConfigService,
-        MareMediator mediator, PerformanceCollectorService performanceCollector,
+        SinusMediator mediator, PerformanceCollectorService performanceCollector,
         FileUploadManager fileTransferManager,
         FileTransferOrchestrator fileTransferOrchestrator,
         FileCacheManager fileCacheManager,
@@ -661,21 +661,21 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
 
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Monitoring Sinus Storage Folder: " + (_cacheMonitor.MareWatcher?.Path ?? "Not monitoring"));
-        if (string.IsNullOrEmpty(_cacheMonitor.MareWatcher?.Path))
+        ImGui.TextUnformatted("Monitoring Sinus Storage Folder: " + (_cacheMonitor.SinusWatcher?.Path ?? "Not monitoring"));
+        if (string.IsNullOrEmpty(_cacheMonitor.SinusWatcher?.Path))
         {
             ImGui.SameLine();
-            using var id = ImRaii.PushId("mareMonitor");
+            using var id = ImRaii.PushId("sinusMonitor");
             if (_uiShared.IconTextButton(FontAwesomeIcon.ArrowsToCircle, "Try to reinitialize Monitor"))
             {
-                _cacheMonitor.StartMareWatcher(_configService.Current.CacheFolder);
+                _cacheMonitor.StartSinusWatcher(_configService.Current.CacheFolder);
             }
         }
-        if (_cacheMonitor.MareWatcher == null || _cacheMonitor.PenumbraWatcher == null)
+        if (_cacheMonitor.SinusWatcher == null || _cacheMonitor.PenumbraWatcher == null)
         {
             if (_uiShared.IconTextButton(FontAwesomeIcon.Play, "Resume Monitoring"))
             {
-                _cacheMonitor.StartMareWatcher(_configService.Current.CacheFolder);
+                _cacheMonitor.StartSinusWatcher(_configService.Current.CacheFolder);
                 _cacheMonitor.StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
                 _cacheMonitor.InvokeScan();
             }
@@ -693,7 +693,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 }
             }
             UiSharedService.AttachToolTip("Stops the monitoring for both Penumbra and Sinus Storage. "
-                + "Do not stop the monitoring, unless you plan to move the Penumbra and Sinus Storage folders, to ensure correct functionality of Mare." + Environment.NewLine
+                + "Do not stop the monitoring, unless you plan to move the Penumbra and Sinus Storage folders, to ensure correct functionality of Sinus." + Environment.NewLine
                 + "If you stop the monitoring to move folders around, resume it after you are finished moving the files."
                 + UiSharedService.TooltipSeparator + "Hold CTRL to enable this button");
         }

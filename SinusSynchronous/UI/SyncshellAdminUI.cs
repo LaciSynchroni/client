@@ -31,7 +31,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     private Task<int>? _pruneTask;
     private int _pruneDays = 14;
 
-    public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, MareMediator mediator, ApiController apiController,
+    public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, SinusMediator mediator, ApiController apiController,
         UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Syncshell Admin Panel (" + groupFullInfo.GroupAliasOrGID + ")", performanceCollectorService)
     {

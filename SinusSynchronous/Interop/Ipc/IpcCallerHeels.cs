@@ -1,15 +1,15 @@
 ﻿using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.Interop.Ipc;
 
 public sealed class IpcCallerHeels : IIpcCaller
 {
     private readonly ILogger<IpcCallerHeels> _logger;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly ICallGateSubscriber<(int, int)> _heelsGetApiVersion;
     private readonly ICallGateSubscriber<string> _heelsGetOffset;
@@ -17,10 +17,10 @@ public sealed class IpcCallerHeels : IIpcCaller
     private readonly ICallGateSubscriber<int, string, object?> _heelsRegisterPlayer;
     private readonly ICallGateSubscriber<int, object?> _heelsUnregisterPlayer;
 
-    public IpcCallerHeels(ILogger<IpcCallerHeels> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil, MareMediator mareMediator)
+    public IpcCallerHeels(ILogger<IpcCallerHeels> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil, SinusMediator sinusMediator)
     {
         _logger = logger;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         _dalamudUtil = dalamudUtil;
         _heelsGetApiVersion = pi.GetIpcSubscriber<(int, int)>("SimpleHeels.ApiVersion");
         _heelsGetOffset = pi.GetIpcSubscriber<string>("SimpleHeels.GetLocalPlayer");
@@ -37,7 +37,7 @@ public sealed class IpcCallerHeels : IIpcCaller
 
     private void HeelsOffsetChange(string offset)
     {
-        _mareMediator.Publish(new HeelsOffsetMessage());
+        _sinusMediator.Publish(new HeelsOffsetMessage());
     }
 
     public async Task<string> GetOffsetAsync()

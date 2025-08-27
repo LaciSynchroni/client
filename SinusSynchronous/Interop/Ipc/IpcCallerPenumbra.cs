@@ -1,12 +1,12 @@
 ﻿using Dalamud.Plugin;
-using SinusSynchronous.MareConfiguration.Models;
-using SinusSynchronous.PlayerData.Handlers;
-using SinusSynchronous.Services;
-using SinusSynchronous.Services.Mediator;
 using Microsoft.Extensions.Logging;
 using Penumbra.Api.Enums;
 using Penumbra.Api.Helpers;
 using Penumbra.Api.IpcSubscribers;
+using SinusSynchronous.PlayerData.Handlers;
+using SinusSynchronous.Services;
+using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration.Models;
 using System.Collections.Concurrent;
 
 namespace SinusSynchronous.Interop.Ipc;
@@ -15,7 +15,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
 {
     private readonly IDalamudPluginInterface _pi;
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
     private readonly RedrawManager _redrawManager;
     private bool _shownPenumbraUnavailable = false;
     private string? _penumbraModDirectory;
@@ -27,7 +27,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
             if (!string.Equals(_penumbraModDirectory, value, StringComparison.Ordinal))
             {
                 _penumbraModDirectory = value;
-                _mareMediator.Publish(new PenumbraDirectoryChangedMessage(_penumbraModDirectory));
+                _sinusMediator.Publish(new PenumbraDirectoryChangedMessage(_penumbraModDirectory));
             }
         }
     }
@@ -54,11 +54,11 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private readonly GetGameObjectResourcePaths _penumbraResourcePaths;
 
     public IpcCallerPenumbra(ILogger<IpcCallerPenumbra> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
-        MareMediator mareMediator, RedrawManager redrawManager) : base(logger, mareMediator)
+        SinusMediator sinusMediator, RedrawManager redrawManager) : base(logger, sinusMediator)
     {
         _pi = pi;
         _dalamudUtil = dalamudUtil;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         _redrawManager = redrawManager;
         _penumbraInit = Initialized.Subscriber(pi, PenumbraInit);
         _penumbraDispose = Disposed.Subscriber(pi, PenumbraDispose);
@@ -76,7 +76,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         _penumbraModSettingChanged = ModSettingChanged.Subscriber(pi, (change, arg1, arg, b) =>
         {
             if (change == ModSettingChange.EnableState)
-                _mareMediator.Publish(new PenumbraModSettingChangedMessage());
+                _sinusMediator.Publish(new PenumbraModSettingChangedMessage());
         });
         _penumbraConvertTextureFile = new ConvertTextureFile(pi);
         _penumbraResourcePaths = new GetGameObjectResourcePaths(pi);
@@ -125,7 +125,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
             if (!penumbraAvailable && !_shownPenumbraUnavailable)
             {
                 _shownPenumbraUnavailable = true;
-                _mareMediator.Publish(new NotificationMessage("Penumbra inactive",
+                _sinusMediator.Publish(new NotificationMessage("Penumbra inactive",
                     "Your Penumbra installation is not active or out of date. Update Penumbra and/or the Enable Mods setting in Penumbra to continue to use Sinus. If you just updated Penumbra, ignore this message.",
                     NotificationType.Error));
             }
@@ -173,7 +173,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     {
         if (!APIAvailable) return;
 
-        _mareMediator.Publish(new HaltScanMessage(nameof(ConvertTextureFiles)));
+        _sinusMediator.Publish(new HaltScanMessage(nameof(ConvertTextureFiles)));
         int currentTexture = 0;
         foreach (var texture in textures)
         {
@@ -200,7 +200,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
                 }
             }
         }
-        _mareMediator.Publish(new ResumeScanMessage(nameof(ConvertTextureFiles)));
+        _sinusMediator.Publish(new ResumeScanMessage(nameof(ConvertTextureFiles)));
 
         await _dalamudUtil.RunOnFrameworkThread(async () =>
         {
@@ -223,7 +223,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
                 logger.LogError("Failed to create temporary collection for {collName}. Penumbra returned the error code {_error} ({_errorCode}).", collName, nameof(_error), _error);
                 return Guid.Empty;
             }
-            
+
             logger.LogTrace("Creating Temp Collection {collName}, GUID: {collId}", collName, collId);
             return collId;
 
@@ -322,7 +322,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         }
         else
         {
-            _mareMediator.Publish(new PenumbraRedrawMessage(objectAddress, objectTableIndex, wasRequested));
+            _sinusMediator.Publish(new PenumbraRedrawMessage(objectAddress, objectTableIndex, wasRequested));
         }
     }
 
@@ -330,21 +330,21 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     {
         if (ptr != IntPtr.Zero && string.Compare(arg1, arg2, ignoreCase: true, System.Globalization.CultureInfo.InvariantCulture) != 0)
         {
-            _mareMediator.Publish(new PenumbraResourceLoadMessage(ptr, arg1, arg2));
+            _sinusMediator.Publish(new PenumbraResourceLoadMessage(ptr, arg1, arg2));
         }
     }
 
     private void PenumbraDispose()
     {
         _redrawManager.Cancel();
-        _mareMediator.Publish(new PenumbraDisposedMessage());
+        _sinusMediator.Publish(new PenumbraDisposedMessage());
     }
 
     private void PenumbraInit()
     {
         APIAvailable = true;
         ModDirectory = _penumbraResolveModDir.Invoke();
-        _mareMediator.Publish(new PenumbraInitializedMessage());
+        _sinusMediator.Publish(new PenumbraInitializedMessage());
         _penumbraRedraw!.Invoke(0, setting: RedrawType.Redraw);
     }
 }

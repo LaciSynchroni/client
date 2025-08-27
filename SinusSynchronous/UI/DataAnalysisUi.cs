@@ -3,14 +3,14 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data.Enum;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.Utils;
-using Microsoft.Extensions.Logging;
 using System.Numerics;
 
 namespace SinusSynchronous.UI;
@@ -39,12 +39,12 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
     private bool _showModal = false;
     private CancellationTokenSource _transientRecordCts = new();
 
-    public DataAnalysisUi(ILogger<DataAnalysisUi> logger, MareMediator mediator,
+    public DataAnalysisUi(ILogger<DataAnalysisUi> logger, SinusMediator mediator,
         CharacterAnalyzer characterAnalyzer, IpcManager ipcManager,
         PerformanceCollectorService performanceCollectorService, UiSharedService uiSharedService,
         PlayerPerformanceConfigService playerPerformanceConfig, TransientResourceManager transientResourceManager,
         TransientConfigService transientConfigService)
-        : base(logger, mediator, "Mare Character Data Analysis", performanceCollectorService)
+        : base(logger, mediator, "Sinus Character Data Analysis", performanceCollectorService)
     {
         _characterAnalyzer = characterAnalyzer;
         _ipcManager = ipcManager;

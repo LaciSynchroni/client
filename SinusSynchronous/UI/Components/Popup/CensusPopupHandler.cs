@@ -27,7 +27,7 @@ public class CensusPopupHandler : IPopupHandler
         using (_uiSharedService.UidFont.Push())
         {
             start = ImGui.GetCursorPosY() - ImGui.CalcTextSize("Sinus Census Data").Y;
-            UiSharedService.TextWrapped("Mare Census Participation");
+            UiSharedService.TextWrapped("Sinus Census Participation");
         }
         ImGuiHelpers.ScaledDummy(5f);
         UiSharedService.TextWrapped("If you are seeing this popup you are updating from a Sinus version that did not collect census data. Please read the following carefully.");

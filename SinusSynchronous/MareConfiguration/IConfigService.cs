@@ -1,8 +1,8 @@
-﻿using SinusSynchronous.MareConfiguration.Configurations;
+﻿using SinusSynchronous.SinusConfiguration.Configurations;
 
-namespace SinusSynchronous.MareConfiguration;
+namespace SinusSynchronous.SinusConfiguration;
 
-public interface IConfigService<out T> : IDisposable where T : IMareConfiguration
+public interface IConfigService<out T> : IDisposable where T : ISinusConfiguration
 {
     T Current { get; }
     string ConfigurationName { get; }

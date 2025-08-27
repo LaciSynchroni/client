@@ -1,4 +1,4 @@
-﻿namespace SinusSynchronous.MareConfiguration.Models.Obsolete;
+﻿namespace SinusSynchronous.SinusConfiguration.Models.Obsolete;
 
 [Serializable]
 [Obsolete("Deprecated, use ServerStorage")]

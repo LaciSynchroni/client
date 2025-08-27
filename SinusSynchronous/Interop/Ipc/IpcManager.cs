@@ -5,7 +5,7 @@ namespace SinusSynchronous.Interop.Ipc;
 
 public sealed partial class IpcManager : DisposableMediatorSubscriberBase
 {
-    public IpcManager(ILogger<IpcManager> logger, MareMediator mediator,
+    public IpcManager(ILogger<IpcManager> logger, SinusMediator mediator,
         IpcCallerPenumbra penumbraIpc, IpcCallerGlamourer glamourerIpc, IpcCallerCustomize customizeIpc, IpcCallerHeels heelsIpc,
         IpcCallerHonorific honorificIpc, IpcCallerMoodles moodlesIpc, IpcCallerPetNames ipcCallerPetNames, IpcCallerBrio ipcCallerBrio) : base(logger, mediator)
     {

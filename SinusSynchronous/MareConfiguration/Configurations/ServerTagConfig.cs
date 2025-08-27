@@ -1,8 +1,8 @@
-﻿using SinusSynchronous.MareConfiguration.Models;
+﻿using SinusSynchronous.SinusConfiguration.Models;
 
-namespace SinusSynchronous.MareConfiguration.Configurations;
+namespace SinusSynchronous.SinusConfiguration.Configurations;
 
-public class ServerTagConfig : IMareConfiguration
+public class ServerTagConfig : ISinusConfiguration
 {
     public Dictionary<string, ServerTagStorage> ServerTagStorage { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int Version { get; set; } = 0;

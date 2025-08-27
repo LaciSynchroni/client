@@ -1,9 +1,9 @@
 ﻿using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.Interop.Ipc;
 
@@ -16,14 +16,14 @@ public sealed class IpcCallerMoodles : IIpcCaller
     private readonly ICallGateSubscriber<nint, object> _moodlesRevertStatus;
     private readonly ILogger<IpcCallerMoodles> _logger;
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
 
     public IpcCallerMoodles(ILogger<IpcCallerMoodles> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
-        MareMediator mareMediator)
+        SinusMediator sinusMediator)
     {
         _logger = logger;
         _dalamudUtil = dalamudUtil;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
 
         _moodlesApiVersion = pi.GetIpcSubscriber<int>("Moodles.Version");
         _moodlesOnChange = pi.GetIpcSubscriber<IPlayerCharacter, object>("Moodles.StatusManagerModified");
@@ -38,7 +38,7 @@ public sealed class IpcCallerMoodles : IIpcCaller
 
     private void OnMoodlesChange(IPlayerCharacter character)
     {
-        _mareMediator.Publish(new MoodlesMessage(character.Address));
+        _sinusMediator.Publish(new MoodlesMessage(character.Address));
     }
 
     public bool APIAvailable { get; private set; } = false;

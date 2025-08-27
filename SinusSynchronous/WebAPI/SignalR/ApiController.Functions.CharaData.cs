@@ -14,7 +14,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Creating new Character Data");
-            return await _mareHub!.InvokeAsync<CharaDataFullDto?>(nameof(CharaDataCreate)).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<CharaDataFullDto?>(nameof(CharaDataCreate)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -30,7 +30,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Updating chara data for {id}", updateDto.Id);
-            return await _mareHub!.InvokeAsync<CharaDataFullDto?>(nameof(CharaDataUpdate), updateDto).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<CharaDataFullDto?>(nameof(CharaDataUpdate), updateDto).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -46,7 +46,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Deleting chara data for {id}", id);
-            return await _mareHub!.InvokeAsync<bool>(nameof(CharaDataDelete), id).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<bool>(nameof(CharaDataDelete), id).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -62,7 +62,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Getting metainfo for chara data {id}", id);
-            return await _mareHub!.InvokeAsync<CharaDataMetaInfoDto?>(nameof(CharaDataGetMetainfo), id).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<CharaDataMetaInfoDto?>(nameof(CharaDataGetMetainfo), id).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -78,7 +78,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Attempting to restore chara data {id}", id);
-            return await _mareHub!.InvokeAsync<CharaDataFullDto?>(nameof(CharaDataAttemptRestore), id).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<CharaDataFullDto?>(nameof(CharaDataAttemptRestore), id).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -94,7 +94,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Getting all own chara data");
-            return await _mareHub!.InvokeAsync<List<CharaDataFullDto>>(nameof(CharaDataGetOwn)).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<List<CharaDataFullDto>>(nameof(CharaDataGetOwn)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -110,7 +110,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Getting all own chara data");
-            return await _mareHub!.InvokeAsync<List<CharaDataMetaInfoDto>>(nameof(CharaDataGetShared)).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<List<CharaDataMetaInfoDto>>(nameof(CharaDataGetShared)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -126,7 +126,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Getting download chara data for {id}", id);
-            return await _mareHub!.InvokeAsync<CharaDataDownloadDto>(nameof(CharaDataDownload), id).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<CharaDataDownloadDto>(nameof(CharaDataDownload), id).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -142,7 +142,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Creating GPose Lobby");
-            return await _mareHub!.InvokeAsync<string>(nameof(GposeLobbyCreate)).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<string>(nameof(GposeLobbyCreate)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -158,7 +158,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Leaving current GPose Lobby");
-            return await _mareHub!.InvokeAsync<bool>(nameof(GposeLobbyLeave)).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<bool>(nameof(GposeLobbyLeave)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -174,7 +174,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Joining GPose Lobby {id}", lobbyId);
-            return await _mareHub!.InvokeAsync<List<UserData>>(nameof(GposeLobbyJoin), lobbyId).ConfigureAwait(false);
+            return await _sinusHub!.InvokeAsync<List<UserData>>(nameof(GposeLobbyJoin), lobbyId).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -190,7 +190,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Sending Chara Data to GPose Lobby");
-            await _mareHub!.InvokeAsync(nameof(GposeLobbyPushCharacterData), charaDownloadDto).ConfigureAwait(false);
+            await _sinusHub!.InvokeAsync(nameof(GposeLobbyPushCharacterData), charaDownloadDto).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -205,7 +205,7 @@ public partial class ApiController
         try
         {
             Logger.LogDebug("Sending Pose Data to GPose Lobby");
-            await _mareHub!.InvokeAsync(nameof(GposeLobbyPushPoseData), poseData).ConfigureAwait(false);
+            await _sinusHub!.InvokeAsync(nameof(GposeLobbyPushPoseData), poseData).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -219,7 +219,7 @@ public partial class ApiController
 
         try
         {
-            await _mareHub!.InvokeAsync(nameof(GposeLobbyPushWorldData), worldData).ConfigureAwait(false);
+            await _sinusHub!.InvokeAsync(nameof(GposeLobbyPushWorldData), worldData).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

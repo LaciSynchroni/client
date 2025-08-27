@@ -1,5 +1,6 @@
 ﻿using Dalamud.Game.ClientState.Objects.SubKinds;
 using K4os.Compression.LZ4.Legacy;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Enum;
 using SinusSynchronous.API.Dto.CharaData;
@@ -10,7 +11,6 @@ using SinusSynchronous.Services.CharaData;
 using SinusSynchronous.Services.CharaData.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI.Files;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.Services;
 
@@ -22,7 +22,7 @@ public sealed class CharaDataFileHandler : IDisposable
     private readonly FileUploadManager _fileUploadManager;
     private readonly GameObjectHandlerFactory _gameObjectHandlerFactory;
     private readonly ILogger<CharaDataFileHandler> _logger;
-    private readonly MareCharaFileDataFactory _mareCharaFileDataFactory;
+    private readonly SinusCharaFileDataFactory _sinusCharaFileDataFactory;
     private readonly PlayerDataFactory _playerDataFactory;
     private int _globalFileCounter = 0;
 
@@ -36,7 +36,7 @@ public sealed class CharaDataFileHandler : IDisposable
         _dalamudUtilService = dalamudUtilService;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
         _playerDataFactory = playerDataFactory;
-        _mareCharaFileDataFactory = new(fileCacheManager);
+        _sinusCharaFileDataFactory = new(fileCacheManager);
     }
 
     public void ComputeMissingFiles(CharaDataDownloadDto charaDataDownloadDto, out Dictionary<string, string> modPaths, out List<FileReplacementData> missingFiles)
@@ -132,16 +132,16 @@ public sealed class CharaDataFileHandler : IDisposable
         }
     }
 
-    public Task<(MareCharaFileHeader loadedCharaFile, long expectedLength)> LoadCharaFileHeader(string filePath)
+    public Task<(SinusCharaFileHeader loadedCharaFile, long expectedLength)> LoadCharaFileHeader(string filePath)
     {
         try
         {
             using var unwrapped = File.OpenRead(filePath);
             using var lz4Stream = new LZ4Stream(unwrapped, LZ4StreamMode.Decompress, LZ4StreamFlags.HighCompression);
             using var reader = new BinaryReader(lz4Stream);
-            var loadedCharaFile = MareCharaFileHeader.FromBinaryReader(filePath, reader);
+            var loadedCharaFile = SinusCharaFileHeader.FromBinaryReader(filePath, reader);
 
-            _logger.LogInformation("Read Mare Chara File");
+            _logger.LogInformation("Read Sinus Chara File");
             _logger.LogInformation("Version: {ver}", (loadedCharaFile?.Version ?? -1));
             long expectedLength = 0;
             if (loadedCharaFile != null)
@@ -181,13 +181,13 @@ public sealed class CharaDataFileHandler : IDisposable
         }
     }
 
-    public Dictionary<string, string> McdfExtractFiles(MareCharaFileHeader? charaFileHeader, long expectedLength, List<string> extractedFiles)
+    public Dictionary<string, string> McdfExtractFiles(SinusCharaFileHeader? charaFileHeader, long expectedLength, List<string> extractedFiles)
     {
         if (charaFileHeader == null) return [];
 
         using var lz4Stream = new LZ4Stream(File.OpenRead(charaFileHeader.FilePath), LZ4StreamMode.Decompress, LZ4StreamFlags.HighCompression);
         using var reader = new BinaryReader(lz4Stream);
-        MareCharaFileHeader.AdvanceReaderToData(reader);
+        SinusCharaFileHeader.AdvanceReaderToData(reader);
 
         long totalRead = 0;
         Dictionary<string, string> gamePathToFilePath = new(StringComparer.Ordinal);
@@ -256,8 +256,8 @@ public sealed class CharaDataFileHandler : IDisposable
             var data = await CreatePlayerData().ConfigureAwait(false);
             if (data == null) return;
 
-            var mareCharaFileData = _mareCharaFileDataFactory.Create(description, data);
-            MareCharaFileHeader output = new(MareCharaFileHeader.CurrentVersion, mareCharaFileData);
+            var sinusCharaFileData = _sinusCharaFileDataFactory.Create(description, data);
+            SinusCharaFileHeader output = new(SinusCharaFileHeader.CurrentVersion, sinusCharaFileData);
 
             using var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
             using var lz4 = new LZ4Stream(fs, LZ4StreamMode.Compress, LZ4StreamFlags.HighCompression);
@@ -291,7 +291,7 @@ public sealed class CharaDataFileHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failure Saving Mare Chara File, deleting output");
+            _logger.LogError(ex, "Failure Saving Sinus Chara File, deleting output");
             File.Delete(tempFilePath);
         }
     }

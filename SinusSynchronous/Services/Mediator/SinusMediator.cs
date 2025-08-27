@@ -1,29 +1,29 @@
-﻿using SinusSynchronous.MareConfiguration;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.SinusConfiguration;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 
 namespace SinusSynchronous.Services.Mediator;
 
-public sealed class MareMediator : IHostedService
+public sealed class SinusMediator : IHostedService
 {
     private readonly object _addRemoveLock = new();
     private readonly ConcurrentDictionary<object, DateTime> _lastErrorTime = [];
-    private readonly ILogger<MareMediator> _logger;
+    private readonly ILogger<SinusMediator> _logger;
     private readonly CancellationTokenSource _loopCts = new();
     private readonly ConcurrentQueue<MessageBase> _messageQueue = new();
     private readonly PerformanceCollectorService _performanceCollector;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly ConcurrentDictionary<Type, HashSet<SubscriberAction>> _subscriberDict = [];
     private bool _processQueue = false;
     private readonly ConcurrentDictionary<Type, MethodInfo?> _genericExecuteMethods = new();
-    public MareMediator(ILogger<MareMediator> logger, PerformanceCollectorService performanceCollector, MareConfigService mareConfigService)
+    public SinusMediator(ILogger<SinusMediator> logger, PerformanceCollectorService performanceCollector, SinusConfigService sinusConfigService)
     {
         _logger = logger;
         _performanceCollector = performanceCollector;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
     }
 
     public void PrintSubscriberInfo()
@@ -59,7 +59,7 @@ public sealed class MareMediator : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting MareMediator");
+        _logger.LogInformation("Starting SinusMediator");
 
         _ = Task.Run(async () =>
         {
@@ -83,7 +83,7 @@ public sealed class MareMediator : IHostedService
             }
         });
 
-        _logger.LogInformation("Started MareMediator");
+        _logger.LogInformation("Started SinusMediator");
 
         return Task.CompletedTask;
     }
@@ -164,7 +164,7 @@ public sealed class MareMediator : IHostedService
         {
             try
             {
-                if (_mareConfigService.Current.LogPerformance)
+                if (_sinusConfigService.Current.LogPerformance)
                 {
                     var isSameThread = message.KeepThreadContext ? "$" : string.Empty;
                     _performanceCollector.LogPerformance(this, $"{isSameThread}Execute>{message.GetType().Name}+{subscriber.Subscriber.GetType().Name}>{subscriber.Subscriber}",

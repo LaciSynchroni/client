@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.MareConfiguration.Models;
+﻿using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -6,10 +6,10 @@ namespace SinusSynchronous.WebAPI.SignalR.Utils;
 
 public class ForeverRetryPolicy : IRetryPolicy
 {
-    private readonly MareMediator _mediator;
+    private readonly SinusMediator _mediator;
     private bool _sentDisconnected = false;
 
-    public ForeverRetryPolicy(MareMediator mediator)
+    public ForeverRetryPolicy(SinusMediator mediator)
     {
         _mediator = mediator;
     }

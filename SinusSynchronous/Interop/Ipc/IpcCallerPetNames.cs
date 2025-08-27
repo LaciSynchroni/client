@@ -1,9 +1,9 @@
 ﻿using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.Interop.Ipc;
 
@@ -11,7 +11,7 @@ public sealed class IpcCallerPetNames : IIpcCaller
 {
     private readonly ILogger<IpcCallerPetNames> _logger;
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
 
     private readonly ICallGateSubscriber<object> _petnamesReady;
     private readonly ICallGateSubscriber<object> _petnamesDisposing;
@@ -24,11 +24,11 @@ public sealed class IpcCallerPetNames : IIpcCaller
     private readonly ICallGateSubscriber<ushort, object> _clearPlayerData;
 
     public IpcCallerPetNames(ILogger<IpcCallerPetNames> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
-        MareMediator mareMediator)
+        SinusMediator sinusMediator)
     {
         _logger = logger;
         _dalamudUtil = dalamudUtil;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
 
         _petnamesReady = pi.GetIpcSubscriber<object>("PetRenamer.Ready");
         _petnamesDisposing = pi.GetIpcSubscriber<object>("PetRenamer.Disposing");
@@ -68,12 +68,12 @@ public sealed class IpcCallerPetNames : IIpcCaller
     private void OnPetNicknamesReady()
     {
         CheckAPI();
-        _mareMediator.Publish(new PetNamesReadyMessage());
+        _sinusMediator.Publish(new PetNamesReadyMessage());
     }
 
     private void OnPetNicknamesDispose()
     {
-        _mareMediator.Publish(new PetNamesMessage(string.Empty));
+        _sinusMediator.Publish(new PetNamesMessage(string.Empty));
     }
 
     public string GetLocalNames()
@@ -84,7 +84,7 @@ public sealed class IpcCallerPetNames : IIpcCaller
         {
             string localNameData = _getPlayerData.InvokeFunc();
             return string.IsNullOrEmpty(localNameData) ? string.Empty : localNameData;
-        } 
+        }
         catch (Exception e)
         {
             _logger.LogWarning(e, "Could not obtain Pet Nicknames data");
@@ -146,7 +146,7 @@ public sealed class IpcCallerPetNames : IIpcCaller
 
     private void OnLocalPetNicknamesDataChange(string data)
     {
-        _mareMediator.Publish(new PetNamesMessage(data));
+        _sinusMediator.Publish(new PetNamesMessage(data));
     }
 
     public void Dispose()

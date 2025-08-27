@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace SinusSynchronous.Services.CharaData.Models;
 
-public record MareCharaFileData
+public record SinusCharaFileData
 {
     public string Description { get; set; } = string.Empty;
     public string GlamourerData { get; set; } = string.Empty;
@@ -15,8 +15,8 @@ public record MareCharaFileData
     public List<FileData> Files { get; set; } = [];
     public List<FileSwap> FileSwaps { get; set; } = [];
 
-    public MareCharaFileData() { }
-    public MareCharaFileData(FileCacheManager manager, string description, CharacterData dto)
+    public SinusCharaFileData() { }
+    public SinusCharaFileData(FileCacheManager manager, string description, CharacterData dto)
     {
         Description = description;
 
@@ -59,9 +59,9 @@ public record MareCharaFileData
         return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this));
     }
 
-    public static MareCharaFileData FromByteArray(byte[] data)
+    public static SinusCharaFileData FromByteArray(byte[] data)
     {
-        return JsonSerializer.Deserialize<MareCharaFileData>(Encoding.UTF8.GetString(data))!;
+        return JsonSerializer.Deserialize<SinusCharaFileData>(Encoding.UTF8.GetString(data))!;
     }
 
     public record FileSwap(IEnumerable<string> GamePaths, string FileSwapPath);

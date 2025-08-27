@@ -4,12 +4,12 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Dto.User;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.WebAPI;
-using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -19,7 +19,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly FileDialogManager _fileDialogManager;
-    private readonly MareProfileManager _mareProfileManager;
+    private readonly SinusProfileManager _sinusProfileManager;
     private readonly UiSharedService _uiSharedService;
     private bool _adjustedForScollBarsLocalProfile = false;
     private bool _adjustedForScollBarsOnlineProfile = false;
@@ -30,9 +30,9 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     private bool _showFileDialogError = false;
     private bool _wasOpen;
 
-    public EditProfileUi(ILogger<EditProfileUi> logger, MareMediator mediator,
+    public EditProfileUi(ILogger<EditProfileUi> logger, SinusMediator mediator,
         ApiController apiController, UiSharedService uiSharedService, FileDialogManager fileDialogManager,
-        MareProfileManager mareProfileManager, PerformanceCollectorService performanceCollectorService)
+        SinusProfileManager sinusProfileManager, PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Sinus Synchronous Edit Profile###SinusSynchronousEditProfileUI", performanceCollectorService)
     {
         IsOpen = false;
@@ -44,7 +44,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         _apiController = apiController;
         _uiSharedService = uiSharedService;
         _fileDialogManager = fileDialogManager;
-        _mareProfileManager = mareProfileManager;
+        _sinusProfileManager = sinusProfileManager;
 
         Mediator.Subscribe<GposeStartMessage>(this, (_) => { _wasOpen = IsOpen; IsOpen = false; });
         Mediator.Subscribe<GposeEndMessage>(this, (_) => IsOpen = _wasOpen);
@@ -63,7 +63,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     {
         _uiSharedService.BigText("Current Profile (as saved on server)");
 
-        var profile = _mareProfileManager.GetMareProfile(new UserData(_apiController.UID));
+        var profile = _sinusProfileManager.GetSinusProfile(new UserData(_apiController.UID));
 
         if (profile.IsFlagged)
         {

@@ -1,11 +1,11 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.Interop.Ipc;
 
@@ -19,15 +19,15 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
     private ICallGateProvider<List<nint>>? _handledGameAddresses;
     private readonly List<GameObjectHandler> _activeGameObjectHandlers = [];
 
-    public MareMediator Mediator { get; init; }
+    public SinusMediator Mediator { get; init; }
 
     public IpcProvider(ILogger<IpcProvider> logger, IDalamudPluginInterface pi,
-        CharaDataManager charaDataManager, MareMediator mareMediator)
+        CharaDataManager charaDataManager, SinusMediator sinusMediator)
     {
         _logger = logger;
         _pi = pi;
         _charaDataManager = charaDataManager;
-        Mediator = mareMediator;
+        Mediator = sinusMediator;
 
         Mediator.Subscribe<GameObjectHandlerCreatedMessage>(this, (msg) =>
         {

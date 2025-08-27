@@ -1,10 +1,10 @@
-﻿using SinusSynchronous.API.Routes;
-using SinusSynchronous.MareConfiguration.Models;
+﻿using Microsoft.Extensions.Logging;
+using SinusSynchronous.API.Routes;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
@@ -20,13 +20,13 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
     private readonly ServerConfigurationManager _serverManager;
     private readonly ConcurrentDictionary<JwtIdentifier, string> _tokenCache = new();
 
-    public TokenProvider(ILogger<TokenProvider> logger, ServerConfigurationManager serverManager, DalamudUtilService dalamudUtil, MareMediator mareMediator, HttpClient httpClient)
+    public TokenProvider(ILogger<TokenProvider> logger, ServerConfigurationManager serverManager, DalamudUtilService dalamudUtil, SinusMediator sinusMediator, HttpClient httpClient)
     {
         _logger = logger;
         _serverManager = serverManager;
         _dalamudUtil = dalamudUtil;
         var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        Mediator = mareMediator;
+        Mediator = sinusMediator;
         _httpClient = httpClient;
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) =>
         {
@@ -40,7 +40,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
         });
     }
 
-    public MareMediator Mediator { get; }
+    public SinusMediator Mediator { get; }
 
     private JwtIdentifier? _lastJwtIdentifier;
 
@@ -121,7 +121,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                     Mediator.Publish(new NotificationMessage("Error generating token", "Your authentication token could not be generated. Check Sinus Main UI (/sinus in chat) to see the error message.",
                     NotificationType.Error));
                 Mediator.Publish(new DisconnectedMessage());
-                throw new MareAuthFailureException(response);
+                throw new SinusAuthFailureException(response);
             }
 
             throw;

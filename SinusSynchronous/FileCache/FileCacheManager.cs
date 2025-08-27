@@ -1,10 +1,10 @@
 ﻿using K4os.Compression.LZ4.Legacy;
-using SinusSynchronous.Interop.Ipc;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.Services.Mediator;
-using SinusSynchronous.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.Interop.Ipc;
+using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.Utils;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
@@ -16,8 +16,8 @@ public sealed class FileCacheManager : IHostedService
     public const string CachePrefix = "{cache}";
     public const string CsvSplit = "|";
     public const string PenumbraPrefix = "{penumbra}";
-    private readonly MareConfigService _configService;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusConfigService _configService;
+    private readonly SinusMediator _sinusMediator;
     private readonly string _csvPath;
     private readonly ConcurrentDictionary<string, List<FileCacheEntity>> _fileCaches = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _getCachesByPathsSemaphore = new(1, 1);
@@ -26,12 +26,12 @@ public sealed class FileCacheManager : IHostedService
     private readonly ILogger<FileCacheManager> _logger;
     public string CacheFolder => _configService.Current.CacheFolder;
 
-    public FileCacheManager(ILogger<FileCacheManager> logger, IpcManager ipcManager, MareConfigService configService, MareMediator mareMediator)
+    public FileCacheManager(ILogger<FileCacheManager> logger, IpcManager ipcManager, SinusConfigService configService, SinusMediator sinusMediator)
     {
         _logger = logger;
         _ipcManager = ipcManager;
         _configService = configService;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         _csvPath = Path.Combine(configService.ConfigurationDirectory, "FileCache.csv");
     }
 
@@ -82,7 +82,7 @@ public sealed class FileCacheManager : IHostedService
 
     public Task<List<FileCacheEntity>> ValidateLocalIntegrity(IProgress<(int, int, FileCacheEntity)> progress, CancellationToken cancellationToken)
     {
-        _mareMediator.Publish(new HaltScanMessage(nameof(ValidateLocalIntegrity)));
+        _sinusMediator.Publish(new HaltScanMessage(nameof(ValidateLocalIntegrity)));
         _logger.LogInformation("Validating local storage");
         var cacheEntries = _fileCaches.SelectMany(v => v.Value).Where(v => v.IsCacheEntry).ToList();
         List<FileCacheEntity> brokenEntities = [];
@@ -131,7 +131,7 @@ public sealed class FileCacheManager : IHostedService
             }
         }
 
-        _mareMediator.Publish(new ResumeScanMessage(nameof(ValidateLocalIntegrity)));
+        _sinusMediator.Publish(new ResumeScanMessage(nameof(ValidateLocalIntegrity)));
         return Task.FromResult(brokenEntities);
     }
 
@@ -417,9 +417,9 @@ public sealed class FileCacheManager : IHostedService
         {
             if (!_ipcManager.Penumbra.APIAvailable || string.IsNullOrEmpty(_ipcManager.Penumbra.ModDirectory))
             {
-                _mareMediator.Publish(new NotificationMessage("Penumbra not connected",
-                    "Could not load local file cache data. Penumbra is not connected or not properly set up. Please enable and/or configure Penumbra properly to use Mare. After, reload Mare in the Plugin installer.",
-                    MareConfiguration.Models.NotificationType.Error));
+                _sinusMediator.Publish(new NotificationMessage("Penumbra not connected",
+                    "Could not load local file cache data. Penumbra is not connected or not properly set up. Please enable and/or configure Penumbra properly to use Sinus. After, reload Sinus in the Plugin installer.",
+                    SinusConfiguration.Models.NotificationType.Error));
             }
 
             _logger.LogInformation("{csvPath} found, parsing", _csvPath);

@@ -37,7 +37,7 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
         }
     }
 
-    public EventViewerUI(ILogger<EventViewerUI> logger, MareMediator mediator,
+    public EventViewerUI(ILogger<EventViewerUI> logger, SinusMediator mediator,
         EventAggregator eventAggregator, UiSharedService uiSharedService, PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Event Viewer", performanceCollectorService)
     {

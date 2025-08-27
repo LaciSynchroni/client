@@ -6,11 +6,11 @@ using Dalamud.Interface.Utility.Raii;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.API.Dto.User;
-using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.UI.Handlers;
 using SinusSynchronous.WebAPI;
 
@@ -20,7 +20,7 @@ public class DrawUserPair
 {
     protected readonly ApiController _apiController;
     protected readonly IdDisplayHandler _displayHandler;
-    protected readonly MareMediator _mediator;
+    protected readonly SinusMediator _mediator;
     protected readonly List<GroupFullInfoDto> _syncedGroups;
     private readonly GroupFullInfoDto? _currentGroup;
     protected Pair _pair;
@@ -36,7 +36,7 @@ public class DrawUserPair
     public DrawUserPair(string id, Pair entry, List<GroupFullInfoDto> syncedGroups,
         GroupFullInfoDto? currentGroup,
         ApiController apiController, IdDisplayHandler uIDDisplayHandler,
-        MareMediator mareMediator, SelectTagForPairUi selectTagForPairUi,
+        SinusMediator sinusMediator, SelectTagForPairUi selectTagForPairUi,
         ServerConfigurationManager serverConfigurationManager,
         UiSharedService uiSharedService, PlayerPerformanceConfigService performanceConfigService,
         CharaDataManager charaDataManager)
@@ -47,7 +47,7 @@ public class DrawUserPair
         _currentGroup = currentGroup;
         _apiController = apiController;
         _displayHandler = uIDDisplayHandler;
-        _mediator = mareMediator;
+        _mediator = sinusMediator;
         _selectTagForPairUi = selectTagForPairUi;
         _serverConfigurationManager = serverConfigurationManager;
         _uiSharedService = uiSharedService;

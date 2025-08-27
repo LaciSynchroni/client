@@ -48,7 +48,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         IpcManager ipcManager, FileDownloadManager transferManager,
         PluginWarningNotificationService pluginWarningNotificationManager,
         DalamudUtilService dalamudUtil, IHostApplicationLifetime lifetime,
-        FileCacheManager fileDbManager, MareMediator mediator,
+        FileCacheManager fileDbManager, SinusMediator mediator,
         PlayerPerformanceService playerPerformanceService,
         ServerConfigurationManager serverConfigManager) : base(logger, mediator)
     {

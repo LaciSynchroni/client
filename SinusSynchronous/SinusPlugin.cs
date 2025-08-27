@@ -1,13 +1,13 @@
-﻿using SinusSynchronous.FileCache;
-using SinusSynchronous.MareConfiguration;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using SinusSynchronous.FileCache;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.PlayerData.Services;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using SinusSynchronous.SinusConfiguration;
 using System.Reflection;
 
 namespace SinusSynchronous;
@@ -69,18 +69,18 @@ namespace SinusSynchronous;
 public class SinusPlugin : MediatorSubscriberBase, IHostedService
 {
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private IServiceScope? _runtimeServiceScope;
     private Task? _launchTask = null;
 
-    public SinusPlugin(ILogger<SinusPlugin> logger, MareConfigService mareConfigService,
+    public SinusPlugin(ILogger<SinusPlugin> logger, SinusConfigService sinusConfigService,
         ServerConfigurationManager serverConfigurationManager,
         DalamudUtilService dalamudUtil,
-        IServiceScopeFactory serviceScopeFactory, MareMediator mediator) : base(logger, mediator)
+        IServiceScopeFactory serviceScopeFactory, SinusMediator mediator) : base(logger, mediator)
     {
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _serverConfigurationManager = serverConfigurationManager;
         _dalamudUtil = dalamudUtil;
         _serviceScopeFactory = serviceScopeFactory;
@@ -91,7 +91,7 @@ public class SinusPlugin : MediatorSubscriberBase, IHostedService
         var version = Assembly.GetExecutingAssembly().GetName().Version!;
         Logger.LogInformation("Launching {name} {major}.{minor}.{build}", "Sinus Synchronous", version.Major, version.Minor, version.Build);
         Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(SinusPlugin), Services.Events.EventSeverity.Informational,
-            $"Starting Mare Synchronous {version.Major}.{version.Minor}.{version.Build}")));
+            $"Starting Sinus Synchronous {version.Major}.{version.Minor}.{version.Build}")));
 
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (msg) => { if (_launchTask == null || _launchTask.IsCompleted) _launchTask = Task.Run(WaitForPlayerAndLaunchCharacterManager); });
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());
@@ -108,7 +108,7 @@ public class SinusPlugin : MediatorSubscriberBase, IHostedService
 
         DalamudUtilOnLogOut();
 
-        Logger.LogDebug("Halting MarePlugin");
+        Logger.LogDebug("Halting SinusPlugin");
 
         return Task.CompletedTask;
     }
@@ -141,7 +141,7 @@ public class SinusPlugin : MediatorSubscriberBase, IHostedService
             _runtimeServiceScope = _serviceScopeFactory.CreateScope();
             _runtimeServiceScope.ServiceProvider.GetRequiredService<UiService>();
             _runtimeServiceScope.ServiceProvider.GetRequiredService<CommandManagerService>();
-            if (!_mareConfigService.Current.HasValidSetup() || !_serverConfigurationManager.HasValidConfig())
+            if (!_sinusConfigService.Current.HasValidSetup() || !_serverConfigurationManager.HasValidConfig())
             {
                 Mediator.Publish(new SwitchToIntroUiMessage());
                 return;
@@ -152,11 +152,11 @@ public class SinusPlugin : MediatorSubscriberBase, IHostedService
             _runtimeServiceScope.ServiceProvider.GetRequiredService<NotificationService>();
 
 #if !DEBUG
-            if (_mareConfigService.Current.LogLevel != LogLevel.Information)
+            if (_sinusConfigService.Current.LogLevel != LogLevel.Information)
             {
                 Mediator.Publish(new NotificationMessage("Abnormal Log Level",
-                    $"Your log level is set to '{_mareConfigService.Current.LogLevel}' which is not recommended for normal usage. Set it to '{LogLevel.Information}' in \"Mare Settings -> Debug\" unless instructed otherwise.",
-                    MareConfiguration.Models.NotificationType.Error, TimeSpan.FromSeconds(15000)));
+                    $"Your log level is set to '{_sinusConfigService.Current.LogLevel}' which is not recommended for normal usage. Set it to '{LogLevel.Information}' in \"Sinus Settings -> Debug\" unless instructed otherwise.",
+                    SinusConfiguration.Models.NotificationType.Error, TimeSpan.FromSeconds(15000)));
             }
 #endif
         }

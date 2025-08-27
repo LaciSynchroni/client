@@ -1,4 +1,4 @@
-﻿namespace SinusSynchronous.MareConfiguration.Models;
+﻿namespace SinusSynchronous.SinusConfiguration.Models;
 
 public class ServerNotesStorage
 {

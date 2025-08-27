@@ -1,6 +1,6 @@
-﻿namespace SinusSynchronous.MareConfiguration.Configurations;
+﻿namespace SinusSynchronous.SinusConfiguration.Configurations;
 
-public class PlayerPerformanceConfig : IMareConfiguration
+public class PlayerPerformanceConfig : ISinusConfiguration
 {
     public int Version { get; set; } = 1;
     public bool ShowPerformanceIndicator { get; set; } = true;

@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace SinusSynchronous.MareConfiguration;
+namespace SinusSynchronous.SinusConfiguration;
 
 public class ConfigurationMigrator(ILogger<ConfigurationMigrator> logger, TransientConfigService transientConfigService,
     ServerConfigService serverConfigService) : IHostedService

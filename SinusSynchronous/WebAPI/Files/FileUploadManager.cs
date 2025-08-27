@@ -1,13 +1,13 @@
-﻿using SinusSynchronous.API.Data;
+﻿using Microsoft.Extensions.Logging;
+using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Dto.Files;
 using SinusSynchronous.API.Routes;
 using SinusSynchronous.FileCache;
-using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.UI;
 using SinusSynchronous.WebAPI.Files.Models;
-using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
@@ -16,19 +16,19 @@ namespace SinusSynchronous.WebAPI.Files;
 public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 {
     private readonly FileCacheManager _fileDbManager;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly FileTransferOrchestrator _orchestrator;
     private readonly ServerConfigurationManager _serverManager;
     private readonly Dictionary<string, DateTime> _verifiedUploadedHashes = new(StringComparer.Ordinal);
     private CancellationTokenSource? _uploadCancellationTokenSource = new();
 
-    public FileUploadManager(ILogger<FileUploadManager> logger, MareMediator mediator,
-        MareConfigService mareConfigService,
+    public FileUploadManager(ILogger<FileUploadManager> logger, SinusMediator mediator,
+        SinusConfigService sinusConfigService,
         FileTransferOrchestrator orchestrator,
         FileCacheManager fileDbManager,
         ServerConfigurationManager serverManager) : base(logger, mediator)
     {
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _orchestrator = orchestrator;
         _fileDbManager = fileDbManager;
         _serverManager = serverManager;
@@ -181,12 +181,12 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
         try
         {
-            await UploadFileStream(compressedFile, fileHash, _mareConfigService.Current.UseAlternativeFileUpload, postProgress, uploadToken).ConfigureAwait(false);
+            await UploadFileStream(compressedFile, fileHash, _sinusConfigService.Current.UseAlternativeFileUpload, postProgress, uploadToken).ConfigureAwait(false);
             _verifiedUploadedHashes[fileHash] = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
-            if (!_mareConfigService.Current.UseAlternativeFileUpload && ex is not OperationCanceledException)
+            if (!_sinusConfigService.Current.UseAlternativeFileUpload && ex is not OperationCanceledException)
             {
                 Logger.LogWarning(ex, "[{hash}] Error during file upload, trying alternative file upload", fileHash);
                 await UploadFileStream(compressedFile, fileHash, munged: true, postProgress, uploadToken).ConfigureAwait(false);

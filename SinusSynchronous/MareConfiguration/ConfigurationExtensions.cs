@@ -1,10 +1,10 @@
-﻿using SinusSynchronous.MareConfiguration.Configurations;
+﻿using SinusSynchronous.SinusConfiguration.Configurations;
 
-namespace SinusSynchronous.MareConfiguration;
+namespace SinusSynchronous.SinusConfiguration;
 
 public static class ConfigurationExtensions
 {
-    public static bool HasValidSetup(this MareConfig configuration)
+    public static bool HasValidSetup(this SinusConfig configuration)
     {
         return configuration.AcceptedAgreement && configuration.InitialScanComplete
                     && !string.IsNullOrEmpty(configuration.CacheFolder)

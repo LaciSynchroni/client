@@ -4,17 +4,17 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Dto.CharaData;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.CharaData;
 using SinusSynchronous.Services.CharaData.Models;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
-using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.UI;
 
@@ -74,12 +74,12 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     private (string Id, string? Alias, string AliasOrId, string? Note)[]? _openComboHybridEntries = null;
     private bool _comboHybridUsedLastFrame = false;
 
-    public CharaDataHubUi(ILogger<CharaDataHubUi> logger, MareMediator mediator, PerformanceCollectorService performanceCollectorService,
+    public CharaDataHubUi(ILogger<CharaDataHubUi> logger, SinusMediator mediator, PerformanceCollectorService performanceCollectorService,
                          CharaDataManager charaDataManager, CharaDataNearbyManager charaDataNearbyManager, CharaDataConfigService configService,
                          UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager,
                          DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager, PairManager pairManager,
                          CharaDataGposeTogetherManager charaDataGposeTogetherManager)
-        : base(logger, mediator, "Mare Synchronous Character Data Hub###SinusSynchronousCharaDataUI", performanceCollectorService)
+        : base(logger, mediator, "Sinus Synchronous Character Data Hub###SinusSynchronousCharaDataUI", performanceCollectorService)
     {
         SetWindowSizeConstraints();
 
@@ -92,7 +92,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _fileDialogManager = fileDialogManager;
         _pairManager = pairManager;
         _charaDataGposeTogetherManager = charaDataGposeTogetherManager;
-        Mediator.Subscribe<GposeStartMessage>(this, (_) => IsOpen |= _configService.Current.OpenMareHubOnGposeStart);
+        Mediator.Subscribe<GposeStartMessage>(this, (_) => IsOpen |= _configService.Current.OpenSinusHubOnGposeStart);
         Mediator.Subscribe<OpenCharaDataHubWithFilterMessage>(this, (msg) =>
         {
             IsOpen = true;
@@ -891,7 +891,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                     _configService.Current.LastSavedCharaDataLocation = Path.GetDirectoryName(path) ?? string.Empty;
                     _configService.Save();
 
-                    _charaDataManager.SaveMareCharaFile(_exportDescription, path);
+                    _charaDataManager.SaveSinusCharaFile(_exportDescription, path);
                     _exportDescription = string.Empty;
                 }, Directory.Exists(_configService.Current.LastSavedCharaDataLocation) ? _configService.Current.LastSavedCharaDataLocation : null);
             }
@@ -1048,10 +1048,10 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         ImGuiHelpers.ScaledDummy(5);
         _uiSharedService.BigText("Settings");
         ImGuiHelpers.ScaledDummy(5);
-        bool openInGpose = _configService.Current.OpenMareHubOnGposeStart;
+        bool openInGpose = _configService.Current.OpenSinusHubOnGposeStart;
         if (ImGui.Checkbox("Open Character Data Hub when GPose loads", ref openInGpose))
         {
-            _configService.Current.OpenMareHubOnGposeStart = openInGpose;
+            _configService.Current.OpenSinusHubOnGposeStart = openInGpose;
             _configService.Save();
         }
         _uiSharedService.DrawHelpText("This will automatically open the import menu when loading into Gpose. If unchecked you can open the menu manually with /sinus gpose");

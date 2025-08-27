@@ -1,7 +1,7 @@
-﻿using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.Utils;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.Utils;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
@@ -12,19 +12,19 @@ public sealed class PerformanceCollectorService : IHostedService
 {
     private const string _counterSplit = "=>";
     private readonly ILogger<PerformanceCollectorService> _logger;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     public ConcurrentDictionary<string, RollingList<(TimeOnly, long)>> PerformanceCounters { get; } = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _periodicLogPruneTaskCts = new();
 
-    public PerformanceCollectorService(ILogger<PerformanceCollectorService> logger, MareConfigService mareConfigService)
+    public PerformanceCollectorService(ILogger<PerformanceCollectorService> logger, SinusConfigService sinusConfigService)
     {
         _logger = logger;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
     }
 
-    public T LogPerformance<T>(object sender, MareInterpolatedStringHandler counterName, Func<T> func, int maxEntries = 10000)
+    public T LogPerformance<T>(object sender, SinusInterpolatedStringHandler counterName, Func<T> func, int maxEntries = 10000)
     {
-        if (!_mareConfigService.Current.LogPerformance) return func.Invoke();
+        if (!_sinusConfigService.Current.LogPerformance) return func.Invoke();
 
         string cn = sender.GetType().Name + _counterSplit + counterName.BuildMessage();
 
@@ -49,9 +49,9 @@ public sealed class PerformanceCollectorService : IHostedService
         }
     }
 
-    public void LogPerformance(object sender, MareInterpolatedStringHandler counterName, Action act, int maxEntries = 10000)
+    public void LogPerformance(object sender, SinusInterpolatedStringHandler counterName, Action act, int maxEntries = 10000)
     {
-        if (!_mareConfigService.Current.LogPerformance) { act.Invoke(); return; }
+        if (!_sinusConfigService.Current.LogPerformance) { act.Invoke(); return; }
 
         var cn = sender.GetType().Name + _counterSplit + counterName.BuildMessage();
 
@@ -93,7 +93,7 @@ public sealed class PerformanceCollectorService : IHostedService
 
     internal void PrintPerformanceStats(int limitBySeconds = 0)
     {
-        if (!_mareConfigService.Current.LogPerformance)
+        if (!_sinusConfigService.Current.LogPerformance)
         {
             _logger.LogWarning("Performance counters are disabled");
         }

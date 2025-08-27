@@ -1,19 +1,19 @@
 ﻿using Dalamud.Utility;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto;
 using SinusSynchronous.API.Dto.User;
 using SinusSynchronous.API.SignalR;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.WebAPI.SignalR;
 using SinusSynchronous.WebAPI.SignalR.Utils;
-using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Logging;
 using System.Reflection;
 
 namespace SinusSynchronous.WebAPI;
@@ -29,34 +29,34 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
     private readonly PairManager _pairManager;
     private readonly ServerConfigurationManager _serverManager;
     private readonly TokenProvider _tokenProvider;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private CancellationTokenSource _connectionCancellationTokenSource;
     private ConnectionDto? _connectionDto;
     private bool _doNotNotifyOnNextInfo = false;
     private CancellationTokenSource? _healthCheckTokenSource = new();
     private bool _initialized;
     private string? _lastUsedToken;
-    private HubConnection? _mareHub;
+    private HubConnection? _sinusHub;
     private ServerState _serverState;
     private CensusUpdateMessage? _lastCensus;
 
     public ApiController(ILogger<ApiController> logger, HubFactory hubFactory, DalamudUtilService dalamudUtil,
-        PairManager pairManager, ServerConfigurationManager serverManager, MareMediator mediator,
-        TokenProvider tokenProvider, MareConfigService mareConfigService) : base(logger, mediator)
+        PairManager pairManager, ServerConfigurationManager serverManager, SinusMediator mediator,
+        TokenProvider tokenProvider, SinusConfigService sinusConfigService) : base(logger, mediator)
     {
         _hubFactory = hubFactory;
         _dalamudUtil = dalamudUtil;
         _pairManager = pairManager;
         _serverManager = serverManager;
         _tokenProvider = tokenProvider;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _connectionCancellationTokenSource = new CancellationTokenSource();
 
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) => DalamudUtilOnLogOut());
-        Mediator.Subscribe<HubClosedMessage>(this, (msg) => MareHubOnClosed(msg.Exception));
-        Mediator.Subscribe<HubReconnectedMessage>(this, (msg) => _ = MareHubOnReconnectedAsync());
-        Mediator.Subscribe<HubReconnectingMessage>(this, (msg) => MareHubOnReconnecting(msg.Exception));
+        Mediator.Subscribe<HubClosedMessage>(this, (msg) => SinusHubOnClosed(msg.Exception));
+        Mediator.Subscribe<HubReconnectedMessage>(this, (msg) => _ = SinusHubOnReconnectedAsync());
+        Mediator.Subscribe<HubReconnectingMessage>(this, (msg) => SinusHubOnReconnecting(msg.Exception));
         Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePauseAsync(msg.UserData));
         Mediator.Subscribe<CensusUpdateMessage>(this, (msg) => _lastCensus = msg);
         Mediator.Subscribe<PauseMessage>(this, (msg) => _ = PauseAsync(msg.UserData));
@@ -102,7 +102,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
     public async Task<bool> CheckClientHealth()
     {
-        return await _mareHub!.InvokeAsync<bool>(nameof(CheckClientHealth)).ConfigureAwait(false);
+        return await _sinusHub!.InvokeAsync<bool>(nameof(CheckClientHealth)).ConfigureAwait(false);
     }
 
     public async Task CreateConnectionsAsync()
@@ -208,7 +208,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
                 {
                     _lastUsedToken = await _tokenProvider.GetOrUpdateToken(token).ConfigureAwait(false);
                 }
-                catch (MareAuthFailureException ex)
+                catch (SinusAuthFailureException ex)
                 {
                     AuthFailureMessage = ex.Reason;
                     throw new HttpRequestException("Error during authentication", ex, System.Net.HttpStatusCode.Unauthorized);
@@ -222,10 +222,10 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
                 if (token.IsCancellationRequested) break;
 
-                _mareHub = _hubFactory.GetOrCreate(token);
+                _sinusHub = _hubFactory.GetOrCreate(token);
                 InitializeApiHooks();
 
-                await _mareHub.StartAsync(token).ConfigureAwait(false);
+                await _sinusHub.StartAsync(token).ConfigureAwait(false);
 
                 _connectionDto = await GetConnectionDto().ConfigureAwait(false);
 
@@ -259,7 +259,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
                 if (_dalamudUtil.HasModifiedGameFiles)
                 {
                     Logger.LogError("Detected modified game files on connection");
-                    if (!_mareConfigService.Current.DebugStopWhining)
+                    if (!_sinusConfigService.Current.DebugStopWhining)
                         Mediator.Publish(new NotificationMessage("Modified Game Files detected",
                             "Dalamud is reporting your FFXIV installation has modified game files. Any mods installed through TexTools will produce this message. " +
                             "Sinus Synchronous, Penumbra, and some other plugins assume your FFXIV installation is unmodified in order to work. " +
@@ -272,7 +272,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
                 {
                     _naggedAboutLod = true;
                     Logger.LogWarning("Model LOD is enabled during connection");
-                    if (!_mareConfigService.Current.DebugStopWhining)
+                    if (!_sinusConfigService.Current.DebugStopWhining)
                     {
                         Mediator.Publish(new NotificationMessage("Model LOD is enabled",
                             "You have \"Use low-detail models on distant objects (LOD)\" enabled. Having model LOD enabled is known to be a reason to cause " +
@@ -361,7 +361,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
     public async Task<ConnectionDto> GetConnectionDtoAsync(bool publishConnected)
     {
-        var dto = await _mareHub!.InvokeAsync<ConnectionDto>(nameof(GetConnectionDto)).ConfigureAwait(false);
+        var dto = await _sinusHub!.InvokeAsync<ConnectionDto>(nameof(GetConnectionDto)).ConfigureAwait(false);
         if (publishConnected) Mediator.Publish(new ConnectedMessage(dto));
         return dto;
     }
@@ -377,7 +377,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
     private async Task ClientHealthCheckAsync(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested && _mareHub != null)
+        while (!ct.IsCancellationRequested && _sinusHub != null)
         {
             await Task.Delay(TimeSpan.FromSeconds(30), ct).ConfigureAwait(false);
             Logger.LogDebug("Checking Client Health State");
@@ -415,7 +415,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
     private void InitializeApiHooks()
     {
-        if (_mareHub == null) return;
+        if (_sinusHub == null) return;
 
         Logger.LogDebug("Initializing data");
         OnDownloadReady((guid) => _ = Client_DownloadReady(guid));
@@ -489,7 +489,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
         }
     }
 
-    private void MareHubOnClosed(Exception? arg)
+    private void SinusHubOnClosed(Exception? arg)
     {
         _healthCheckTokenSource?.Cancel();
         Mediator.Publish(new DisconnectedMessage());
@@ -504,7 +504,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
         }
     }
 
-    private async Task MareHubOnReconnectedAsync()
+    private async Task SinusHubOnReconnectedAsync()
     {
         ServerState = ServerState.Reconnecting;
         try
@@ -528,7 +528,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
         }
     }
 
-    private void MareHubOnReconnecting(Exception? arg)
+    private void SinusHubOnReconnecting(Exception? arg)
     {
         _doNotNotifyOnNextInfo = true;
         _healthCheckTokenSource?.Cancel();
@@ -554,7 +554,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
                 requireReconnect = true;
             }
         }
-        catch (MareAuthFailureException ex)
+        catch (SinusAuthFailureException ex)
         {
             AuthFailureMessage = ex.Reason;
             await StopConnectionAsync(ServerState.Unauthorized).ConfigureAwait(false);
@@ -578,7 +578,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
         Logger.LogInformation("Stopping existing connection");
         await _hubFactory.DisposeHubAsync().ConfigureAwait(false);
 
-        if (_mareHub is not null)
+        if (_sinusHub is not null)
         {
             Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(ApiController), Services.Events.EventSeverity.Informational,
                 $"Stopping existing connection to {_serverManager.CurrentServer.ServerName}")));
@@ -586,7 +586,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
             _initialized = false;
             _healthCheckTokenSource?.Cancel();
             Mediator.Publish(new DisconnectedMessage());
-            _mareHub = null;
+            _sinusHub = null;
             _connectionDto = null;
         }
 

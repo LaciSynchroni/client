@@ -14,12 +14,12 @@ using Microsoft.Extensions.Logging;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.Localization;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
 using SinusSynchronous.WebAPI.SignalR;
@@ -40,11 +40,11 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                                            ImGuiWindowFlags.NoScrollWithMouse;
 
     public readonly FileDialogManager FileDialogManager;
-    private const string _notesEnd = "##MARE_SYNCHRONOS_USER_NOTES_END##";
-    private const string _notesStart = "##MARE_SYNCHRONOS_USER_NOTES_START##";
+    private const string _notesEnd = "##SINUS_SYNCHRONOS_USER_NOTES_END##";
+    private const string _notesStart = "##SINUS_SYNCHRONOS_USER_NOTES_START##";
     private readonly ApiController _apiController;
     private readonly CacheMonitor _cacheMonitor;
-    private readonly MareConfigService _configService;
+    private readonly SinusConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly IpcManager _ipcManager;
     private readonly Dalamud.Localization _localization;
@@ -76,10 +76,10 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private int _serverSelectionIndex = -1;
     public UiSharedService(ILogger<UiSharedService> logger, IpcManager ipcManager, ApiController apiController,
         CacheMonitor cacheMonitor, FileDialogManager fileDialogManager,
-        MareConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
+        SinusConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
         ITextureProvider textureProvider,
         Dalamud.Localization localization,
-        ServerConfigurationManager serverManager, TokenProvider tokenProvider, MareMediator mediator) : base(logger, mediator)
+        ServerConfigurationManager serverManager, TokenProvider tokenProvider, SinusMediator mediator) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
         _apiController = apiController;
@@ -459,7 +459,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGui.InputText("Storage Folder##cache", ref cacheDirectory, 255, ImGuiInputTextFlags.ReadOnly);
 
         ImGui.SameLine();
-        using (ImRaii.Disabled(_cacheMonitor.MareWatcher != null))
+        using (ImRaii.Disabled(_cacheMonitor.SinusWatcher != null))
         {
             if (IconButton(FontAwesomeIcon.Folder))
             {
@@ -501,13 +501,13 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                     {
                         _configService.Current.CacheFolder = path;
                         _configService.Save();
-                        _cacheMonitor.StartMareWatcher(path);
+                        _cacheMonitor.StartSinusWatcher(path);
                         _cacheMonitor.InvokeScan();
                     }
                 }, _dalamudUtil.IsWine ? @"Z:\" : @"C:\");
             }
         }
-        if (_cacheMonitor.MareWatcher != null)
+        if (_cacheMonitor.SinusWatcher != null)
         {
             AttachToolTip("Stop the Monitoring before changing the Storage folder. As long as monitoring is active, you cannot change the Storage folder location.");
         }
@@ -526,7 +526,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         }
         else if (_cacheDirectoryHasOtherFilesThanCache)
         {
-            ColorTextWrapped("Your selected directory has files or directories inside that are not Sinus related. Use an empty directory or a previous Mare storage directory only.", ImGuiColors.DalamudRed);
+            ColorTextWrapped("Your selected directory has files or directories inside that are not Sinus related. Use an empty directory or a previous Sinus storage directory only.", ImGuiColors.DalamudRed);
         }
         else if (!_cacheDirectoryIsValidPath)
         {

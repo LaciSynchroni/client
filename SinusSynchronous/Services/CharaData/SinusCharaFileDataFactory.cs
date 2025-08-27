@@ -4,17 +4,17 @@ using SinusSynchronous.Services.CharaData.Models;
 
 namespace SinusSynchronous.Services.CharaData;
 
-public sealed class MareCharaFileDataFactory
+public sealed class SinusCharaFileDataFactory
 {
     private readonly FileCacheManager _fileCacheManager;
 
-    public MareCharaFileDataFactory(FileCacheManager fileCacheManager)
+    public SinusCharaFileDataFactory(FileCacheManager fileCacheManager)
     {
         _fileCacheManager = fileCacheManager;
     }
 
-    public MareCharaFileData Create(string description, CharacterData characterCacheDto)
+    public SinusCharaFileData Create(string description, CharacterData characterCacheDto)
     {
-        return new MareCharaFileData(_fileCacheManager, description, characterCacheDto);
+        return new SinusCharaFileData(_fileCacheManager, description, characterCacheDto);
     }
 }

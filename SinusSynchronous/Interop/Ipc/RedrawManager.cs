@@ -1,31 +1,31 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Utils;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 namespace SinusSynchronous.Interop.Ipc;
 
 public class RedrawManager
 {
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly ConcurrentDictionary<nint, bool> _penumbraRedrawRequests = [];
     private CancellationTokenSource _disposalCts = new();
 
     public SemaphoreSlim RedrawSemaphore { get; init; } = new(2, 2);
 
-    public RedrawManager(MareMediator mareMediator, DalamudUtilService dalamudUtil)
+    public RedrawManager(SinusMediator sinusMediator, DalamudUtilService dalamudUtil)
     {
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         _dalamudUtil = dalamudUtil;
     }
 
     public async Task PenumbraRedrawInternalAsync(ILogger logger, GameObjectHandler handler, Guid applicationId, Action<ICharacter> action, CancellationToken token)
     {
-        _mareMediator.Publish(new PenumbraStartRedrawMessage(handler.Address));
+        _sinusMediator.Publish(new PenumbraStartRedrawMessage(handler.Address));
 
         _penumbraRedrawRequests[handler.Address] = true;
 
@@ -43,7 +43,7 @@ public class RedrawManager
         finally
         {
             _penumbraRedrawRequests[handler.Address] = false;
-            _mareMediator.Publish(new PenumbraEndRedrawMessage(handler.Address));
+            _sinusMediator.Publish(new PenumbraEndRedrawMessage(handler.Address));
         }
     }
 

@@ -1,10 +1,10 @@
-﻿using SinusSynchronous.MareConfiguration.Configurations;
+﻿using SinusSynchronous.SinusConfiguration.Configurations;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Text.Json;
 
-namespace SinusSynchronous.MareConfiguration;
+namespace SinusSynchronous.SinusConfiguration;
 
 public class ConfigurationSaveService : IHostedService
 {
@@ -15,7 +15,7 @@ public class ConfigurationSaveService : IHostedService
     public const string BackupFolder = "config_backup";
     private readonly MethodInfo _saveMethod;
 
-    public ConfigurationSaveService(ILogger<ConfigurationSaveService> logger, IEnumerable<IConfigService<IMareConfiguration>> configs)
+    public ConfigurationSaveService(ILogger<ConfigurationSaveService> logger, IEnumerable<IConfigService<ISinusConfiguration>> configs)
     {
         foreach (var config in configs)
         {
@@ -68,7 +68,7 @@ public class ConfigurationSaveService : IHostedService
         }
     }
 
-    private async Task SaveConfig<T>(IConfigService<T> config) where T : IMareConfiguration
+    private async Task SaveConfig<T>(IConfigService<T> config) where T : ISinusConfiguration
     {
         _logger.LogTrace("Saving {configName}", config.ConfigurationName);
         var configDir = config.ConfigurationPath.Replace(config.ConfigurationName, string.Empty);

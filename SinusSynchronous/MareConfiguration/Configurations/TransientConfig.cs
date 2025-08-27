@@ -1,8 +1,8 @@
 ﻿using SinusSynchronous.API.Data.Enum;
 
-namespace SinusSynchronous.MareConfiguration.Configurations;
+namespace SinusSynchronous.SinusConfiguration.Configurations;
 
-public class TransientConfig : IMareConfiguration
+public class TransientConfig : ISinusConfiguration
 {
     public Dictionary<string, TransientPlayerConfig> TransientConfigs { get; set; } = [];
     public int Version { get; set; } = 1;

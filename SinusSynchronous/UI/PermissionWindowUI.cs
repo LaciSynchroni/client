@@ -20,7 +20,7 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
     private readonly ApiController _apiController;
     private UserPermissions _ownPermissions;
 
-    public PermissionWindowUI(ILogger<PermissionWindowUI> logger, Pair pair, MareMediator mediator, UiSharedService uiSharedService,
+    public PermissionWindowUI(ILogger<PermissionWindowUI> logger, Pair pair, SinusMediator mediator, UiSharedService uiSharedService,
         ApiController apiController, PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Permissions for " + pair.UserData.AliasOrUID + "###SinusSynchronousPermissions" + pair.UserData.UID, performanceCollectorService)
     {

@@ -2,9 +2,9 @@
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
-using Microsoft.Extensions.Logging;
 using System.Numerics;
 
 namespace SinusSynchronous.UI.Components.Popup;
@@ -16,9 +16,9 @@ public class PopupHandler : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
     private IPopupHandler? _currentHandler = null;
 
-    public PopupHandler(ILogger<PopupHandler> logger, MareMediator mediator, IEnumerable<IPopupHandler> popupHandlers,
+    public PopupHandler(ILogger<PopupHandler> logger, SinusMediator mediator, IEnumerable<IPopupHandler> popupHandlers,
         PerformanceCollectorService performanceCollectorService, UiSharedService uiSharedService)
-        : base(logger, mediator, "MarePopupHandler", performanceCollectorService)
+        : base(logger, mediator, "SinusPopupHandler", performanceCollectorService)
     {
         Flags = ImGuiWindowFlags.NoBringToFrontOnFocus
           | ImGuiWindowFlags.NoDecoration

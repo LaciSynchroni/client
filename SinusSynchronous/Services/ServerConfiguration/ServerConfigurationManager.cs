@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Routes;
-using SinusSynchronous.MareConfiguration;
-using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.WebAPI;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,25 +18,25 @@ public class ServerConfigurationManager
 {
     private readonly ServerConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly MareConfigService _mareConfigService;
+    private readonly SinusConfigService _sinusConfigService;
     private readonly HttpClient _httpClient;
     private readonly ILogger<ServerConfigurationManager> _logger;
-    private readonly MareMediator _mareMediator;
+    private readonly SinusMediator _sinusMediator;
     private readonly NotesConfigService _notesConfig;
     private readonly ServerTagConfigService _serverTagConfig;
 
     public ServerConfigurationManager(ILogger<ServerConfigurationManager> logger, ServerConfigService configService,
         ServerTagConfigService serverTagConfig, NotesConfigService notesConfig, DalamudUtilService dalamudUtil,
-        MareConfigService mareConfigService, HttpClient httpClient, MareMediator mareMediator)
+        SinusConfigService sinusConfigService, HttpClient httpClient, SinusMediator sinusMediator)
     {
         _logger = logger;
         _configService = configService;
         _serverTagConfig = serverTagConfig;
         _notesConfig = notesConfig;
         _dalamudUtil = dalamudUtil;
-        _mareConfigService = mareConfigService;
+        _sinusConfigService = sinusConfigService;
         _httpClient = httpClient;
-        _mareMediator = mareMediator;
+        _sinusMediator = sinusMediator;
         EnsureMainExists();
     }
 
@@ -311,7 +311,7 @@ public class ServerConfigurationManager
     {
         CurrentServerTagStorage().ServerAvailablePairTags.Add(tag);
         _serverTagConfig.Save();
-        _mareMediator.Publish(new RefreshUiMessage());
+        _sinusMediator.Publish(new RefreshUiMessage());
     }
 
     internal void AddTagForUid(string uid, string tagName)
@@ -319,7 +319,7 @@ public class ServerConfigurationManager
         if (CurrentServerTagStorage().UidServerPairedUserTags.TryGetValue(uid, out var tags))
         {
             tags.Add(tagName);
-            _mareMediator.Publish(new RefreshUiMessage());
+            _sinusMediator.Publish(new RefreshUiMessage());
         }
         else
         {
@@ -423,7 +423,7 @@ public class ServerConfigurationManager
             RemoveTagForUid(uid, tag, save: false);
         }
         _serverTagConfig.Save();
-        _mareMediator.Publish(new RefreshUiMessage());
+        _sinusMediator.Publish(new RefreshUiMessage());
     }
 
     internal void RemoveTagForUid(string uid, string tagName, bool save = true)
@@ -435,7 +435,7 @@ public class ServerConfigurationManager
             if (save)
             {
                 _serverTagConfig.Save();
-                _mareMediator.Publish(new RefreshUiMessage());
+                _sinusMediator.Publish(new RefreshUiMessage());
             }
         }
     }
@@ -476,7 +476,7 @@ public class ServerConfigurationManager
 
     internal void AutoPopulateNoteForUid(string uid, string note)
     {
-        if (!_mareConfigService.Current.AutoPopulateEmptyNotesFromCharaName
+        if (!_sinusConfigService.Current.AutoPopulateEmptyNotesFromCharaName
             || GetNoteForUid(uid) != null)
             return;
 

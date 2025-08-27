@@ -1,8 +1,8 @@
 ﻿namespace SinusSynchronous.WebAPI.SignalR;
 
-public class MareAuthFailureException : Exception
+public class SinusAuthFailureException : Exception
 {
-    public MareAuthFailureException(string reason)
+    public SinusAuthFailureException(string reason)
     {
         Reason = reason;
     }

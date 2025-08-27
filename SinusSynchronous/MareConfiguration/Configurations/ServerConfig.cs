@@ -1,10 +1,10 @@
-﻿using SinusSynchronous.MareConfiguration.Models;
+﻿using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.WebAPI;
 
-namespace SinusSynchronous.MareConfiguration.Configurations;
+namespace SinusSynchronous.SinusConfiguration.Configurations;
 
 [Serializable]
-public class ServerConfig : IMareConfiguration
+public class ServerConfig : ISinusConfiguration
 {
     public int CurrentServer { get; set; } = 0;
 

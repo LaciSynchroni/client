@@ -1,12 +1,12 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.WebAPI;
-using Microsoft.Extensions.Logging;
 using System.Numerics;
 
 namespace SinusSynchronous.UI;
@@ -18,9 +18,9 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
     private bool _errorGroupCreate;
     private GroupJoinDto? _lastCreatedGroup;
 
-    public CreateSyncshellUI(ILogger<CreateSyncshellUI> logger, MareMediator mareMediator, ApiController apiController, UiSharedService uiSharedService,
+    public CreateSyncshellUI(ILogger<CreateSyncshellUI> logger, SinusMediator sinusMediator, ApiController apiController, UiSharedService uiSharedService,
         PerformanceCollectorService performanceCollectorService)
-        : base(logger, mareMediator, "Create new Syncshell###SinusSynchronousCreateSyncshell", performanceCollectorService)
+        : base(logger, sinusMediator, "Create new Syncshell###SinusSynchronousCreateSyncshell", performanceCollectorService)
     {
         _apiController = apiController;
         _uiSharedService = uiSharedService;
