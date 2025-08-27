@@ -45,8 +45,9 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly TagHandler _tagHandler;
     private readonly UiSharedService _uiSharedService;
     private readonly CharacterAnalyzer _characterAnalyzer;
-    private Dictionary<ObjectKind, Dictionary<string, CharacterAnalyzer.FileDataEntry>>? _cachedAnalysis;
     private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
+    private readonly ServerConfigService _serverConfigService;
+    private Dictionary<ObjectKind, Dictionary<string, CharacterAnalyzer.FileDataEntry>>? _cachedAnalysis;
     private bool _hasUpdate = false;
     private List<IDrawFolder> _drawFolders;
     private Pair? _lastAddedUser;
@@ -62,7 +63,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController, PairManager pairManager,
         ServerConfigurationManager serverManager, MareMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
-        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService)
+        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService, ServerConfigService serverConfigService)
         : base(logger, mediator, "###SinusSynchronousMainUI", performanceCollectorService)
     {
         _uiSharedService = uiShared;
@@ -78,6 +79,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         _ipcManager = ipcManager;
         _characterAnalyzer = characterAnalyzer;
         _playerPerformanceConfigService = playerPerformanceConfigService;
+        _serverConfigService = serverConfigService;
         _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService);
 
         CheckForCharacterAnalysis();
@@ -198,9 +200,13 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.Separator();
         }
 
-        using (ImRaii.PushId("header")) DrawUIDHeader();
-        ImGui.Separator();
+        if (_serverConfigService.Current.ShowServerPickerInMainMenu)
+        {
+            using (ImRaii.PushId("serverpicker")) _uiSharedService.DrawServiceSelection(hideServiceCreation: true, showMinifiedConnect: true, hideSelectLabel: true);
+        }
         using (ImRaii.PushId("serverstatus")) DrawServerStatus();
+        ImGui.Separator();
+        using (ImRaii.PushId("header")) DrawUIDHeader();
         ImGui.Separator();
         if (_playerPerformanceConfigService.Current.ShowPlayerPerformanceInMainUi)
         {
@@ -291,6 +297,13 @@ public class CompactUi : WindowMediatorSubscriberBase
         var shardTextSize = ImGui.CalcTextSize(shardConnection);
         var printShard = !string.IsNullOrEmpty(_apiController.ServerInfo.ShardName) && shardConnection != string.Empty;
 
+        if (!_serverConfigService.Current.ShowServerPickerInMainMenu)
+        {
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() / 2 - ImGui.CalcTextSize(_serverManager.CurrentServer.ServerName).X / 2);
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextWrapped(_serverManager.CurrentServer.ServerName);
+        }
+
         if (_apiController.ServerState is ServerState.Connected)
         {
             ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth()) / 2 - (userSize.X + textSize.X) / 2 - ImGui.GetStyle().ItemSpacing.X / 2);
@@ -302,6 +315,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         }
         else
         {
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() / 2 - ImGui.CalcTextSize("Not connected to any server").X / 2);
             ImGui.AlignTextToFramePadding();
             ImGui.TextColored(ImGuiColors.DalamudRed, "Not connected to any server");
         }
@@ -313,43 +327,47 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.TextUnformatted(shardConnection);
         }
 
-        ImGui.SameLine();
-        if (printShard)
+        if (!_serverConfigService.Current.ShowServerPickerInMainMenu)
         {
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ((userSize.Y + textSize.Y) / 2 + shardTextSize.Y) / 2 - ImGui.GetStyle().ItemSpacing.Y + buttonSize.Y / 2);
-        }
-        bool isConnectingOrConnected = _apiController.ServerState is ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting;
-        var color = UiSharedService.GetBoolColor(!isConnectingOrConnected);
-        var connectedIcon = isConnectingOrConnected ? FontAwesomeIcon.Unlink : FontAwesomeIcon.Link;
-
-        ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
-        if (printShard)
-        {
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ((userSize.Y + textSize.Y) / 2 + shardTextSize.Y) / 2 - ImGui.GetStyle().ItemSpacing.Y + buttonSize.Y / 2);
-        }
-
-        if (_apiController.ServerState is not (ServerState.Reconnecting or ServerState.Disconnecting))
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, color))
+            ImGui.SameLine();
+            if (printShard)
             {
-                if (_uiSharedService.IconButton(connectedIcon))
-                {
-                    if (isConnectingOrConnected && !_serverManager.CurrentServer.FullPause)
-                    {
-                        _serverManager.CurrentServer.FullPause = true;
-                        _serverManager.Save();
-                    }
-                    else if (!isConnectingOrConnected && _serverManager.CurrentServer.FullPause)
-                    {
-                        _serverManager.CurrentServer.FullPause = false;
-                        _serverManager.Save();
-                    }
-
-                    _ = _apiController.CreateConnectionsAsync();
-                }
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ((userSize.Y + textSize.Y) / 2 + shardTextSize.Y) / 2 - ImGui.GetStyle().ItemSpacing.Y + buttonSize.Y / 2);
             }
 
-            UiSharedService.AttachToolTip(isConnectingOrConnected ? "Disconnect from " + _serverManager.CurrentServer.ServerName : "Connect to " + _serverManager.CurrentServer.ServerName);
+            bool isConnectingOrConnected = _apiController.ServerState is ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting;
+            var color = UiSharedService.GetBoolColor(!isConnectingOrConnected);
+            var connectedIcon = isConnectingOrConnected ? FontAwesomeIcon.Unlink : FontAwesomeIcon.Link;
+
+            ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
+            if (printShard)
+            {
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ((userSize.Y + textSize.Y) / 2 + shardTextSize.Y) / 2 - ImGui.GetStyle().ItemSpacing.Y + buttonSize.Y / 2);
+            }
+
+            if (_apiController.ServerState is not (ServerState.Disconnecting))
+            {
+                using (ImRaii.PushColor(ImGuiCol.Text, color))
+                {
+                    if (_uiSharedService.IconButton(connectedIcon))
+                    {
+                        if (isConnectingOrConnected && !_serverManager.CurrentServer.FullPause)
+                        {
+                            _serverManager.CurrentServer.FullPause = true;
+                            _serverManager.Save();
+                        }
+                        else if (!isConnectingOrConnected && _serverManager.CurrentServer.FullPause)
+                        {
+                            _serverManager.CurrentServer.FullPause = false;
+                            _serverManager.Save();
+                        }
+
+                        _ = _apiController.CreateConnectionsAsync();
+                    }
+                }
+
+                UiSharedService.AttachToolTip(isConnectingOrConnected ? "Disconnect from " + _serverManager.CurrentServer.ServerName : "Connect to " + _serverManager.CurrentServer.ServerName);
+            }
         }
     }
 

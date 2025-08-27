@@ -1,11 +1,11 @@
 ﻿using Dalamud.Utility;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Routes;
 using SinusSynchronous.MareConfiguration;
 using SinusSynchronous.MareConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.WebAPI;
-using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
@@ -84,6 +84,19 @@ public class ServerConfigurationManager
             }
 
             return _configService.Current.CurrentServer;
+        }
+    }
+
+    public bool ShowServerPickerInMainMenu
+    {
+        set
+        {
+            _configService.Current.ShowServerPickerInMainMenu = value;
+            _configService.Save();
+        }
+        get
+        {
+            return _configService.Current.ShowServerPickerInMainMenu;
         }
     }
 

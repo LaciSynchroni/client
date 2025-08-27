@@ -1373,6 +1373,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.Separator();
         }
 
+        _uiShared.BigText("UI");
+        ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
+        var showServerPickerInMainMenu = _serverConfigurationManager.ShowServerPickerInMainMenu;
+        if (ImGui.Checkbox("Show Server Picker in Main Menu", ref showServerPickerInMainMenu))
+        {
+            _serverConfigurationManager.ShowServerPickerInMainMenu = showServerPickerInMainMenu;
+        }
+
         _uiShared.BigText("Service & Character Settings");
         ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
         var sendCensus = _serverConfigurationManager.SendCensusData;
