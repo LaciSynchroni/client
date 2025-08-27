@@ -1,9 +1,11 @@
 ﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.Interop.Ipc;
@@ -19,7 +21,6 @@ using SinusSynchronous.WebAPI;
 using SinusSynchronous.WebAPI.Files;
 using SinusSynchronous.WebAPI.Files.Models;
 using SinusSynchronous.WebAPI.SignalR.Utils;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Globalization;
@@ -43,6 +44,10 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly TopTabMenu _tabMenu;
     private readonly TagHandler _tagHandler;
     private readonly UiSharedService _uiSharedService;
+    private readonly CharacterAnalyzer _characterAnalyzer;
+    private Dictionary<ObjectKind, Dictionary<string, CharacterAnalyzer.FileDataEntry>>? _cachedAnalysis;
+    private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
+    private bool _hasUpdate = false;
     private List<IDrawFolder> _drawFolders;
     private Pair? _lastAddedUser;
     private string _lastAddedUserComment = string.Empty;
@@ -57,7 +62,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController, PairManager pairManager,
         ServerConfigurationManager serverManager, MareMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
-        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager)
+        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService)
         : base(logger, mediator, "###SinusSynchronousMainUI", performanceCollectorService)
     {
         _uiSharedService = uiShared;
@@ -71,7 +76,16 @@ public class CompactUi : WindowMediatorSubscriberBase
         _selectGroupForPairUi = selectTagForPairUi;
         _selectPairsForGroupUi = selectPairForTagUi;
         _ipcManager = ipcManager;
+        _characterAnalyzer = characterAnalyzer;
+        _playerPerformanceConfigService = playerPerformanceConfigService;
         _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService);
+
+        CheckForCharacterAnalysis();
+
+        Mediator.Subscribe<CharacterDataAnalyzedMessage>(this, _ =>
+        {
+            _hasUpdate = true;
+        });
 
         AllowPinning = false;
         AllowClickthrough = false;
@@ -188,6 +202,11 @@ public class CompactUi : WindowMediatorSubscriberBase
         ImGui.Separator();
         using (ImRaii.PushId("serverstatus")) DrawServerStatus();
         ImGui.Separator();
+        if (_playerPerformanceConfigService.Current.ShowPlayerPerformanceInMainUi)
+        {
+            using (ImRaii.PushId("modload")) DrawModLoad();
+        }
+
 
         if (_apiController.ServerState is ServerState.Connected)
         {
@@ -332,6 +351,83 @@ public class CompactUi : WindowMediatorSubscriberBase
 
             UiSharedService.AttachToolTip(isConnectingOrConnected ? "Disconnect from " + _serverManager.CurrentServer.ServerName : "Connect to " + _serverManager.CurrentServer.ServerName);
         }
+    }
+
+    private void DrawModLoad()
+    {
+        CheckForCharacterAnalysis();
+
+        if (_cachedAnalysis == null)
+        {
+            return;
+        }
+
+        var config = _playerPerformanceConfigService.Current;
+
+        var playerLoadMemory = _cachedAnalysis.Sum(c => c.Value.Sum(c => c.Value.OriginalSize));
+        var playerLoadTriangles = _cachedAnalysis.Sum(c => c.Value.Sum(c => c.Value.Triangles));
+
+        ImGui.TextUnformatted("Character Load Data");
+        ImGui.TextUnformatted("Mem.:");
+        ImGui.SameLine();
+        ImGui.TextUnformatted($"{UiSharedService.ByteToString(playerLoadMemory)}");
+
+        if (config.VRAMSizeAutoPauseThresholdMiB > 0)
+        {
+            var _playerLoadMemoryKiB = playerLoadMemory / 1024;
+            var vramWarningThreshold = config.VRAMSizeWarningThresholdMiB * 1024;
+            var vramAutoPauseThreshold = config.VRAMSizeAutoPauseThresholdMiB * 1024;
+            var warning = false;
+            var alert = false;
+
+            if (_playerLoadMemoryKiB > vramWarningThreshold)
+                warning = true;
+
+            if (_playerLoadMemoryKiB > vramAutoPauseThreshold)
+                alert = true;
+
+            ImGuiHelpers.ScaledRelativeSameLine(180, ImGui.GetStyle().ItemSpacing.X);
+            var calculatedRam = (float)_playerLoadMemoryKiB / (vramAutoPauseThreshold);
+
+            DrawProgressBar(calculatedRam, "VRAM usage", warning, alert);
+        }
+
+        ImGui.TextUnformatted("Tri.:");
+        ImGui.SameLine();
+        ImGui.TextUnformatted($"{playerLoadTriangles}");
+
+        if (config.TrisAutoPauseThresholdThousands > 0)
+        {
+            var warning = false;
+            if (playerLoadTriangles > config.TrisWarningThresholdThousands * 1000)
+                warning = true;
+
+            var alert = false;
+            if (playerLoadTriangles > config.TrisAutoPauseThresholdThousands * 1000)
+                alert = true;
+
+            ImGuiHelpers.ScaledRelativeSameLine(180, ImGui.GetStyle().ItemSpacing.X);
+            var calculatedTriangles = ((float)playerLoadTriangles / (config.TrisAutoPauseThresholdThousands * 1000));
+
+            DrawProgressBar(calculatedTriangles, "Triangle count", warning, alert);
+        }
+
+        ImGui.Separator();
+    }
+
+    private static void DrawProgressBar(float value, string tooltipText, bool warning = false, bool alert = false)
+    {
+        var progressBarSize = new Vector2(170, 20);
+        if (warning)
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
+        else if (alert)
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+        else
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.HealerGreen);
+
+        ImGui.ProgressBar(value, progressBarSize);
+        UiSharedService.AttachToolTip($"{MathF.Round(value * 100, 2)}% {tooltipText}.");
+        ImGui.PopStyleColor();
     }
 
     private void DrawTransfers()
@@ -625,6 +721,19 @@ public class CompactUi : WindowMediatorSubscriberBase
             ServerState.Connected => _apiController.DisplayName,
             _ => string.Empty
         };
+    }
+
+    private void CheckForCharacterAnalysis()
+    {
+        if (_hasUpdate)
+        {
+            _cachedAnalysis = _characterAnalyzer.LastAnalysis
+                .ToDictionary(
+                    kvp => (Dalamud.Game.ClientState.Objects.Enums.ObjectKind)kvp.Key,
+                    kvp => kvp.Value
+                );
+            _hasUpdate = false;
+        }
     }
 
     private void UiSharedService_GposeEnd()

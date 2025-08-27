@@ -4,6 +4,8 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Comparer;
 using SinusSynchronous.API.Routes;
@@ -21,8 +23,6 @@ using SinusSynchronous.WebAPI;
 using SinusSynchronous.WebAPI.Files;
 using SinusSynchronous.WebAPI.Files.Models;
 using SinusSynchronous.WebAPI.SignalR.Utils;
-using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
@@ -1143,7 +1143,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
         ImGui.Dummy(new Vector2(10));
         ImGui.Separator();
         ImGui.Dummy(new Vector2(10));
+        bool showPlayerPerformanceIndicator = _playerPerformanceConfigService.Current.ShowPlayerPerformanceInMainUi;
         bool showPerformanceIndicator = _playerPerformanceConfigService.Current.ShowPerformanceIndicator;
+        if (ImGui.Checkbox("Show Character Load Data in Main Menu", ref showPlayerPerformanceIndicator))
+        {
+            _playerPerformanceConfigService.Current.ShowPlayerPerformanceInMainUi = showPlayerPerformanceIndicator;
+            _playerPerformanceConfigService.Save();
+        }
         if (ImGui.Checkbox("Show performance indicator", ref showPerformanceIndicator))
         {
             _playerPerformanceConfigService.Current.ShowPerformanceIndicator = showPerformanceIndicator;
