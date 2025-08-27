@@ -87,9 +87,9 @@ public sealed class Plugin : IDalamudPlugin
         })
         .ConfigureServices(collection =>
         {
-            collection.AddSingleton(new WindowSystem("MareSynchronos"));
+            collection.AddSingleton(new WindowSystem("SinusSynchronous"));
             collection.AddSingleton<FileDialogManager>();
-            collection.AddSingleton(new Dalamud.Localization("MareSynchronos.Localization.", "", useEmbedded: true));
+            collection.AddSingleton(new Dalamud.Localization("SinusSynchronous.Localization.", "", useEmbedded: true));
 
             // add mare related singletons
             collection.AddSingleton<MareMediator>();

@@ -79,7 +79,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                          UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager,
                          DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager, PairManager pairManager,
                          CharaDataGposeTogetherManager charaDataGposeTogetherManager)
-        : base(logger, mediator, "Mare Synchronous Character Data Hub###MareSynchronosCharaDataUI", performanceCollectorService)
+        : base(logger, mediator, "Mare Synchronous Character Data Hub###SinusSynchronousCharaDataUI", performanceCollectorService)
     {
         SetWindowSizeConstraints();
 

@@ -20,7 +20,7 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
 
     public CreateSyncshellUI(ILogger<CreateSyncshellUI> logger, MareMediator mareMediator, ApiController apiController, UiSharedService uiSharedService,
         PerformanceCollectorService performanceCollectorService)
-        : base(logger, mareMediator, "Create new Syncshell###MareSynchronosCreateSyncshell", performanceCollectorService)
+        : base(logger, mareMediator, "Create new Syncshell###SinusSynchronousCreateSyncshell", performanceCollectorService)
     {
         _apiController = apiController;
         _uiSharedService = uiSharedService;
