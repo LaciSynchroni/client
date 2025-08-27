@@ -220,6 +220,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
 
             if (_error != PenumbraApiEc.Success)
             {
+                logger.LogError("Failed to create temporary collection for {collName}. Penumbra returned the error code {_error} ({_errorCode}).", collName, nameof(_error), _error);
                 return Guid.Empty;
             }
             
