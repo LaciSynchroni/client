@@ -1,18 +1,14 @@
-﻿using SinusSynchronous.API.Data;
+using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Dto.CharaData;
 using SinusSynchronous.Services.CharaData.Models;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 
 namespace SinusSynchronous.WebAPI;
-public partial class ApiController
+public partial class MultiConnectSinusClient
 {
     public async Task<CharaDataFullDto?> CharaDataCreate()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataCreate().ConfigureAwait(false);
-        }
         if (!IsConnected) return null;
 
         try
@@ -29,10 +25,6 @@ public partial class ApiController
 
     public async Task<CharaDataFullDto?> CharaDataUpdate(CharaDataUpdateDto updateDto)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataUpdate(updateDto).ConfigureAwait(false);
-        }
         if (!IsConnected) return null;
 
         try
@@ -49,10 +41,6 @@ public partial class ApiController
 
     public async Task<bool> CharaDataDelete(string id)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataDelete(id).ConfigureAwait(false);
-        }
         if (!IsConnected) return false;
 
         try
@@ -69,10 +57,6 @@ public partial class ApiController
 
     public async Task<CharaDataMetaInfoDto?> CharaDataGetMetainfo(string id)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataGetMetainfo(id).ConfigureAwait(false);
-        }
         if (!IsConnected) return null;
 
         try
@@ -89,10 +73,6 @@ public partial class ApiController
 
     public async Task<CharaDataFullDto?> CharaDataAttemptRestore(string id)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataAttemptRestore(id).ConfigureAwait(false);
-        }
         if (!IsConnected) return null;
 
         try
@@ -109,10 +89,6 @@ public partial class ApiController
 
     public async Task<List<CharaDataFullDto>> CharaDataGetOwn()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataGetOwn().ConfigureAwait(false);
-        }
         if (!IsConnected) return [];
 
         try
@@ -129,10 +105,6 @@ public partial class ApiController
 
     public async Task<List<CharaDataMetaInfoDto>> CharaDataGetShared()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataGetShared().ConfigureAwait(false);
-        }
         if (!IsConnected) return [];
 
         try
@@ -149,10 +121,6 @@ public partial class ApiController
 
     public async Task<CharaDataDownloadDto?> CharaDataDownload(string id)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.CharaDataDownload(id).ConfigureAwait(false);
-        }
         if (!IsConnected) return null;
 
         try
@@ -169,10 +137,6 @@ public partial class ApiController
 
     public async Task<string> GposeLobbyCreate()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GposeLobbyCreate().ConfigureAwait(false);
-        }
         if (!IsConnected) return string.Empty;
 
         try
@@ -189,10 +153,6 @@ public partial class ApiController
 
     public async Task<bool> GposeLobbyLeave()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GposeLobbyLeave().ConfigureAwait(false);
-        }
         if (!IsConnected) return true;
 
         try
@@ -209,10 +169,6 @@ public partial class ApiController
 
     public async Task<List<UserData>> GposeLobbyJoin(string lobbyId)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GposeLobbyJoin(lobbyId).ConfigureAwait(false);
-        }
         if (!IsConnected) return [];
 
         try
@@ -229,11 +185,6 @@ public partial class ApiController
 
     public async Task GposeLobbyPushCharacterData(CharaDataDownloadDto charaDownloadDto)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GposeLobbyPushCharacterData(charaDownloadDto).ConfigureAwait(false);
-            return;
-        }
         if (!IsConnected) return;
 
         try
@@ -249,11 +200,6 @@ public partial class ApiController
 
     public async Task GposeLobbyPushPoseData(PoseData poseData)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GposeLobbyPushPoseData(poseData).ConfigureAwait(false);
-            return;
-        }
         if (!IsConnected) return;
 
         try
@@ -269,11 +215,6 @@ public partial class ApiController
 
     public async Task GposeLobbyPushWorldData(WorldData worldData)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GposeLobbyPushWorldData(worldData).ConfigureAwait(false);
-            return;
-        }
         if (!IsConnected) return;
 
         try

@@ -77,4 +77,9 @@
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="MultiConnectAPI\" />
+    <Folder Include="WebAPI\SignalR\Client\" />
+  </ItemGroup>
+
 </Project>

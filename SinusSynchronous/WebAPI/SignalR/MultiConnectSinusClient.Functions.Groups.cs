@@ -1,40 +1,26 @@
-﻿using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.WebAPI.SignalR.Utils;
 using Microsoft.AspNetCore.SignalR.Client;
+using SinusSynchronous.API.Dto.Group;
+using SinusSynchronous.API.Dto.User;
+using SinusSynchronous.WebAPI.SignalR.Utils;
 
 namespace SinusSynchronous.WebAPI;
 
-public partial class ApiController
+public partial class MultiConnectSinusClient
 {
-    public async Task GroupBanUser(GroupPairDto dto, string reason)
+  public async Task GroupBanUser(GroupPairDto dto, string reason)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupBanUser(dto, reason).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupBanUser), dto, reason).ConfigureAwait(false);
     }
 
     public async Task GroupChangeGroupPermissionState(GroupPermissionDto dto)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupChangeGroupPermissionState(dto).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupChangeGroupPermissionState), dto).ConfigureAwait(false);
     }
 
     public async Task GroupChangeIndividualPermissionState(GroupPairUserPermissionDto dto)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupChangeIndividualPermissionState(dto).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await SetBulkPermissions(new(new(StringComparer.Ordinal),
             new(StringComparer.Ordinal) {
@@ -44,163 +30,96 @@ public partial class ApiController
 
     public async Task GroupChangeOwnership(GroupPairDto groupPair)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupChangeOwnership(groupPair).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupChangeOwnership), groupPair).ConfigureAwait(false);
     }
 
     public async Task<bool> GroupChangePassword(GroupPasswordDto groupPassword)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupChangePassword(groupPassword).ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<bool>(nameof(GroupChangePassword), groupPassword).ConfigureAwait(false);
     }
 
     public async Task GroupClear(GroupDto group)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupClear(group).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupClear), group).ConfigureAwait(false);
     }
 
     public async Task<GroupJoinDto> GroupCreate()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupCreate().ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<GroupJoinDto>(nameof(GroupCreate)).ConfigureAwait(false);
     }
 
     public async Task<List<string>> GroupCreateTempInvite(GroupDto group, int amount)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupCreateTempInvite(group, amount).ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<List<string>>(nameof(GroupCreateTempInvite), group, amount).ConfigureAwait(false);
     }
 
     public async Task GroupDelete(GroupDto group)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupDelete(group).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupDelete), group).ConfigureAwait(false);
     }
 
     public async Task<List<BannedGroupUserDto>> GroupGetBannedUsers(GroupDto group)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupGetBannedUsers(group).ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<List<BannedGroupUserDto>>(nameof(GroupGetBannedUsers), group).ConfigureAwait(false);
     }
 
     public async Task<GroupJoinInfoDto> GroupJoin(GroupPasswordDto passwordedGroup)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupJoin(passwordedGroup).ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<GroupJoinInfoDto>(nameof(GroupJoin), passwordedGroup).ConfigureAwait(false);
     }
 
     public async Task<bool> GroupJoinFinalize(GroupJoinDto passwordedGroup)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupJoinFinalize(passwordedGroup).ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<bool>(nameof(GroupJoinFinalize), passwordedGroup).ConfigureAwait(false);
     }
 
     public async Task GroupLeave(GroupDto group)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupLeave(group).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupLeave), group).ConfigureAwait(false);
     }
 
     public async Task GroupRemoveUser(GroupPairDto groupPair)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupRemoveUser(groupPair).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupRemoveUser), groupPair).ConfigureAwait(false);
     }
 
     public async Task GroupSetUserInfo(GroupPairUserInfoDto groupPair)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupSetUserInfo(groupPair).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupSetUserInfo), groupPair).ConfigureAwait(false);
     }
 
     public async Task<int> GroupPrune(GroupDto group, int days, bool execute)
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupPrune(group, days, execute).ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<int>(nameof(GroupPrune), group, days, execute).ConfigureAwait(false);
     }
 
     public async Task<List<GroupFullInfoDto>> GroupsGetAll()
     {
-        if (_useMultiConnect)
-        {
-            return await _currentSinusClient!.GroupsGetAll().ConfigureAwait(false);
-        }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<List<GroupFullInfoDto>>(nameof(GroupsGetAll)).ConfigureAwait(false);
     }
 
     public async Task GroupUnbanUser(GroupPairDto groupPair)
     {
-        if (_useMultiConnect)
-        {
-            await _currentSinusClient!.GroupUnbanUser(groupPair).ConfigureAwait(false);
-            return;
-        }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupUnbanUser), groupPair).ConfigureAwait(false);
     }
 
     private void CheckConnection()
     {
-        if (ServerState is not (ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting)) throw new InvalidDataException("Not connected");
+        if (_serverState is not (ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting)) throw new InvalidDataException("Not connected");
     }
 }
