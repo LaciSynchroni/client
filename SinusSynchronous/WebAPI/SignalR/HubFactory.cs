@@ -1,14 +1,14 @@
-﻿using SinusSynchronous.API.SignalR;
-using SinusSynchronous.Services;
-using SinusSynchronous.Services.Mediator;
-using SinusSynchronous.Services.ServerConfiguration;
-using SinusSynchronous.WebAPI.SignalR.Utils;
-using MessagePack;
+﻿using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.API.SignalR;
+using SinusSynchronous.Services;
+using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.WebAPI.SignalR.Utils;
 
 namespace SinusSynchronous.WebAPI.SignalR;
 
@@ -77,10 +77,17 @@ public class HubFactory : MediatorSubscriberBase
             transportType = HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling;
         }
 
+        var useAdvancedUris = _serverConfigurationManager.CurrentServer.UseAdvancedUris;
+        var serverHubUri = _serverConfigurationManager.CurrentServer.ServerHubUri;
+
+        var hubUrl = (useAdvancedUris && !string.IsNullOrEmpty(serverHubUri)) ?
+            serverHubUri :
+            _serverConfigurationManager.CurrentApiUrl + ISinusHub.Path;
+
         Logger.LogDebug("Building new HubConnection using transport {transport}", transportType);
 
         _instance = new HubConnectionBuilder()
-            .WithUrl(_serverConfigurationManager.CurrentApiUrl + ISinusHub.Path, options =>
+            .WithUrl(hubUrl, options =>
             {
                 options.AccessTokenProvider = () => _tokenProvider.GetOrUpdateToken(ct);
                 options.Transports = transportType;

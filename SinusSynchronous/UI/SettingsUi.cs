@@ -1693,17 +1693,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
             {
                 var serverName = selectedServer.ServerName;
                 var serverUri = selectedServer.ServerUri;
+                var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
                 var isMain = string.Equals(serverName, ApiController.MainServer, StringComparison.OrdinalIgnoreCase);
                 var flags = isMain ? ImGuiInputTextFlags.ReadOnly : ImGuiInputTextFlags.None;
-
-                if (ImGui.InputText("Service URI", ref serverUri, 255, flags))
-                {
-                    selectedServer.ServerUri = serverUri;
-                }
-                if (isMain)
-                {
-                    _uiShared.DrawHelpText("You cannot edit the URI of the main service.");
-                }
+                var useAdvancedUris = selectedServer.UseAdvancedUris;
 
                 if (ImGui.InputText("Service Name", ref serverName, 255, flags))
                 {
@@ -1713,6 +1706,44 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 if (isMain)
                 {
                     _uiShared.DrawHelpText("You cannot edit the name of the main service.");
+                }
+
+                if (ImGui.InputText("Service URI", ref serverUri, 255, flags))
+                {
+                    selectedServer.ServerUri = serverUri;
+                    _serverConfigurationManager.Save();
+                }
+                if (isMain)
+                {
+                    _uiShared.DrawHelpText("You cannot edit the URI of the main service.");
+                }
+
+                ImGui.SameLine();
+                if (isMain)
+                {
+                    ImGui.BeginDisabled();
+                }
+                if (ImGui.Checkbox("Advanced URIs", ref useAdvancedUris))
+                {
+                    selectedServer.UseAdvancedUris = useAdvancedUris;
+                    _serverConfigurationManager.Save();
+                }
+                if (isMain)
+                {
+                    ImGui.EndDisabled();
+                }
+                _uiShared.DrawHelpText("Configure the API & Hub URI individually");
+                if (useAdvancedUris)
+                {
+                    if (ImGui.InputText("Service Hub URI", ref serverHubUri, 255, flags))
+                    {
+                        selectedServer.ServerHubUri = serverHubUri;
+                        _serverConfigurationManager.Save();
+                    }
+                    if (isMain)
+                    {
+                        _uiShared.DrawHelpText("You cannot edit the URI of the main service.");
+                    }
                 }
 
                 ImGui.SetNextItemWidth(200);

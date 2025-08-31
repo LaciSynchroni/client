@@ -59,6 +59,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private bool _customizePlusExists = false;
     private string _customServerName = "";
     private string _customServerUri = "";
+    private bool _useAdvancedUris = false;
+    private string _serverHubUri = "";
     private Task<Uri?>? _discordOAuthCheck;
     private Task<string?>? _discordOAuthGetCode;
     private CancellationTokenSource _discordOAuthGetCts = new();
@@ -913,9 +915,17 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         if (!hideServiceCreation && ImGui.TreeNode("Add Custom Service"))
         {
             ImGui.SetNextItemWidth(250);
-            ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
-            ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service Name", ref _customServerName, 255);
+            ImGui.SetNextItemWidth(250);
+            ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
+            ImGui.SameLine();
+            ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
+            if (_useAdvancedUris)
+            {
+                ImGui.SetNextItemWidth(250);
+                ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
+            }
+
             if (IconTextButton(FontAwesomeIcon.Plus, "Add Custom Service")
                 && !string.IsNullOrEmpty(_customServerUri)
                 && !string.IsNullOrEmpty(_customServerName))
@@ -924,6 +934,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 {
                     ServerName = _customServerName,
                     ServerUri = _customServerUri,
+                    UseAdvancedUris = _useAdvancedUris,
+                    ServerHubUri = _serverHubUri,
                     UseOAuth2 = true
                 });
                 _customServerName = string.Empty;

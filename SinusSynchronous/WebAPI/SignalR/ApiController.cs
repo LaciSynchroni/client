@@ -187,7 +187,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
         Logger.LogInformation("Recreating Connection");
         Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(ApiController), Services.Events.EventSeverity.Informational,
-            $"Starting Connection to {_serverManager.CurrentServer.ServerName}")));
+            $"Starting Connection to {_serverManager.CurrentServer.ServerName} ({_serverManager.CurrentServer.ServerUri}")));
 
         _connectionCancellationTokenSource?.Cancel();
         _connectionCancellationTokenSource?.Dispose();
@@ -575,13 +575,13 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
     {
         ServerState = ServerState.Disconnecting;
 
-        Logger.LogInformation("Stopping existing connection");
+        Logger.LogInformation("Stopping existing connection to {serverName} ({url})", _serverManager.CurrentServer.ServerName, _serverManager.CurrentServer.ServerUri);
         await _hubFactory.DisposeHubAsync().ConfigureAwait(false);
 
         if (_sinusHub is not null)
         {
             Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(ApiController), Services.Events.EventSeverity.Informational,
-                $"Stopping existing connection to {_serverManager.CurrentServer.ServerName}")));
+                $"Stopping existing connection to {_serverManager.CurrentServer.ServerName} ({_serverManager.CurrentServer.ServerUri})")));
 
             _initialized = false;
             _healthCheckTokenSource?.Cancel();
