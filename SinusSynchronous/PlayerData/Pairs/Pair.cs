@@ -20,17 +20,19 @@ public class Pair
     private readonly ILogger<Pair> _logger;
     private readonly SinusMediator _mediator;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly int _serverIndex;
     private CancellationTokenSource _applicationCts = new();
     private OnlineUserIdentDto? _onlineUserIdentDto = null;
 
     public Pair(ILogger<Pair> logger, UserFullPairDto userPair, PairHandlerFactory cachedPlayerFactory,
-        SinusMediator mediator, ServerConfigurationManager serverConfigurationManager)
+        SinusMediator mediator, ServerConfigurationManager serverConfigurationManager, int serverIndex)
     {
         _logger = logger;
         UserPair = userPair;
         _cachedPlayerFactory = cachedPlayerFactory;
         _mediator = mediator;
         _serverConfigurationManager = serverConfigurationManager;
+        _serverIndex = serverIndex;
     }
 
     public bool HasCachedPlayer => CachedPlayer != null && !string.IsNullOrEmpty(CachedPlayer.PlayerName) && _onlineUserIdentDto != null;

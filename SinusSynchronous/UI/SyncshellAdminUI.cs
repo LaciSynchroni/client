@@ -30,9 +30,10 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     private Task<int>? _pruneTestTask;
     private Task<int>? _pruneTask;
     private int _pruneDays = 14;
+    private int _serverIndex;
 
     public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, SinusMediator mediator, ApiController apiController,
-        UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService)
+        UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService, int serverIndex)
         : base(logger, mediator, "Syncshell Admin Panel (" + groupFullInfo.GroupAliasOrGID + ")", performanceCollectorService)
     {
         GroupFullInfo = groupFullInfo;
@@ -44,6 +45,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
         _newPassword = string.Empty;
         _multiInvites = 30;
         _pwChangeSuccess = true;
+        _serverIndex = serverIndex;
         IsOpen = true;
         SizeConstraints = new WindowSizeConstraints()
         {
@@ -58,7 +60,8 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     {
         if (!_isModerator && !_isOwner) return;
 
-        GroupFullInfo = _pairManager.Groups[GroupFullInfo.Group];
+        var key = new ServerBasedGroupKey(GroupFullInfo.Group, _serverIndex);
+        GroupFullInfo = _pairManager.Groups[key];
 
         using var id = ImRaii.PushId("syncshell_admin_" + GroupFullInfo.GID);
 
@@ -120,7 +123,12 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 var userNode = ImRaii.TreeNode("User List & Administration");
                 if (userNode)
                 {
-                    if (!_pairManager.GroupPairs.TryGetValue(GroupFullInfo, out var pairs))
+                    // TODO uses inefficient Where-op
+                    var pairs = _pairManager.GroupPairs
+                        .First(pair => pair.Key.ServerIndex == _serverIndex && string.Equals(pair.Key.GroupFullInfo.GID,
+                            GroupFullInfo.GID, StringComparison.Ordinal))
+                        .Value;
+                    if (pairs.Count <= 0)
                     {
                         UiSharedService.ColorTextWrapped("No users found in this Syncshell", ImGuiColors.DalamudYellow);
                     }

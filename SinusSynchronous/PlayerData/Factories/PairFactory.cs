@@ -22,14 +22,14 @@ public class PairFactory
         _serverConfigurationManager = serverConfigurationManager;
     }
 
-    public Pair Create(UserFullPairDto userPairDto)
+    public Pair Create(UserFullPairDto userPairDto, int serverIndex)
     {
-        return new Pair(_loggerFactory.CreateLogger<Pair>(), userPairDto, _cachedPlayerFactory, _sinusMediator, _serverConfigurationManager);
+        return new Pair(_loggerFactory.CreateLogger<Pair>(), userPairDto, _cachedPlayerFactory, _sinusMediator, _serverConfigurationManager, serverIndex);
     }
 
-    public Pair Create(UserPairDto userPairDto)
+    public Pair Create(UserPairDto userPairDto, int serverIndex)
     {
         return new Pair(_loggerFactory.CreateLogger<Pair>(), new(userPairDto.User, userPairDto.IndividualPairStatus, [], userPairDto.OwnPermissions, userPairDto.OtherPermissions),
-            _cachedPlayerFactory, _sinusMediator, _serverConfigurationManager);
+            _cachedPlayerFactory, _sinusMediator, _serverConfigurationManager, serverIndex);
     }
 }

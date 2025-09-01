@@ -439,13 +439,13 @@ public class TopTabMenu
             if (ImGui.Button(FontAwesomeIcon.Check.ToIconString(), buttonSize))
             {
                 _ = GlobalControlCountdown(10);
-                var bulkSyncshells = _pairManager.GroupPairs.Keys.OrderBy(g => g.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Group.GID, g =>
+                var bulkSyncshells = _pairManager.GroupPairs.Keys.OrderBy(g => g.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.GroupFullInfo.Group.GID, g =>
                     {
-                        var perm = g.GroupUserPermissions;
-                        perm.SetDisableSounds(g.GroupPermissions.IsPreferDisableSounds());
-                        perm.SetDisableAnimations(g.GroupPermissions.IsPreferDisableAnimations());
-                        perm.SetDisableVFX(g.GroupPermissions.IsPreferDisableVFX());
+                        var perm = g.GroupFullInfo.GroupUserPermissions;
+                        perm.SetDisableSounds(g.GroupFullInfo.GroupPermissions.IsPreferDisableSounds());
+                        perm.SetDisableAnimations(g.GroupFullInfo.GroupPermissions.IsPreferDisableAnimations());
+                        perm.SetDisableVFX(g.GroupFullInfo.GroupPermissions.IsPreferDisableVFX());
                         return perm;
                     }, StringComparer.Ordinal);
 
@@ -465,7 +465,7 @@ public class TopTabMenu
         var buttonX = (availableWidth - (spacingX)) / 2f;
 
         using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct()
-            .Count(g => string.Equals(g.OwnerUID, _apiController.UID, StringComparison.Ordinal)) >= _apiController.ServerInfo.MaxGroupsCreatedByUser))
+            .Count(g => string.Equals(g.GroupFullInfo.OwnerUID, _apiController.UID, StringComparison.Ordinal)) >= _apiController.ServerInfo.MaxGroupsCreatedByUser))
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create new Syncshell", buttonX))
             {
@@ -565,10 +565,10 @@ public class TopTabMenu
             {
                 _ = GlobalControlCountdown(10);
                 var bulkSyncshells = _pairManager.GroupPairs.Keys
-                    .OrderBy(u => u.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Group.GID, g =>
+                    .OrderBy(u => u.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.GroupFullInfo.Group.GID, g =>
                     {
-                        return actEnable(g.GroupUserPermissions);
+                        return actEnable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
                 _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
@@ -579,10 +579,10 @@ public class TopTabMenu
             {
                 _ = GlobalControlCountdown(10);
                 var bulkSyncshells = _pairManager.GroupPairs.Keys
-                    .OrderBy(u => u.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Group.GID, g =>
+                    .OrderBy(u => u.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.GroupFullInfo.Group.GID, g =>
                     {
-                        return actDisable(g.GroupUserPermissions);
+                        return actDisable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
                 _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);

@@ -75,10 +75,11 @@ public partial class MultiConnectSinusClient
         try
         {
             await _sinusHub!.InvokeAsync(nameof(SetBulkPermissions), dto).ConfigureAwait(false);
+            _logger.LogDebug("Executed SetBulkPermissions {dto}", dto);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to set permissions");
+            _logger.LogWarning(ex, "Failed to set permissions");
         }
     }
 

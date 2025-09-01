@@ -131,7 +131,7 @@ public sealed class MultiConnectTokenProvider : IDisposable, IMediatorSubscriber
                     Mediator.Publish(new NotificationMessage("Error generating token",
                         "Your authentication token could not be generated. Check Sinus Main UI (/sinus in chat) to see the error message.",
                         NotificationType.Error));
-                Mediator.Publish(new DisconnectedMessage());
+                Mediator.Publish(new DisconnectedMessage(_serverIndex));
                 throw new SinusAuthFailureException(response);
             }
 

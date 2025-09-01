@@ -869,7 +869,8 @@ internal sealed partial class CharaDataHubUi
                 using (ImRaii.Group())
                 {
                     InputComboHybrid("##GroupAliasToAdd", "##GroupAliasToAddPicker", ref _specificGroupAdd, _pairManager.Groups.Keys,
-                        group => (group.GID, group.Alias, group.AliasOrGID, _serverConfigurationManager.GetNoteForGid(group.GID)));
+                        // TODO index I guess?
+                        group => (group.GroupData.GID, group.GroupData.Alias, group.GroupData.AliasOrGID, _serverConfigurationManager.GetNoteForGid(group.GroupData.GID)));
                     ImGui.SameLine();
                     using (ImRaii.Disabled(string.IsNullOrEmpty(_specificGroupAdd)
                         || updateDto.GroupList.Any(f => string.Equals(f.GID, _specificGroupAdd, StringComparison.Ordinal) || string.Equals(f.Alias, _specificGroupAdd, StringComparison.Ordinal))))

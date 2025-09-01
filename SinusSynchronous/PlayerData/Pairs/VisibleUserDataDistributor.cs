@@ -16,9 +16,9 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
     private readonly PairManager _pairManager;
     private CharacterData? _lastCreatedData;
     private CharacterData? _uploadingCharacterData = null;
-    private readonly List<UserData> _previouslyVisiblePlayers = [];
+    private readonly List<ServerBasedUserKey> _previouslyVisiblePlayers = [];
     private Task<CharacterData>? _fileUploadTask = null;
-    private readonly HashSet<UserData> _usersToPushDataTo = [];
+    private readonly HashSet<ServerBasedUserKey> _usersToPushDataTo = [];
     private readonly SemaphoreSlim _pushDataSemaphore = new(1, 1);
     private readonly CancellationTokenSource _runtimeCts = new();
 
@@ -46,7 +46,7 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
             }
         });
 
-        Mediator.Subscribe<ConnectedMessage>(this, (_) => PushToAllVisibleUsers());
+        Mediator.Subscribe<ConnectedMessage>(this, (msg) => PushToAllVisibleUsers(false, msg.serverIndex));
         Mediator.Subscribe<DisconnectedMessage>(this, (_) => _previouslyVisiblePlayers.Clear());
     }
 
@@ -61,11 +61,21 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
         base.Dispose(disposing);
     }
 
-    private void PushToAllVisibleUsers(bool forced = false)
+    private void PushToAllVisibleUsers(bool forced = false, int? serverIndex = null)
     {
-        foreach (var user in _pairManager.GetVisibleUsers())
+        if (serverIndex != null)
         {
-            _usersToPushDataTo.Add(user);
+            foreach (var user in _pairManager.GetVisibleUsers((int)serverIndex))
+            {
+                _usersToPushDataTo.Add(user);
+            }
+        }
+        else
+        {
+            foreach (var user in _pairManager.GetVisibleUsersAcrossAllServers())
+            {
+                _usersToPushDataTo.Add(user);
+            }
         }
 
         if (_usersToPushDataTo.Count > 0)
@@ -79,7 +89,7 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
     {
         if (!_dalamudUtil.GetIsPlayerPresent() || !_apiController.IsConnected) return;
 
-        var allVisibleUsers = _pairManager.GetVisibleUsers();
+        var allVisibleUsers = _pairManager.GetVisibleUsersAcrossAllServers();
         var newVisibleUsers = allVisibleUsers.Except(_previouslyVisiblePlayers).ToList();
         _previouslyVisiblePlayers.Clear();
         _previouslyVisiblePlayers.AddRange(allVisibleUsers);
@@ -87,7 +97,7 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
 
         Logger.LogDebug("Scheduling character data push of {data} to {users}",
             _lastCreatedData?.DataHash.Value ?? string.Empty,
-            string.Join(", ", newVisibleUsers.Select(k => k.AliasOrUID)));
+            string.Join(", ", newVisibleUsers.Select(k => k.UserData.AliasOrUID)));
         foreach (var user in newVisibleUsers)
         {
             _usersToPushDataTo.Add(user);
@@ -108,19 +118,38 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
                 _uploadingCharacterData = _lastCreatedData.DeepClone();
                 Logger.LogDebug("Starting UploadTask for {hash}, Reason: TaskIsNull: {task}, TaskIsCompleted: {taskCpl}, Forced: {frc}",
                     _lastCreatedData.DataHash, _fileUploadTask == null, _fileUploadTask?.IsCompleted ?? false, forced);
-                _fileUploadTask = _fileTransferManager.UploadFiles(_uploadingCharacterData, [.. _usersToPushDataTo]);
+                // Right now, the file manager is still single-instance, so we push to "current" independant of the user
+                var usersToPushDataTo = _usersToPushDataTo.Select(key => key.UserData);
+                _fileUploadTask = _fileTransferManager.UploadFiles(_uploadingCharacterData, [.. usersToPushDataTo]);
             }
 
             if (_fileUploadTask != null)
             {
                 var dataToSend = await _fileUploadTask.ConfigureAwait(false);
-                await _pushDataSemaphore.WaitAsync(_runtimeCts.Token).ConfigureAwait(false);
+
                 try
                 {
+                    await _pushDataSemaphore.WaitAsync(_runtimeCts.Token).ConfigureAwait(false);
                     if (_usersToPushDataTo.Count == 0) return;
-                    Logger.LogDebug("Pushing {data} to {users}", dataToSend.DataHash, string.Join(", ", _usersToPushDataTo.Select(k => k.AliasOrUID)));
-                    await _apiController.PushCharacterData(dataToSend, [.. _usersToPushDataTo]).ConfigureAwait(false);
+
+                    var serversToPushTo = _usersToPushDataTo.Select(key => key.ServerIndex).Distinct();
+                    Logger.LogDebug("Pushing to servers: {serversToPushTo}", serversToPushTo);
+                    foreach (int serverIndex in serversToPushTo)
+                    {
+                        Logger.LogDebug("Server {serverIndex}: Pushing {data} to {users}", serverIndex,
+                            dataToSend.DataHash,
+                            string.Join(", ", _usersToPushDataTo.Select(k => k.UserData.AliasOrUID)));
+                        var toPushForServer = _usersToPushDataTo.Where(key => key.ServerIndex == serverIndex)
+                            .Select(key => key.UserData);
+                        await _apiController.PushCharacterData(serverIndex, dataToSend, [.. toPushForServer])
+                            .ConfigureAwait(false);
+                    }
+
                     _usersToPushDataTo.Clear();
+                }
+                catch (Exception e)
+                {
+                    Logger.LogDebug(e, "Failed to acquire lock.");
                 }
                 finally
                 {

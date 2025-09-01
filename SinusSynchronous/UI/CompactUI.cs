@@ -594,22 +594,22 @@ public class CompactUi : WindowMediatorSubscriberBase
             var filteredVisiblePairs = BasicSortedDictionary(filteredPairs
                 .Where(FilterVisibleUsers));
 
-            drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(TagHandler.CustomVisibleTag, filteredVisiblePairs, allVisiblePairs));
+            drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(TagHandler.CustomVisibleTag, _serverManager.CurrentServerIndex, filteredVisiblePairs, allVisiblePairs));
         }
 
         List<IDrawFolder> groupFolders = new();
-        foreach (var group in _pairManager.GroupPairs.Select(g => g.Key).OrderBy(g => g.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase))
+        foreach (var group in _pairManager.GroupPairs.Select(g => g.Key).OrderBy(g => g.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase))
         {
             var allGroupPairs = ImmutablePairList(allPairs
-                .Where(u => FilterGroupUsers(u, group)));
+                .Where(u => FilterGroupUsers(u, group.GroupFullInfo)));
 
             var filteredGroupPairs = filteredPairs
-                .Where(u => FilterGroupUsers(u, group) && FilterOnlineOrPausedSelf(u))
+                .Where(u => FilterGroupUsers(u, group.GroupFullInfo) && FilterOnlineOrPausedSelf(u))
                 .OrderByDescending(u => u.Key.IsOnline)
                 .ThenBy(u =>
                 {
-                    if (string.Equals(u.Key.UserData.UID, group.OwnerUID, StringComparison.Ordinal)) return 0;
-                    if (group.GroupPairUserInfos.TryGetValue(u.Key.UserData.UID, out var info))
+                    if (string.Equals(u.Key.UserData.UID, group.GroupFullInfo.OwnerUID, StringComparison.Ordinal)) return 0;
+                    if (group.GroupFullInfo.GroupPairUserInfos.TryGetValue(u.Key.UserData.UID, out var info))
                     {
                         if (info.IsModerator()) return 1;
                         if (info.IsPinned()) return 2;
@@ -635,7 +635,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             var filteredTagPairs = BasicSortedDictionary(filteredPairs
                 .Where(u => FilterTagusers(u, tag) && FilterOnlineOrPausedSelf(u)));
 
-            drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(tag, filteredTagPairs, allTagPairs));
+            drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(tag, _serverManager.CurrentServerIndex, filteredTagPairs, allTagPairs));
         }
 
         var allOnlineNotTaggedPairs = ImmutablePairList(allPairs
@@ -644,7 +644,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             .Where(u => FilterNotTaggedUsers(u) && FilterOnlineOrPausedSelf(u)));
 
         drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder((_configService.Current.ShowOfflineUsersSeparately ? TagHandler.CustomOnlineTag : TagHandler.CustomAllTag),
-            onlineNotTaggedPairs, allOnlineNotTaggedPairs));
+            _serverManager.CurrentServerIndex, onlineNotTaggedPairs, allOnlineNotTaggedPairs));
 
         if (_configService.Current.ShowOfflineUsersSeparately)
         {
@@ -653,7 +653,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             var filteredOfflinePairs = BasicSortedDictionary(filteredPairs
                 .Where(FilterOfflineUsers));
 
-            drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(TagHandler.CustomOfflineTag, filteredOfflinePairs, allOfflinePairs));
+            drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(TagHandler.CustomOfflineTag, _serverManager.CurrentServerIndex, filteredOfflinePairs, allOfflinePairs));
             if (_configService.Current.ShowSyncshellOfflineUsersSeparately)
             {
                 var allOfflineSyncshellUsers = ImmutablePairList(allPairs
@@ -662,12 +662,14 @@ public class CompactUi : WindowMediatorSubscriberBase
                     .Where(FilterOfflineSyncshellUsers));
 
                 drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(TagHandler.CustomOfflineSyncshellTag,
+                    _serverManager.CurrentServerIndex,
                     filteredOfflineSyncshellUsers,
                     allOfflineSyncshellUsers));
             }
         }
 
         drawFolders.Add(_drawEntityFactory.CreateDrawTagFolder(TagHandler.CustomUnpairedTag,
+            _serverManager.CurrentServerIndex,
             BasicSortedDictionary(filteredPairs.Where(u => u.Key.IsOneSidedPair)),
             ImmutablePairList(allPairs.Where(u => u.Key.IsOneSidedPair))));
 

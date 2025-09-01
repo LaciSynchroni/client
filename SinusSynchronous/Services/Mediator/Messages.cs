@@ -30,8 +30,9 @@ public record GposeStartMessage : SameThreadMessage;
 public record GposeEndMessage : MessageBase;
 public record CutsceneEndMessage : MessageBase;
 public record CutsceneFrameworkUpdateMessage : SameThreadMessage;
-public record ConnectedMessage(ConnectionDto Connection) : MessageBase;
-public record DisconnectedMessage : SameThreadMessage;
+public record ConnectedMessage(ConnectionDto Connection, int serverIndex) : MessageBase;
+// TODO this message has a lot of usages that are not yet per-server
+public record DisconnectedMessage(int ServerIndex) : SameThreadMessage;
 public record PenumbraModSettingChangedMessage : MessageBase;
 public record PenumbraInitializedMessage : MessageBase;
 public record PenumbraDisposedMessage : MessageBase;
@@ -74,7 +75,7 @@ public record RemoveWindowMessage(WindowMediatorSubscriberBase Window) : Message
 public record RefreshUiMessage : MessageBase;
 public record OpenBanUserPopupMessage(Pair PairToBan, GroupFullInfoDto GroupFullInfoDto) : MessageBase;
 public record OpenCensusPopupMessage() : MessageBase;
-public record OpenSyncshellAdminPanel(GroupFullInfoDto GroupInfo) : MessageBase;
+public record OpenSyncshellAdminPanel(GroupFullInfoDto GroupInfo, int ServerIndex) : MessageBase;
 public record OpenPermissionWindow(Pair Pair) : MessageBase;
 public record DownloadLimitChangedMessage() : SameThreadMessage;
 public record CensusUpdateMessage(byte Gender, byte RaceId, byte TribeId) : MessageBase;

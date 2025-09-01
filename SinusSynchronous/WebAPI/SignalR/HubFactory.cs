@@ -111,7 +111,7 @@ public class HubFactory : MediatorSubscriberBase
                         .WithCompression(MessagePackCompression.Lz4Block)
                         .WithResolver(resolver);
             })
-            .WithAutomaticReconnect(new ForeverRetryPolicy(Mediator))
+            .WithAutomaticReconnect(new ForeverRetryPolicy(Mediator, _serverConfigurationManager.CurrentServerIndex))
             .ConfigureLogging(a =>
             {
                 a.ClearProviders().AddProvider(_loggingProvider);

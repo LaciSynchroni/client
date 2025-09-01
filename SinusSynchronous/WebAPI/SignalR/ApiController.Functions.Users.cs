@@ -10,7 +10,7 @@ namespace SinusSynchronous.WebAPI;
 #pragma warning disable MA0040
 public partial class ApiController
 {
-    public async Task PushCharacterData(CharacterData data, List<UserData> visibleCharacters)
+    public async Task PushCharacterData(int serverIndex, CharacterData data, List<UserData> visibleCharacters)
     {
         if (_useMultiConnect)
         {

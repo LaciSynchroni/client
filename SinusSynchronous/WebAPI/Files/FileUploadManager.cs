@@ -42,21 +42,6 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
     public List<FileTransfer> CurrentUploads { get; } = [];
     public bool IsUploading => CurrentUploads.Count > 0;
 
-    public bool CancelUpload()
-    {
-        if (CurrentUploads.Any())
-        {
-            Logger.LogDebug("Cancelling current upload");
-            _uploadCancellationTokenSource?.Cancel();
-            _uploadCancellationTokenSource?.Dispose();
-            _uploadCancellationTokenSource = null;
-            CurrentUploads.Clear();
-            return true;
-        }
-
-        return false;
-    }
-
     public async Task DeleteAllFiles()
     {
         if (!_orchestrator.IsInitialized) throw new InvalidOperationException("FileTransferManager is not initialized");
@@ -292,5 +277,20 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         }
 
         CurrentUploads.Clear();
+    }
+    
+    private bool CancelUpload()
+    {
+        if (CurrentUploads.Any())
+        {
+            Logger.LogDebug("Cancelling current upload");
+            _uploadCancellationTokenSource?.Cancel();
+            _uploadCancellationTokenSource?.Dispose();
+            _uploadCancellationTokenSource = null;
+            CurrentUploads.Clear();
+            return true;
+        }
+
+        return false;
     }
 }

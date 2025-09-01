@@ -17,10 +17,11 @@ public class DrawFolderGroup : DrawFolderBase
 {
     private readonly ApiController _apiController;
     private readonly GroupFullInfoDto _groupFullInfoDto;
+    private readonly int _serverIndex;
     private readonly IdDisplayHandler _idDisplayHandler;
     private readonly SinusMediator _sinusMediator;
 
-    public DrawFolderGroup(string id, GroupFullInfoDto groupFullInfoDto, ApiController apiController,
+    public DrawFolderGroup(string id, int serverIndex, GroupFullInfoDto groupFullInfoDto, ApiController apiController,
         IImmutableList<DrawUserPair> drawPairs, IImmutableList<Pair> allPairs, TagHandler tagHandler, IdDisplayHandler idDisplayHandler,
         SinusMediator sinusMediator, UiSharedService uiSharedService) :
         base(id, drawPairs, allPairs, tagHandler, uiSharedService)
@@ -29,6 +30,7 @@ public class DrawFolderGroup : DrawFolderBase
         _apiController = apiController;
         _idDisplayHandler = idDisplayHandler;
         _sinusMediator = sinusMediator;
+        _serverIndex = serverIndex;
     }
 
     protected override bool RenderIfEmpty => true;
@@ -154,7 +156,7 @@ public class DrawFolderGroup : DrawFolderBase
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Cog, "Open Admin Panel", menuWidth, true))
             {
                 ImGui.CloseCurrentPopup();
-                _sinusMediator.Publish(new OpenSyncshellAdminPanel(_groupFullInfoDto));
+                _sinusMediator.Publish(new OpenSyncshellAdminPanel(_groupFullInfoDto, _serverIndex));
             }
         }
     }

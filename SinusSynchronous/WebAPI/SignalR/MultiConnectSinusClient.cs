@@ -239,7 +239,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
 
             _initialized = false;
             _healthCheckTokenSource?.Cancel();
-            Mediator.Publish(new DisconnectedMessage());
+            Mediator.Publish(new DisconnectedMessage(ServerIndex));
             _sinusHub = null;
             ConnectionDto = null;
         }
@@ -313,7 +313,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
                         .WithCompression(MessagePackCompression.Lz4Block)
                         .WithResolver(resolver);
             })
-            .WithAutomaticReconnect(new ForeverRetryPolicy(Mediator))
+            .WithAutomaticReconnect(new ForeverRetryPolicy(Mediator, ServerIndex))
             .ConfigureLogging(a =>
             {
                 a.ClearProviders().AddProvider(_loggerProvider);
@@ -332,7 +332,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     private Task SinusHubOnClosed(Exception? arg)
     {
         _healthCheckTokenSource?.Cancel();
-        Mediator.Publish(new DisconnectedMessage());
+        Mediator.Publish(new DisconnectedMessage(ServerIndex));
         _serverState = ServerState.Offline;
         if (arg != null)
         {
@@ -362,7 +362,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
             _serverState = ServerState.Connected;
             await LoadIninitialPairsAsync().ConfigureAwait(false);
             await LoadOnlinePairsAsync().ConfigureAwait(false);
-            Mediator.Publish(new ConnectedMessage(ConnectionDto));
+            Mediator.Publish(new ConnectedMessage(ConnectionDto, ServerIndex));
         }
         catch (Exception ex)
         {
@@ -387,7 +387,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     public async Task<ConnectionDto> GetConnectionDtoAsync(bool publishConnected)
     {
         var dto = await _sinusHub!.InvokeAsync<ConnectionDto>(nameof(GetConnectionDto)).ConfigureAwait(false);
-        if (publishConnected) Mediator.Publish(new ConnectedMessage(dto));
+        if (publishConnected) Mediator.Publish(new ConnectedMessage(dto, ServerIndex));
         return dto;
     }
 
@@ -488,13 +488,13 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         foreach (var entry in await GroupsGetAll().ConfigureAwait(false))
         {
             Logger.LogDebug("Group: {entry}", entry);
-            _pairManager.AddGroup(entry);
+            _pairManager.AddGroup(entry, ServerIndex);
         }
 
         foreach (var userPair in await UserGetPairedClients().ConfigureAwait(false))
         {
             Logger.LogDebug("Individual Pair: {userPair}", userPair);
-            _pairManager.AddUserPair(userPair);
+            _pairManager.AddUserPair(userPair, ServerIndex);
         }
     }
 
@@ -511,7 +511,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         foreach (var entry in await UserGetOnlinePairs(dto).ConfigureAwait(false))
         {
             Logger.LogDebug("Pair online: {pair}", entry);
-            _pairManager.MarkPairOnline(entry, sendNotif: false);
+            _pairManager.MarkPairOnline(entry, ServerIndex, sendNotif: false);
         }
     }
 
@@ -563,7 +563,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         cts.CancelAfter(TimeSpan.FromSeconds(5));
         _ = Task.Run(async () =>
         {
-            var pair = _pairManager.GetOnlineUserPairs().Single(p => p.UserPair != null && p.UserData == userData);
+            var pair = _pairManager.GetOnlineUserPairs(ServerIndex).Single(p => p.UserPair != null && p.UserData == userData);
             var perm = pair.UserPair!.OwnPermissions;
             perm.SetPaused(paused: true);
             await UserSetPairPermissions(new UserPermissionsDto(userData, perm)).ConfigureAwait(false);
@@ -583,7 +583,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
 
     private async Task PauseAsync(UserData userData)
     {
-        var pair = _pairManager.GetOnlineUserPairs().Single(p => p.UserPair != null && p.UserData == userData);
+        var pair = _pairManager.GetOnlineUserPairs(ServerIndex).Single(p => p.UserPair != null && p.UserData == userData);
         var perm = pair.UserPair!.OwnPermissions;
         perm.SetPaused(paused: true);
         await UserSetPairPermissions(new UserPermissionsDto(userData, perm)).ConfigureAwait(false);
