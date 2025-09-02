@@ -20,7 +20,7 @@ public class Pair
     private readonly ILogger<Pair> _logger;
     private readonly SinusMediator _mediator;
     private readonly ServerConfigurationManager _serverConfigurationManager;
-    private readonly int _serverIndex;
+    public readonly int ServerIndex;
     private CancellationTokenSource _applicationCts = new();
     private OnlineUserIdentDto? _onlineUserIdentDto = null;
 
@@ -32,7 +32,7 @@ public class Pair
         _cachedPlayerFactory = cachedPlayerFactory;
         _mediator = mediator;
         _serverConfigurationManager = serverConfigurationManager;
-        _serverIndex = serverIndex;
+        ServerIndex = serverIndex;
     }
 
     public bool HasCachedPlayer => CachedPlayer != null && !string.IsNullOrEmpty(CachedPlayer.PlayerName) && _onlineUserIdentDto != null;

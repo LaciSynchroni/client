@@ -66,7 +66,7 @@ public partial class MultiConnectSinusClient
             return false;
         }
 
-        if (!await _tokenProvider.TryUpdateOAuth2LoginTokenAsync(_serverConfigurationManager.CurrentServer).ConfigureAwait(false))
+        if (!await _multiConnectTokenService.TryUpdateOAuth2LoginTokenAsync(ServerIndex, _serverConfigurationManager.CurrentServer).ConfigureAwait(false))
         {
             Logger.LogWarning("OAuth2 login token could not be updated");
             ConnectionDto = null;

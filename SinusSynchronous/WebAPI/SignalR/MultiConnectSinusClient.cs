@@ -32,7 +32,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
 
     private readonly ILogger _logger;
     private readonly ILoggerProvider _loggerProvider;
-    private readonly MultiConnectTokenProvider _tokenProvider;
+    private readonly MultiConnectTokenService _multiConnectTokenService;
     private readonly PairManager _pairManager;
 
     private readonly DalamudUtilService _dalamudUtil;
@@ -65,16 +65,14 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     public MultiConnectSinusClient(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
         DalamudUtilService dalamudUtilService,
-        ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SinusMediator mediator,
-        HttpClient httpClient) : base(
+        ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SinusMediator mediator, MultiConnectTokenService multiConnectTokenService) : base(
         loggerFactory.CreateLogger("MultiConnectSinusClient" + serverIndex + "Mediator"), mediator)
     {
         ServerIndex = serverIndex;
-        _tokenProvider = new MultiConnectTokenProvider(loggerFactory.CreateLogger<MultiConnectTokenProvider>(),
-            ServerIndex, serverConfigurationManager, dalamudUtilService, mediator, httpClient);
         _isWine = dalamudUtilService.IsWine;
         _logger = loggerFactory.CreateLogger("MultiConnectSinusClient" + serverIndex);
         _loggerProvider = loggerProvider;
+        _multiConnectTokenService = multiConnectTokenService;
         _pairManager = pairManager;
         _dalamudUtil = dalamudUtilService;
         _serverConfigurationManager = serverConfigurationManager;
@@ -215,7 +213,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     {
         try
         {
-            _lastUsedToken = await _tokenProvider.GetOrUpdateToken(cancellationToken).ConfigureAwait(false);
+            _lastUsedToken = await _multiConnectTokenService.GetOrUpdateToken(ServerIndex, cancellationToken).ConfigureAwait(false);
         }
         catch (SinusAuthFailureException ex)
         {
@@ -230,18 +228,30 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         _serverState = ServerState.Disconnecting;
 
         _logger.LogInformation("Stopping existing connection");
-        await DisposeHubAsync().ConfigureAwait(false);
 
-        if (_sinusHub is not null)
+        if (_sinusHub != null && !_isDisposed)
         {
+            _logger.LogDebug("Disposing current HubConnection");
+            _isDisposed = true;
+
+            _sinusHub.Closed -= SinusHubOnClosed;
+            _sinusHub.Reconnecting -= SinusHubOnReconnecting;
+            _sinusHub.Reconnected -= SinusHubOnReconnectedAsync;
+
+            await _sinusHub.StopAsync().ConfigureAwait(false);
+            await _sinusHub.DisposeAsync().ConfigureAwait(false);
+
             Mediator.Publish(new EventMessage(new Event(nameof(ApiController), EventSeverity.Informational,
                 $"Stopping existing connection to {ServerToUse.ServerName}")));
-
             _initialized = false;
             _healthCheckTokenSource?.Cancel();
             Mediator.Publish(new DisconnectedMessage(ServerIndex));
             _sinusHub = null;
             ConnectionDto = null;
+            
+            _sinusHub = null;
+
+            Logger.LogDebug("Current HubConnection disposed");
         }
 
         _serverState = state;
@@ -291,7 +301,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         _sinusHub = new HubConnectionBuilder()
             .WithUrl(ServerToUse.ServerUri + ISinusHub.Path, options =>
             {
-                options.AccessTokenProvider = () => _tokenProvider.GetOrUpdateToken(ct);
+                options.AccessTokenProvider = () => _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct);
                 options.Transports = transportType;
             })
             .AddMessagePackProtocol(opt =>
@@ -456,7 +466,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         bool requireReconnect = false;
         try
         {
-            var token = await _tokenProvider.GetOrUpdateToken(ct).ConfigureAwait(false);
+            var token = await _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct).ConfigureAwait(false);
             if (!string.Equals(token, _lastUsedToken, StringComparison.Ordinal))
             {
                 Logger.LogDebug("Reconnecting due to updated token");

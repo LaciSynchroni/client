@@ -81,7 +81,10 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
         if (_usersToPushDataTo.Count > 0)
         {
             Logger.LogDebug("Pushing data {hash} for {count} visible players", _lastCreatedData?.DataHash.Value ?? "UNKNOWN", _usersToPushDataTo.Count);
-            PushCharacterData(forced);
+            foreach (int connectedServerIndex in _apiController.ConnectedServerIndexes)
+            {
+                PushCharacterData(connectedServerIndex, forced);
+            }
         }
     }
 
@@ -102,10 +105,13 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
         {
             _usersToPushDataTo.Add(user);
         }
-        PushCharacterData();
+        foreach (int connectedServerIndex in _apiController.ConnectedServerIndexes)
+        {
+            PushCharacterData(connectedServerIndex);
+        }
     }
 
-    private void PushCharacterData(bool forced = false)
+    private void PushCharacterData(int serverIndex, bool forced = false)
     {
         if (_lastCreatedData == null || _usersToPushDataTo.Count == 0) return;
 
@@ -120,7 +126,7 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
                     _lastCreatedData.DataHash, _fileUploadTask == null, _fileUploadTask?.IsCompleted ?? false, forced);
                 // Right now, the file manager is still single-instance, so we push to "current" independant of the user
                 var usersToPushDataTo = _usersToPushDataTo.Select(key => key.UserData);
-                _fileUploadTask = _fileTransferManager.UploadFiles(_uploadingCharacterData, [.. usersToPushDataTo]);
+                _fileUploadTask = _fileTransferManager.UploadFiles(serverIndex, _uploadingCharacterData, [.. usersToPushDataTo]);
             }
 
             if (_fileUploadTask != null)

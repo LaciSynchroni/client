@@ -9,6 +9,7 @@ using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services.CharaData;
 using SinusSynchronous.Services.CharaData.Models;
+using SinusSynchronous.Services.ServerConfiguration;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI.Files;
 
@@ -24,10 +25,11 @@ public sealed class CharaDataFileHandler : IDisposable
     private readonly ILogger<CharaDataFileHandler> _logger;
     private readonly SinusCharaFileDataFactory _sinusCharaFileDataFactory;
     private readonly PlayerDataFactory _playerDataFactory;
+    private readonly ServerConfigurationManager _serverConfiguration;
     private int _globalFileCounter = 0;
 
     public CharaDataFileHandler(ILogger<CharaDataFileHandler> logger, FileDownloadManagerFactory fileDownloadManagerFactory, FileUploadManager fileUploadManager, FileCacheManager fileCacheManager,
-            DalamudUtilService dalamudUtilService, GameObjectHandlerFactory gameObjectHandlerFactory, PlayerDataFactory playerDataFactory)
+            DalamudUtilService dalamudUtilService, GameObjectHandlerFactory gameObjectHandlerFactory, PlayerDataFactory playerDataFactory, ServerConfigurationManager serverConfiguration)
     {
         _fileDownloadManager = fileDownloadManagerFactory.Create();
         _logger = logger;
@@ -36,6 +38,7 @@ public sealed class CharaDataFileHandler : IDisposable
         _dalamudUtilService = dalamudUtilService;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
         _playerDataFactory = playerDataFactory;
+        _serverConfiguration = serverConfiguration;
         _sinusCharaFileDataFactory = new(fileCacheManager);
     }
 
@@ -116,10 +119,10 @@ public sealed class CharaDataFileHandler : IDisposable
         _fileDownloadManager.Dispose();
     }
 
-    public async Task DownloadFilesAsync(GameObjectHandler tempHandler, List<FileReplacementData> missingFiles, Dictionary<string, string> modPaths, CancellationToken token)
+    public async Task DownloadFilesAsync(int serverIndex, GameObjectHandler tempHandler, List<FileReplacementData> missingFiles, Dictionary<string, string> modPaths, CancellationToken token)
     {
-        await _fileDownloadManager.InitiateDownloadList(tempHandler, missingFiles, token).ConfigureAwait(false);
-        await _fileDownloadManager.DownloadFiles(tempHandler, missingFiles, token).ConfigureAwait(false);
+        await _fileDownloadManager.InitiateDownloadList(serverIndex, tempHandler, missingFiles, token).ConfigureAwait(false);
+        await _fileDownloadManager.DownloadFiles(serverIndex, tempHandler, missingFiles, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         foreach (var file in missingFiles.SelectMany(m => m.GamePaths, (FileEntry, GamePath) => (FileEntry.Hash, GamePath)))
         {
@@ -298,6 +301,6 @@ public sealed class CharaDataFileHandler : IDisposable
 
     internal async Task<List<string>> UploadFiles(List<string> fileList, ValueProgress<string> uploadProgress, CancellationToken token)
     {
-        return await _fileUploadManager.UploadFiles(fileList, uploadProgress, token).ConfigureAwait(false);
+        return await _fileUploadManager.UploadFiles(_serverConfiguration.CurrentServerIndex, fileList, uploadProgress, token).ConfigureAwait(false);
     }
 }

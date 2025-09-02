@@ -408,7 +408,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
                 Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Informational,
                     $"Starting download for {toDownloadReplacements.Count} files")));
-                var toDownloadFiles = await _downloadManager.InitiateDownloadList(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false);
+                var toDownloadFiles = await _downloadManager.InitiateDownloadList(Pair.ServerIndex, _charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false);
 
                 if (!_playerPerformanceService.ComputeAndAutoPauseOnVRAMUsageThresholds(this, charaData, toDownloadFiles))
                 {
@@ -416,7 +416,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     return;
                 }
 
-                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false));
+                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(Pair.ServerIndex, _charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false));
 
                 await _pairDownloadTask.ConfigureAwait(false);
 

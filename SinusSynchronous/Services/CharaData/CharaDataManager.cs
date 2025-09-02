@@ -9,6 +9,7 @@ using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.CharaData.Models;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.Services.ServerConfiguration;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
@@ -24,6 +25,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly CharaDataFileHandler _fileHandler;
     private readonly IpcManager _ipcManager;
+    private readonly ServerConfigurationManager _serverConfig;
     private readonly ConcurrentDictionary<string, CharaDataMetaInfoExtendedDto?> _metaInfoCache = [];
     private readonly List<CharaDataMetaInfoExtendedDto> _nearbyData = [];
     private readonly CharaDataNearbyManager _nearbyManager;
@@ -45,7 +47,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         SinusMediator sinusMediator, IpcManager ipcManager, DalamudUtilService dalamudUtilService,
         FileDownloadManagerFactory fileDownloadManagerFactory,
         CharaDataConfigService charaDataConfigService, CharaDataNearbyManager charaDataNearbyManager,
-        CharaDataCharacterHandler charaDataCharacterHandler, PairManager pairManager) : base(logger, sinusMediator)
+        CharaDataCharacterHandler charaDataCharacterHandler, PairManager pairManager, ServerConfigurationManager serverConfig) : base(logger, sinusMediator)
     {
         _apiController = apiController;
         _fileHandler = charaDataFileHandler;
@@ -55,6 +57,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         _nearbyManager = charaDataNearbyManager;
         _characterHandler = charaDataCharacterHandler;
         _pairManager = pairManager;
+        _serverConfig = serverConfig;
         sinusMediator.Subscribe<ConnectedMessage>(this, (msg) =>
         {
             _connectCts?.Cancel();
@@ -958,7 +961,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
             try
             {
                 DataApplicationProgress = "Downloading Missing Files. Please be patient.";
-                await _fileHandler.DownloadFilesAsync(tempHandler, missingFiles, modPaths, token).ConfigureAwait(false);
+                await _fileHandler.DownloadFilesAsync(_serverConfig.CurrentServerIndex,tempHandler, missingFiles, modPaths, token).ConfigureAwait(false);
             }
             catch (FileNotFoundException)
             {

@@ -109,6 +109,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<XivDataAnalyzer>();
             collection.AddSingleton<CharacterAnalyzer>();
             collection.AddSingleton<TokenProvider>();
+            collection.AddSingleton<MultiConnectTokenService>();
             collection.AddSingleton<PluginWarningNotificationService>();
             collection.AddSingleton<FileCompactor>();
             collection.AddSingleton<TagHandler>();
