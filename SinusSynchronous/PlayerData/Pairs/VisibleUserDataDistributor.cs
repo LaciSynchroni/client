@@ -47,7 +47,10 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
         });
 
         Mediator.Subscribe<ConnectedMessage>(this, (msg) => PushToAllVisibleUsers(false, msg.serverIndex));
-        Mediator.Subscribe<DisconnectedMessage>(this, (_) => _previouslyVisiblePlayers.Clear());
+        Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
+        {
+            _previouslyVisiblePlayers.RemoveAll(key => key.ServerIndex == msg.ServerIndex);
+        });
     }
 
     protected override void Dispose(bool disposing)

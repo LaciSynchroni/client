@@ -79,12 +79,9 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
 
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) => DalamudUtilOnLogOut());
-        Mediator.Subscribe<HubClosedMessage>(this, (msg) => SinusHubOnClosed(msg.Exception));
-        Mediator.Subscribe<HubReconnectedMessage>(this, (msg) => _ = SinusHubOnReconnectedAsync(null));
-        Mediator.Subscribe<HubReconnectingMessage>(this, (msg) => SinusHubOnReconnecting(msg.Exception));
-        Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePauseAsync(msg.UserData));
+        Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePauseAsync(msg.ServerIndex, msg.UserData));
         Mediator.Subscribe<CensusUpdateMessage>(this, (msg) => _lastCensus = msg);
-        Mediator.Subscribe<PauseMessage>(this, (msg) => _ = PauseAsync(msg.UserData));
+        Mediator.Subscribe<PauseMessage>(this, (msg) => _ = PauseAsync(msg.ServerIndex, msg.UserData));
     }
 
 
@@ -567,8 +564,12 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         _serverState = ServerState.Offline;
     }
 
-    public Task CyclePauseAsync(UserData userData)
+    public Task CyclePauseAsync(int serverIndex, UserData userData)
     {
+        if (serverIndex != ServerIndex)
+        {
+            return Task.CompletedTask;
+        }
         CancellationTokenSource cts = new();
         cts.CancelAfter(TimeSpan.FromSeconds(5));
         _ = Task.Run(async () =>
@@ -591,8 +592,12 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         return Task.CompletedTask;
     }
 
-    private async Task PauseAsync(UserData userData)
+    private async Task PauseAsync(int serverIndex, UserData userData)
     {
+        if (serverIndex != ServerIndex)
+        {
+            return;
+        }
         var pair = _pairManager.GetOnlineUserPairs(ServerIndex).Single(p => p.UserPair != null && p.UserData == userData);
         var perm = pair.UserPair!.OwnPermissions;
         perm.SetPaused(paused: true);

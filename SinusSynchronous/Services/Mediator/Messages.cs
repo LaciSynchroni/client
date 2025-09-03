@@ -57,8 +57,11 @@ public record CharacterDataCreatedMessage(CharacterData CharacterData) : SameThr
 public record CharacterDataAnalyzedMessage : MessageBase;
 public record PenumbraStartRedrawMessage(IntPtr Address) : MessageBase;
 public record PenumbraEndRedrawMessage(IntPtr Address) : MessageBase;
+[Obsolete("no longer needed for multiconnect")]
 public record HubReconnectingMessage(Exception? Exception) : SameThreadMessage;
+[Obsolete("no longer needed for multiconnect")]
 public record HubReconnectedMessage(string? Arg) : SameThreadMessage;
+[Obsolete("no longer needed for multiconnect")]
 public record HubClosedMessage(Exception? Exception) : SameThreadMessage;
 public record DownloadReadyMessage(Guid RequestId) : MessageBase;
 public record DownloadStartedMessage(GameObjectHandler DownloadId, Dictionary<string, FileDownloadStatus> DownloadStatus) : MessageBase;
@@ -67,7 +70,7 @@ public record UiToggleMessage(Type UiType) : MessageBase;
 public record PlayerUploadingMessage(GameObjectHandler Handler, bool IsUploading) : MessageBase;
 public record ClearProfileDataMessage(ServerBasedUserKey? UserData = null) : MessageBase;
 public record CyclePauseMessage(int ServerIndex, UserData UserData) : MessageBase;
-public record PauseMessage(UserData UserData) : MessageBase;
+public record PauseMessage(int ServerIndex, UserData UserData) : MessageBase;
 public record ProfilePopoutToggle(Pair? Pair) : MessageBase;
 public record CompactUiChange(Vector2 Size, Vector2 Position) : MessageBase;
 public record ProfileOpenStandaloneMessage(Pair Pair) : MessageBase;

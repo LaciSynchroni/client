@@ -147,7 +147,7 @@ public class PlayerPerformanceService
             _mediator.Publish(new EventMessage(new Event(pair.PlayerName, pair.UserData, nameof(PlayerPerformanceService), EventSeverity.Warning,
                 $"Exceeds triangle threshold: automatically paused ({triUsage}/{config.TrisAutoPauseThresholdThousands * 1000} triangles)")));
 
-            _mediator.Publish(new PauseMessage(pair.UserData));
+            _mediator.Publish(new PauseMessage(pair.ServerIndex, pair.UserData));
 
             return false;
         }
@@ -220,7 +220,7 @@ public class PlayerPerformanceService
                 $" and has been automatically paused.",
                 SinusConfiguration.Models.NotificationType.Warning));
 
-            _mediator.Publish(new PauseMessage(pair.UserData));
+            _mediator.Publish(new PauseMessage(pair.ServerIndex, pair.UserData));
 
             _mediator.Publish(new EventMessage(new Event(pair.PlayerName, pair.UserData, nameof(PlayerPerformanceService), EventSeverity.Warning,
                 $"Exceeds VRAM threshold: automatically paused ({UiSharedService.ByteToString(vramUsage, addSuffix: true)}/{config.VRAMSizeAutoPauseThresholdMiB} MiB)")));
