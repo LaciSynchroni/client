@@ -3,71 +3,72 @@ using SinusSynchronous.WebAPI.SignalR.Utils;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace SinusSynchronous.WebAPI;
+using ServerIndex = int;
 
 public partial class ApiController
 {
-    public async Task GroupBanUser(GroupPairDto dto, string reason)
+    public async Task GroupBanUser(ServerIndex serverIndex, GroupPairDto dto, string reason)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupBanUser(dto, reason).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupBanUser(dto, reason).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupBanUser), dto, reason).ConfigureAwait(false);
     }
 
-    public async Task GroupChangeGroupPermissionState(GroupPermissionDto dto)
+    public async Task GroupChangeGroupPermissionState(ServerIndex serverIndex, GroupPermissionDto dto)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupChangeGroupPermissionState(dto).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupChangeGroupPermissionState(dto).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupChangeGroupPermissionState), dto).ConfigureAwait(false);
     }
 
-    public async Task GroupChangeIndividualPermissionState(GroupPairUserPermissionDto dto)
+    public async Task GroupChangeIndividualPermissionState(ServerIndex serverIndex, GroupPairUserPermissionDto dto)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupChangeIndividualPermissionState(dto).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupChangeIndividualPermissionState(dto).ConfigureAwait(false);
             return;
         }
         CheckConnection();
-        await SetBulkPermissions(new(new(StringComparer.Ordinal),
+        await SetBulkPermissions(serverIndex, new(new(StringComparer.Ordinal),
             new(StringComparer.Ordinal) {
                 { dto.Group.GID, dto.GroupPairPermissions }
             })).ConfigureAwait(false);
     }
 
-    public async Task GroupChangeOwnership(GroupPairDto groupPair)
+    public async Task GroupChangeOwnership(ServerIndex serverIndex, GroupPairDto groupPair)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupChangeOwnership(groupPair).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupChangeOwnership(groupPair).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupChangeOwnership), groupPair).ConfigureAwait(false);
     }
 
-    public async Task<bool> GroupChangePassword(GroupPasswordDto groupPassword)
+    public async Task<bool> GroupChangePassword(ServerIndex serverIndex, GroupPasswordDto groupPassword)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupChangePassword(groupPassword).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupChangePassword(groupPassword).ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<bool>(nameof(GroupChangePassword), groupPassword).ConfigureAwait(false);
     }
 
-    public async Task GroupClear(GroupDto group)
+    public async Task GroupClear(ServerIndex serverIndex, GroupDto group)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupClear(group).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupClear(group).ConfigureAwait(false);
             return;
         }
         CheckConnection();
@@ -76,103 +77,114 @@ public partial class ApiController
 
     public async Task<GroupJoinDto> GroupCreate()
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupCreate().ConfigureAwait(false);
+            // TODO needs a server selection instead of doing it for current
+            return await GetClientForServer(_serverManager.CurrentServerIndex)!.GroupCreate().ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<GroupJoinDto>(nameof(GroupCreate)).ConfigureAwait(false);
     }
 
-    public async Task<List<string>> GroupCreateTempInvite(GroupDto group, int amount)
+    public async Task<List<string>> GroupCreateTempInvite(ServerIndex serverIndex, GroupDto group, int amount)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupCreateTempInvite(group, amount).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupCreateTempInvite(group, amount).ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<List<string>>(nameof(GroupCreateTempInvite), group, amount).ConfigureAwait(false);
     }
 
-    public async Task GroupDelete(GroupDto group)
+    public async Task GroupDelete(ServerIndex serverIndex, GroupDto group)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupDelete(group).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupDelete(group).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupDelete), group).ConfigureAwait(false);
     }
 
-    public async Task<List<BannedGroupUserDto>> GroupGetBannedUsers(GroupDto group)
+    public async Task<List<BannedGroupUserDto>> GroupGetBannedUsers(ServerIndex serverIndex, GroupDto group)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupGetBannedUsers(group).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupGetBannedUsers(group).ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<List<BannedGroupUserDto>>(nameof(GroupGetBannedUsers), group).ConfigureAwait(false);
     }
 
-    public async Task<GroupJoinInfoDto> GroupJoin(GroupPasswordDto passwordedGroup)
+    public Task<GroupJoinInfoDto> GroupJoinCurrentServer(GroupPasswordDto passwordedGroup)
     {
-        if (_useMultiConnect)
+        return GroupJoin(_serverManager.CurrentServerIndex, passwordedGroup);
+    }
+
+    public async Task<GroupJoinInfoDto> GroupJoin(ServerIndex serverIndex, GroupPasswordDto passwordedGroup)
+    {
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupJoin(passwordedGroup).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupJoin(passwordedGroup).ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<GroupJoinInfoDto>(nameof(GroupJoin), passwordedGroup).ConfigureAwait(false);
     }
-
-    public async Task<bool> GroupJoinFinalize(GroupJoinDto passwordedGroup)
+    
+    public Task<bool> GroupJoinFinalizeCurrentServer(GroupJoinDto passwordedGroup)
     {
-        if (_useMultiConnect)
+        return GroupJoinFinalize(_serverManager.CurrentServerIndex, passwordedGroup);
+    }
+
+    public async Task<bool> GroupJoinFinalize(ServerIndex serverIndex, GroupJoinDto passwordedGroup)
+    {
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupJoinFinalize(passwordedGroup).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupJoinFinalize(passwordedGroup).ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<bool>(nameof(GroupJoinFinalize), passwordedGroup).ConfigureAwait(false);
     }
 
-    public async Task GroupLeave(GroupDto group)
+    public async Task GroupLeave(ServerIndex serverIndex, GroupDto group)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupLeave(group).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupLeave(group).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupLeave), group).ConfigureAwait(false);
     }
 
-    public async Task GroupRemoveUser(GroupPairDto groupPair)
+    public async Task GroupRemoveUser(ServerIndex serverIndex, GroupPairDto groupPair)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupRemoveUser(groupPair).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupRemoveUser(groupPair).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupRemoveUser), groupPair).ConfigureAwait(false);
     }
 
-    public async Task GroupSetUserInfo(GroupPairUserInfoDto groupPair)
+    public async Task GroupSetUserInfo(ServerIndex serverIndex, GroupPairUserInfoDto groupPair)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupSetUserInfo(groupPair).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupSetUserInfo(groupPair).ConfigureAwait(false);
             return;
         }
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(GroupSetUserInfo), groupPair).ConfigureAwait(false);
     }
 
-    public async Task<int> GroupPrune(GroupDto group, int days, bool execute)
+    public async Task<int> GroupPrune(ServerIndex serverIndex, GroupDto group, int days, bool execute)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupPrune(group, days, execute).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupPrune(group, days, execute).ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<int>(nameof(GroupPrune), group, days, execute).ConfigureAwait(false);
@@ -180,19 +192,19 @@ public partial class ApiController
 
     public async Task<List<GroupFullInfoDto>> GroupsGetAll()
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.GroupsGetAll().ConfigureAwait(false);
+            throw new InvalidOperationException("Not supported for _multiConnect, please call multi connect sinus client instead!");
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<List<GroupFullInfoDto>>(nameof(GroupsGetAll)).ConfigureAwait(false);
     }
 
-    public async Task GroupUnbanUser(GroupPairDto groupPair)
+    public async Task GroupUnbanUser(ServerIndex serverIndex, GroupPairDto groupPair)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.GroupUnbanUser(groupPair).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.GroupUnbanUser(groupPair).ConfigureAwait(false);
             return;
         }
         CheckConnection();

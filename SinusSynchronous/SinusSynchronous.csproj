@@ -24,6 +24,7 @@
     <Compile Remove="PlayerData\Export\**" />
     <EmbeddedResource Remove="PlayerData\Export\**" />
     <None Remove="PlayerData\Export\**" />
+    <Compile Remove="WebAPI\SignalR\ApiController.Files.cs" />
   </ItemGroup>
 
   <ItemGroup>

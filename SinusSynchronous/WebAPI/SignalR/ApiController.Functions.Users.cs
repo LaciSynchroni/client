@@ -6,15 +6,17 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 
 namespace SinusSynchronous.WebAPI;
+using ServerIndex = int;
 
 #pragma warning disable MA0040
 public partial class ApiController
 {
-    public async Task PushCharacterData(int serverIndex, CharacterData data, List<UserData> visibleCharacters)
+    
+    public async Task PushCharacterData(ServerIndex serverIndex, CharacterData data, List<UserData> visibleCharacters)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.PushCharacterData(data, visibleCharacters).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.PushCharacterData(data, visibleCharacters).ConfigureAwait(false);
             return;
         }
 
@@ -34,11 +36,16 @@ public partial class ApiController
         }
     }
 
-    public async Task UserAddPair(UserDto user)
+    public Task UserAddPairToCurrentServer(string pairToAdd)
     {
-        if (_useMultiConnect)
+        return UserAddPair(_serverManager.CurrentServerIndex, new(new(pairToAdd)));
+    }
+
+    public async Task UserAddPair(ServerIndex serverIndex, UserDto user)
+    {
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.UserAddPair(user).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.UserAddPair(user).ConfigureAwait(false);
             return;
         }
 
@@ -46,35 +53,39 @@ public partial class ApiController
         await _sinusHub!.SendAsync(nameof(UserAddPair), user).ConfigureAwait(false);
     }
 
-    public async Task UserDelete()
+    public async Task UserDelete(ServerIndex serverIndex)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.UserDelete().ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.UserDelete().ConfigureAwait(false);
             return;
         }
 
         CheckConnection();
         await _sinusHub!.SendAsync(nameof(UserDelete)).ConfigureAwait(false);
-        await CreateConnectionsAsync().ConfigureAwait(false);
+        await CreateConnectionsAsync(serverIndex).ConfigureAwait(false);
     }
 
-    public async Task<List<OnlineUserIdentDto>> UserGetOnlinePairs(CensusDataDto? censusDataDto)
+    private async Task<List<OnlineUserIdentDto>> UserGetOnlinePairs(CensusDataDto? censusDataDto)
     {
         return await _sinusHub!.InvokeAsync<List<OnlineUserIdentDto>>(nameof(UserGetOnlinePairs), censusDataDto)
             .ConfigureAwait(false);
     }
 
-    public async Task<List<UserFullPairDto>> UserGetPairedClients()
+    private async Task<List<UserFullPairDto>> UserGetPairedClients()
     {
+        if (UseMultiConnect)
+        {
+            throw new InvalidOperationException("Not supported for _multiConnect, please call multi connect sinus client instead!");
+        }
         return await _sinusHub!.InvokeAsync<List<UserFullPairDto>>(nameof(UserGetPairedClients)).ConfigureAwait(false);
     }
 
-    public async Task<UserProfileDto> UserGetProfile(UserDto dto)
+    public async Task<UserProfileDto> UserGetProfile(ServerIndex serverIndex, UserDto dto)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            return await _currentSinusClient!.UserGetProfile(dto).ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.UserGetProfile(dto).ConfigureAwait(false);
         }
 
         if (!IsConnected)
@@ -83,7 +94,7 @@ public partial class ApiController
         return await _sinusHub!.InvokeAsync<UserProfileDto>(nameof(UserGetProfile), dto).ConfigureAwait(false);
     }
 
-    public async Task UserPushData(UserCharaDataMessageDto dto)
+    private async Task UserPushData(UserCharaDataMessageDto dto)
     {
         try
         {
@@ -95,11 +106,11 @@ public partial class ApiController
         }
     }
 
-    public async Task SetBulkPermissions(BulkPermissionsDto dto)
+    public async Task SetBulkPermissions(ServerIndex serverIndex, BulkPermissionsDto dto)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.SetBulkPermissions(dto).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.SetBulkPermissions(dto).ConfigureAwait(false);
             return;
         }
 
@@ -115,45 +126,45 @@ public partial class ApiController
         }
     }
 
-    public async Task UserRemovePair(UserDto userDto)
+    public async Task UserRemovePair(ServerIndex serverIndex, UserDto userDto)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.UserRemovePair(userDto).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.UserRemovePair(userDto).ConfigureAwait(false);
             return;
         }
         if (!IsConnected) return;
         await _sinusHub!.SendAsync(nameof(UserRemovePair), userDto).ConfigureAwait(false);
     }
 
-    public async Task UserSetPairPermissions(UserPermissionsDto userPermissions)
+    public async Task UserSetPairPermissions(ServerIndex serverIndex, UserPermissionsDto userPermissions)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.UserSetPairPermissions(userPermissions).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.UserSetPairPermissions(userPermissions).ConfigureAwait(false);
             return;
         }
-        await SetBulkPermissions(new(
+        await SetBulkPermissions(serverIndex, new(
             new(StringComparer.Ordinal) { { userPermissions.User.UID, userPermissions.Permissions } },
             new(StringComparer.Ordinal))).ConfigureAwait(false);
     }
 
-    public async Task UserSetProfile(UserProfileDto userDescription)
+    public async Task UserSetProfile(ServerIndex serverIndex, UserProfileDto userDescription)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.UserSetProfile(userDescription).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.UserSetProfile(userDescription).ConfigureAwait(false);
             return;
         }
         if (!IsConnected) return;
         await _sinusHub!.InvokeAsync(nameof(UserSetProfile), userDescription).ConfigureAwait(false);
     }
 
-    public async Task UserUpdateDefaultPermissions(DefaultPermissionsDto defaultPermissionsDto)
+    public async Task UserUpdateDefaultPermissions(ServerIndex serverIndex, DefaultPermissionsDto defaultPermissionsDto)
     {
-        if (_useMultiConnect)
+        if (UseMultiConnect)
         {
-            await _currentSinusClient!.UserUpdateDefaultPermissions(defaultPermissionsDto).ConfigureAwait(false);
+            await GetClientForServer(serverIndex)!.UserUpdateDefaultPermissions(defaultPermissionsDto).ConfigureAwait(false);
             return;
         }
         CheckConnection();

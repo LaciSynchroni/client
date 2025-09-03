@@ -35,7 +35,7 @@ public class BanUserPopupHandler : IPopupHandler
         {
             ImGui.CloseCurrentPopup();
             var reason = _banReason;
-            _ = _apiController.GroupBanUser(new GroupPairDto(_group.Group, _reportedPair.UserData), reason);
+            _ = _apiController.GroupBanUser(_reportedPair.ServerIndex, new GroupPairDto(_group.Group, _reportedPair.UserData), reason);
             _banReason = string.Empty;
         }
         UiSharedService.TextWrapped("The reason will be displayed in the banlist. The current server-side alias if present (Vanity ID) will automatically be attached to the reason.");

@@ -51,7 +51,8 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
         {
             var spacing = ImGui.GetStyle().ItemSpacing;
 
-            var sinusProfile = _sinusProfileManager.GetSinusProfile(Pair.UserData);
+            var msg = new ServerBasedUserKey(Pair.UserData, Pair.ServerIndex);
+            var sinusProfile = _sinusProfileManager.GetSinusProfile(msg);
 
             if (_textureWrap == null || !sinusProfile.ImageData.Value.SequenceEqual(_lastProfilePicture))
             {

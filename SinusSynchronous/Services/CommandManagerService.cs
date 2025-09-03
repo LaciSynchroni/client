@@ -88,7 +88,7 @@ public sealed class CommandManagerService : IDisposable
             {
                 _serverConfigurationManager.CurrentServer.FullPause = fullPause;
                 _serverConfigurationManager.Save();
-                _ = _apiController.CreateConnectionsAsync();
+                _ = _apiController.CreateConnectionsAsync(_serverConfigurationManager.CurrentServerIndex);
             }
         }
         else if (string.Equals(splitArgs[0], "gpose", StringComparison.OrdinalIgnoreCase))

@@ -295,7 +295,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                             };
                         }
                         _secretKey = string.Empty;
-                        _ = Task.Run(() => _uiShared.ApiController.CreateConnectionsAsync());
+                        _ = Task.Run(() => _uiShared.ApiController.CreateConnectionsAsync(serverIdx));
                     }
                 }
             }
@@ -304,7 +304,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                 if (string.IsNullOrEmpty(selectedServer.OAuthToken))
                 {
                     UiSharedService.TextWrapped("Press the button below to verify the server has OAuth2 capabilities. Afterwards, authenticate using Discord in the Browser window.");
-                    _uiShared.DrawOAuth(selectedServer);
+                    _uiShared.DrawOAuth(serverIdx, selectedServer);
                 }
                 else
                 {
@@ -335,7 +335,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                     {
                         if (_uiShared.IconTextButton(Dalamud.Interface.FontAwesomeIcon.Link, "Connect to Service"))
                         {
-                            _ = Task.Run(() => _uiShared.ApiController.CreateConnectionsAsync());
+                            _ = Task.Run(() => _uiShared.ApiController.CreateConnectionsAsync(serverIdx));
                         }
                     }
                     if (string.IsNullOrEmpty(auth.UID))

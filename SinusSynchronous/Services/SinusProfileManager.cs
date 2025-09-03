@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Comparer;
+using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.WebAPI;
@@ -18,7 +19,7 @@ public class SinusProfileManager : MediatorSubscriberBase
     private const string _nsfw = "Profile not displayed - NSFW";
     private readonly ApiController _apiController;
     private readonly SinusConfigService _sinusConfigService;
-    private readonly ConcurrentDictionary<UserData, SinusProfileData> _sinusProfiles = new(UserDataComparer.Instance);
+    private readonly ConcurrentDictionary<ServerBasedUserKey, SinusProfileData> _sinusProfiles = new(ServerBasedUserKeyComparator.Instance);
 
     private readonly SinusProfileData _defaultProfileData = new(IsFlagged: false, IsNSFW: false, _sinusLogo, string.Empty, _noDescription);
     private readonly SinusProfileData _loadingProfileData = new(IsFlagged: false, IsNSFW: false, _sinusLogoLoading, string.Empty, "Loading Data from server...");
@@ -40,7 +41,7 @@ public class SinusProfileManager : MediatorSubscriberBase
         Mediator.Subscribe<DisconnectedMessage>(this, (_) => _sinusProfiles.Clear());
     }
 
-    public SinusProfileData GetSinusProfile(UserData data)
+    public SinusProfileData GetSinusProfile(ServerBasedUserKey data)
     {
         if (!_sinusProfiles.TryGetValue(data, out var profile))
         {
@@ -51,17 +52,18 @@ public class SinusProfileManager : MediatorSubscriberBase
         return (profile);
     }
 
-    private async Task GetSinusProfileFromService(UserData data)
+    private async Task GetSinusProfileFromService(ServerBasedUserKey data)
     {
         try
         {
             _sinusProfiles[data] = _loadingProfileData;
-            var profile = await _apiController.UserGetProfile(new API.Dto.User.UserDto(data)).ConfigureAwait(false);
+            var userData = data.UserData;
+            var profile = await _apiController.UserGetProfile(data.ServerIndex, new API.Dto.User.UserDto(data.UserData)).ConfigureAwait(false);
             SinusProfileData profileData = new(profile.Disabled, profile.IsNSFW ?? false,
                 string.IsNullOrEmpty(profile.ProfilePictureBase64) ? _sinusLogo : profile.ProfilePictureBase64,
-                !string.IsNullOrEmpty(data.Alias) && !string.Equals(data.Alias, data.UID, StringComparison.Ordinal) ? _sinusSupporter : string.Empty,
+                !string.IsNullOrEmpty(userData.Alias) && !string.Equals(userData.Alias, userData.UID, StringComparison.Ordinal) ? _sinusSupporter : string.Empty,
                 string.IsNullOrEmpty(profile.Description) ? _noDescription : profile.Description);
-            if (profileData.IsNSFW && !_sinusConfigService.Current.ProfilesAllowNsfw && !string.Equals(_apiController.UID, data.UID, StringComparison.Ordinal))
+            if (profileData.IsNSFW && !_sinusConfigService.Current.ProfilesAllowNsfw && !string.Equals(_apiController.UID, userData.UID, StringComparison.Ordinal))
             {
                 _sinusProfiles[data] = _nsfwProfileData;
             }

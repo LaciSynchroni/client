@@ -99,7 +99,7 @@ public class DrawUserPair
 
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.PlayCircle, "Cycle pause state", _menuWidth, true))
         {
-            _ = _apiController.CyclePauseAsync(_pair.UserData);
+            _ = _apiController.CyclePauseAsync(_pair.ServerIndex, _pair.UserData);
             ImGui.CloseCurrentPopup();
         }
         ImGui.Separator();
@@ -119,7 +119,7 @@ public class DrawUserPair
         {
             var permissions = _pair.UserPair.OwnPermissions;
             permissions.SetSticky(!isSticky);
-            _ = _apiController.UserSetPairPermissions(new(_pair.UserData, permissions));
+            _ = _apiController.UserSetPairPermissions(_pair.ServerIndex, new(_pair.UserData, permissions));
         }
         UiSharedService.AttachToolTip("Preferred permissions means that this pair will not" + Environment.NewLine + " be affected by any syncshell permission changes through you.");
 
@@ -135,7 +135,7 @@ public class DrawUserPair
         {
             var permissions = _pair.UserPair.OwnPermissions;
             permissions.SetDisableSounds(!isDisableSounds);
-            _ = _apiController.UserSetPairPermissions(new UserPermissionsDto(_pair.UserData, permissions));
+            _ = _apiController.UserSetPairPermissions(_pair.ServerIndex, new UserPermissionsDto(_pair.UserData, permissions));
         }
         UiSharedService.AttachToolTip("Changes sound sync permissions with this user." + (individual ? individualText : string.Empty));
 
@@ -146,7 +146,7 @@ public class DrawUserPair
         {
             var permissions = _pair.UserPair.OwnPermissions;
             permissions.SetDisableAnimations(!isDisableAnims);
-            _ = _apiController.UserSetPairPermissions(new UserPermissionsDto(_pair.UserData, permissions));
+            _ = _apiController.UserSetPairPermissions(_pair.ServerIndex, new UserPermissionsDto(_pair.UserData, permissions));
         }
         UiSharedService.AttachToolTip("Changes animation sync permissions with this user." + (individual ? individualText : string.Empty));
 
@@ -157,7 +157,7 @@ public class DrawUserPair
         {
             var permissions = _pair.UserPair.OwnPermissions;
             permissions.SetDisableVFX(!isDisableVFX);
-            _ = _apiController.UserSetPairPermissions(new UserPermissionsDto(_pair.UserData, permissions));
+            _ = _apiController.UserSetPairPermissions(_pair.ServerIndex, new UserPermissionsDto(_pair.UserData, permissions));
         }
         UiSharedService.AttachToolTip("Changes VFX sync permissions with this user." + (individual ? individualText : string.Empty));
     }
@@ -176,7 +176,7 @@ public class DrawUserPair
             UiSharedService.AttachToolTip("Choose pair groups for " + entryUID);
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Unpair Permanently", _menuWidth, true) && UiSharedService.CtrlPressed())
             {
-                _ = _apiController.UserRemovePair(new(_pair.UserData));
+                _ = _apiController.UserRemovePair(_pair.ServerIndex, new(_pair.UserData));
             }
             UiSharedService.AttachToolTip("Hold CTRL and click to unpair permanently from " + entryUID);
         }
@@ -184,7 +184,7 @@ public class DrawUserPair
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Pair individually", _menuWidth, true))
             {
-                _ = _apiController.UserAddPair(new(_pair.UserData));
+                _ = _apiController.UserAddPair(_pair.ServerIndex, new(_pair.UserData));
             }
             UiSharedService.AttachToolTip("Pair individually with " + entryUID);
         }
@@ -356,7 +356,7 @@ public class DrawUserPair
                 perm.SetSticky(true);
             }
             perm.SetPaused(!perm.IsPaused());
-            _ = _apiController.UserSetPairPermissions(new(_pair.UserData, perm));
+            _ = _apiController.UserSetPairPermissions(_pair.ServerIndex, new(_pair.UserData, perm));
         }
         UiSharedService.AttachToolTip(!_pair.UserPair!.OwnPermissions.IsPaused()
             ? ("Pause pairing with " + _pair.UserData.AliasOrUID
@@ -538,14 +538,14 @@ public class DrawUserPair
                 {
                     userinfo.SetPinned(!userinfo.IsPinned());
                 }
-                _ = _apiController.GroupSetUserInfo(new GroupPairUserInfoDto(group.Group, _pair.UserData, userinfo));
+                _ = _apiController.GroupSetUserInfo(_pair.ServerIndex, new GroupPairUserInfoDto(group.Group, _pair.UserData, userinfo));
             }
             UiSharedService.AttachToolTip("Pin this user to the Syncshell. Pinned users will not be deleted in case of a manually initiated Syncshell clean");
 
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Remove user", _menuWidth, true) && UiSharedService.CtrlPressed())
             {
                 ImGui.CloseCurrentPopup();
-                _ = _apiController.GroupRemoveUser(new(group.Group, _pair.UserData));
+                _ = _apiController.GroupRemoveUser(_pair.ServerIndex, new(group.Group, _pair.UserData));
             }
             UiSharedService.AttachToolTip("Hold CTRL and click to remove user " + (_pair.UserData.AliasOrUID) + " from Syncshell");
 
@@ -575,7 +575,7 @@ public class DrawUserPair
                     userinfo.SetModerator(!userinfo.IsModerator());
                 }
 
-                _ = _apiController.GroupSetUserInfo(new GroupPairUserInfoDto(group.Group, _pair.UserData, userinfo));
+                _ = _apiController.GroupSetUserInfo(_pair.ServerIndex, new GroupPairUserInfoDto(group.Group, _pair.UserData, userinfo));
             }
             UiSharedService.AttachToolTip("Hold CTRL to change the moderator status for " + (_pair.UserData.AliasOrUID) + Environment.NewLine +
                 "Moderators can kick, ban/unban, pin/unpin users and clear the Syncshell.");
@@ -583,7 +583,7 @@ public class DrawUserPair
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Crown, "Transfer Ownership", _menuWidth, true) && UiSharedService.CtrlPressed() && UiSharedService.ShiftPressed())
             {
                 ImGui.CloseCurrentPopup();
-                _ = _apiController.GroupChangeOwnership(new(group.Group, _pair.UserData));
+                _ = _apiController.GroupChangeOwnership(_pair.ServerIndex, new(group.Group, _pair.UserData));
             }
             UiSharedService.AttachToolTip("Hold CTRL and SHIFT and click to transfer ownership of this Syncshell to "
                 + (_pair.UserData.AliasOrUID) + Environment.NewLine + "WARNING: This action is irreversible.");

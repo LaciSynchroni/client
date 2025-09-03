@@ -188,7 +188,8 @@ public class TopTabMenu
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserPlus, "Add"))
             {
-                _ = _apiController.UserAddPair(new(new(_pairToAdd)));
+                // Adds pair for the current 
+                _ = _apiController.UserAddPairToCurrentServer(_pairToAdd);
                 _pairToAdd = string.Empty;
             }
         }
@@ -449,7 +450,8 @@ public class TopTabMenu
                         return perm;
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                // TODO Renable this
+                // _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
             }
         }
         UiSharedService.AttachToolTip("Globally align syncshell permissions to suggested syncshell permissions." + UiSharedService.TooltipSeparator
@@ -533,7 +535,8 @@ public class TopTabMenu
                         return actEnable(g.UserPair.OwnPermissions);
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
+                // TODO Renable this
+                // _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
 
@@ -546,8 +549,8 @@ public class TopTabMenu
                     {
                         return actDisable(g.UserPair.OwnPermissions);
                     }, StringComparer.Ordinal);
-
-                _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
+                // TODO Renable this
+                // _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();
@@ -571,7 +574,8 @@ public class TopTabMenu
                         return actEnable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                // TODO Renable this
+                // _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
 
@@ -585,7 +589,8 @@ public class TopTabMenu
                         return actDisable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                // TODO Renable this
+                // _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();

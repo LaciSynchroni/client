@@ -85,7 +85,8 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
         {
             var spacing = ImGui.GetStyle().ItemSpacing;
 
-            var sinusProfile = _sinusProfileManager.GetSinusProfile(_pair.UserData);
+            var data = new ServerBasedUserKey(_pair.UserData, _pair.ServerIndex);
+            var sinusProfile = _sinusProfileManager.GetSinusProfile(data);
 
             if (_textureWrap == null || !sinusProfile.ImageData.Value.SequenceEqual(_lastProfilePicture))
             {

@@ -65,8 +65,8 @@ public record DownloadStartedMessage(GameObjectHandler DownloadId, Dictionary<st
 public record DownloadFinishedMessage(GameObjectHandler DownloadId) : MessageBase;
 public record UiToggleMessage(Type UiType) : MessageBase;
 public record PlayerUploadingMessage(GameObjectHandler Handler, bool IsUploading) : MessageBase;
-public record ClearProfileDataMessage(UserData? UserData = null) : MessageBase;
-public record CyclePauseMessage(UserData UserData) : MessageBase;
+public record ClearProfileDataMessage(ServerBasedUserKey? UserData = null) : MessageBase;
+public record CyclePauseMessage(int ServerIndex, UserData UserData) : MessageBase;
 public record PauseMessage(UserData UserData) : MessageBase;
 public record ProfilePopoutToggle(Pair? Pair) : MessageBase;
 public record CompactUiChange(Vector2 Size, Vector2 Position) : MessageBase;

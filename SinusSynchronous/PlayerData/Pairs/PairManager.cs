@@ -165,8 +165,8 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         var key = BuildKey(user, serverIndex);
         if (_allClientPairs.TryGetValue(key, out var pair))
         {
-            // TODO index based
-            Mediator.Publish(new ClearProfileDataMessage(pair.UserData));
+            var message = new ServerBasedUserKey(user, serverIndex);
+            Mediator.Publish(new ClearProfileDataMessage(message));
             pair.MarkOffline();
         }
 
@@ -178,8 +178,8 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         var key = BuildKey(dto.User, serverIndex);
         if (!_allClientPairs.ContainsKey(key)) throw new InvalidOperationException("No user found for " + dto);
 
-        // TODO index
-        Mediator.Publish(new ClearProfileDataMessage(dto.User));
+        var message = new ServerBasedUserKey(dto.User, serverIndex);
+        Mediator.Publish(new ClearProfileDataMessage(message));
 
         var pair = _allClientPairs[key];
         if (pair.HasCachedPlayer)
@@ -299,8 +299,8 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
 
         if (pair.UserPair.OtherPermissions.IsPaused() != dto.Permissions.IsPaused())
         {
-            // TODO
-            Mediator.Publish(new ClearProfileDataMessage(dto.User));
+            var message = new ServerBasedUserKey(dto.User, serverIndex);
+            Mediator.Publish(new ClearProfileDataMessage(message));
         }
 
         pair.UserPair.OtherPermissions = dto.Permissions;
@@ -327,8 +327,8 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
 
         if (pair.UserPair.OwnPermissions.IsPaused() != dto.Permissions.IsPaused())
         {
-            // TODO index
-            Mediator.Publish(new ClearProfileDataMessage(dto.User));
+            var message = new ServerBasedUserKey(dto.User, serverIndex);
+            Mediator.Publish(new ClearProfileDataMessage(message));
         }
 
         pair.UserPair.OwnPermissions = dto.Permissions;

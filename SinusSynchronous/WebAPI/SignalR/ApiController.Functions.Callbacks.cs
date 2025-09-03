@@ -8,6 +8,7 @@ using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.PlayerData.Pairs;
 using static FFXIVClientStructs.FFXIV.Client.Game.UI.MapMarkerData.Delegates;
 
 namespace SinusSynchronous.WebAPI;
@@ -178,7 +179,7 @@ public partial class ApiController
     public Task Client_UserUpdateProfile(UserDto dto)
     {
         Logger.LogDebug("Client_UserUpdateProfile: {dto}", dto);
-        ExecuteSafely(() => Mediator.Publish(new ClearProfileDataMessage(dto.User)));
+        ExecuteSafely(() => Mediator.Publish(new ClearProfileDataMessage(new ServerBasedUserKey(dto.User, _serverManager.CurrentServerIndex))));
         return Task.CompletedTask;
     }
 

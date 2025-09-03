@@ -78,7 +78,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             {
                 if (_uiSharedService.IconTextButton(Dalamud.Interface.FontAwesomeIcon.Plus, "Join Syncshell"))
                 {
-                    _groupJoinInfo = _apiController.GroupJoin(new GroupPasswordDto(new API.Data.GroupData(_desiredSyncshellToJoin), _syncshellPassword)).Result;
+                    _groupJoinInfo = _apiController.GroupJoinCurrentServer(new GroupPasswordDto(new API.Data.GroupData(_desiredSyncshellToJoin), _syncshellPassword)).Result;
                     _previousPassword = _syncshellPassword;
                     _syncshellPassword = string.Empty;
                 }
@@ -173,7 +173,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
                 joinPermissions.SetDisableSounds(_ownPermissions.DisableGroupSounds);
                 joinPermissions.SetDisableAnimations(_ownPermissions.DisableGroupAnimations);
                 joinPermissions.SetDisableVFX(_ownPermissions.DisableGroupVFX);
-                _ = _apiController.GroupJoinFinalize(new GroupJoinDto(_groupJoinInfo.Group, _previousPassword, joinPermissions));
+                _ = _apiController.GroupJoinFinalizeCurrentServer(new GroupJoinDto(_groupJoinInfo.Group, _previousPassword, joinPermissions));
                 IsOpen = false;
             }
         }

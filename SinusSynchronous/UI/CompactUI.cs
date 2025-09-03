@@ -204,6 +204,39 @@ public class CompactUi : WindowMediatorSubscriberBase
         {
             using (ImRaii.PushId("serverpicker")) _uiSharedService.DrawServiceSelection(hideServiceCreation: true, showMinifiedConnect: true, hideSelectLabel: true);
         }
+
+        if (_serverConfigService.Current.EnableMultiConnect)
+        {
+            foreach (int serverIndex in _serverManager.ServerIndexes)
+            {
+                ImGui.PushID($"ServerToConenctTo-{serverIndex}-entry");
+                var isConnected = _apiController.IsServerConnected(serverIndex);
+                var serverText = _serverManager.GetServerByIndex(serverIndex).ServerName;
+                if (isConnected)
+                {
+                    serverText += $" | {_apiController.GetOnlineUsersForServer(serverIndex)} users online";
+                }
+              
+                ImGui.TextUnformatted(serverText);
+                var text = isConnected ? "Disconnect" : "Connect";
+                var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.Link, "Disconnect");
+                var windowEndX = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth();
+                float currentRightSide = windowEndX - buttonSize;
+                ImGui.SameLine(currentRightSide);
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Link, text, buttonSize))
+                {
+                    if (isConnected)
+                    {
+                        _ = _apiController.PauseConnectionAsync(serverIndex);
+                    }
+                    else
+                    {
+                        _ = _apiController.CreateConnectionsAsync(serverIndex);
+                    }
+                }
+                ImGui.PopID();
+            }
+        }
         using (ImRaii.PushId("serverstatus")) DrawServerStatus();
         ImGui.Separator();
         using (ImRaii.PushId("header")) DrawUIDHeader();
@@ -214,7 +247,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         }
 
 
-        if (_apiController.ServerState is ServerState.Connected)
+        if (_apiController.AnyServerConnected)
         {
             using (ImRaii.PushId("global-topmenu")) _tabMenu.Draw();
             using (ImRaii.PushId("pairlist")) DrawPairs();
@@ -304,7 +337,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.TextWrapped(_serverManager.CurrentServer.ServerName);
         }
 
-        if (_apiController.ServerState is ServerState.Connected)
+        if (_apiController.AnyServerConnected)
         {
             ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth()) / 2 - (userSize.X + textSize.X) / 2 - ImGui.GetStyle().ItemSpacing.X / 2);
             if (!printShard) ImGui.AlignTextToFramePadding();
@@ -362,7 +395,7 @@ public class CompactUi : WindowMediatorSubscriberBase
                             _serverManager.Save();
                         }
 
-                        _ = _apiController.CreateConnectionsAsync();
+                        _ = _apiController.CreateConnectionsAsync(_serverManager.CurrentServerIndex);
                     }
                 }
 
@@ -514,7 +547,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.TextColored(GetUidColor(), uidText);
         }
 
-        if (_apiController.ServerState is ServerState.Connected)
+        if (_apiController.AnyServerConnected)
         {
             if (ImGui.IsItemClicked())
             {

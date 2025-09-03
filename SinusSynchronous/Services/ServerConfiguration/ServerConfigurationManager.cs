@@ -40,6 +40,8 @@ public class ServerConfigurationManager
         EnsureMainExists();
     }
 
+    public IEnumerable<int> ServerIndexes => _configService.Current.ServerStorage.Select((_, i) => i);
+    
     public string CurrentApiUrl => CurrentServer.ServerUri;
     public ServerStorage CurrentServer => _configService.Current.ServerStorage[CurrentServerIndex];
     public bool SendCensusData
@@ -99,6 +101,8 @@ public class ServerConfigurationManager
             return _configService.Current.ShowServerPickerInMainMenu;
         }
     }
+
+    public bool EnableMultiConnect => _configService.Current.EnableMultiConnect;
 
     public (string OAuthToken, string UID)? GetOAuth2(out bool hasMulti, int serverIdx = -1)
     {

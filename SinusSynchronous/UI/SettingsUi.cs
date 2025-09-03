@@ -1355,7 +1355,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
                 if (ImGui.Button("Delete account", new Vector2(buttonSize, 0)))
                 {
-                    _ = Task.Run(ApiController.UserDelete);
+                    // TODO for now, delete on selected server. Decide if we delete all or show a prompt
+                    _ = Task.Run(() => ApiController.UserDelete(_serverConfigurationManager.CurrentServerIndex));
                     _deleteAccountPopupModalShown = false;
                     Mediator.Publish(new SwitchToIntroUiMessage());
                 }
@@ -1780,7 +1781,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _uiShared.DrawHelpText("Use Discord OAuth2 Authentication to identify with this server instead of secret keys");
                 if (useOauth)
                 {
-                    _uiShared.DrawOAuth(selectedServer);
+                    _uiShared.DrawOAuth(idx, selectedServer);
                     if (string.IsNullOrEmpty(_serverConfigurationManager.GetDiscordUserFromToken(selectedServer)))
                     {
                         ImGuiHelpers.ScaledDummy(10f);
@@ -1824,7 +1825,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (ImGui.Checkbox("Individually set permissions become preferred permissions", ref individualIsSticky))
                     {
                         perms.IndividualIsSticky = individualIsSticky;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("The preferred attribute means that the permissions to that user will never change through any of your permission changes to Syncshells " +
                         "(i.e. if you have paused one specific user in a Syncshell and they become preferred permissions, then pause and unpause the same Syncshell, the user will remain paused - " +
@@ -1839,19 +1840,19 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (ImGui.Checkbox("Disable individual pair sounds", ref disableIndividualSounds))
                     {
                         perms.DisableIndividualSounds = disableIndividualSounds;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("This setting will disable sound sync for all new individual pairs.");
                     if (ImGui.Checkbox("Disable individual pair animations", ref disableIndividualAnimations))
                     {
                         perms.DisableIndividualAnimations = disableIndividualAnimations;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("This setting will disable animation sync for all new individual pairs.");
                     if (ImGui.Checkbox("Disable individual pair VFX", ref disableIndividualVFX))
                     {
                         perms.DisableIndividualVFX = disableIndividualVFX;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("This setting will disable VFX sync for all new individual pairs.");
                     ImGuiHelpers.ScaledDummy(5f);
@@ -1861,19 +1862,19 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (ImGui.Checkbox("Disable Syncshell pair sounds", ref disableGroundSounds))
                     {
                         perms.DisableGroupSounds = disableGroundSounds;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("This setting will disable sound sync for all non-sticky pairs in newly joined syncshells.");
                     if (ImGui.Checkbox("Disable Syncshell pair animations", ref disableGroupAnimations))
                     {
                         perms.DisableGroupAnimations = disableGroupAnimations;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("This setting will disable animation sync for all non-sticky pairs in newly joined syncshells.");
                     if (ImGui.Checkbox("Disable Syncshell pair VFX", ref disableGroupVFX))
                     {
                         perms.DisableGroupVFX = disableGroupVFX;
-                        _ = _apiController.UserUpdateDefaultPermissions(perms);
+                        _ = _apiController.UserUpdateDefaultPermissions(_serverConfigurationManager.CurrentServerIndex, perms);
                     }
                     _uiShared.DrawHelpText("This setting will disable VFX sync for all non-sticky pairs in newly joined syncshells.");
                 }

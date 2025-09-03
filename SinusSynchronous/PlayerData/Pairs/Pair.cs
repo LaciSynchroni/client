@@ -20,6 +20,9 @@ public class Pair
     private readonly ILogger<Pair> _logger;
     private readonly SinusMediator _mediator;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    /// <summary>
+    /// The server from which this pair originates
+    /// </summary>
     public readonly int ServerIndex;
     private CancellationTokenSource _applicationCts = new();
     private OnlineUserIdentDto? _onlineUserIdentDto = null;
@@ -98,7 +101,7 @@ public class Pair
         args.AddMenuItem(new MenuItem()
         {
             Name = cyclePauseState,
-            OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(UserData)),
+            OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(ServerIndex, UserData)),
             UseDefaultPrefix = false,
             PrefixChar = 'M',
             PrefixColor = 526
