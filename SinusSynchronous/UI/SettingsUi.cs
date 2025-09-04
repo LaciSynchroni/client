@@ -349,7 +349,9 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 {
                     if (_uiShared.IconTextButton(FontAwesomeIcon.GroupArrowsRotate, "Update Download Server List"))
                     {
-                        _downloadServersTask = GetDownloadServerList();
+                        // Speedtest is always done for current server
+                        // TODO change this?
+                        _downloadServersTask = GetDownloadServerList(_serverConfigurationManager.CurrentServerIndex);
                     }
                 }
                 if (_downloadServersTask != null && _downloadServersTask.IsCompleted && !_downloadServersTask.IsCompletedSuccessfully)
@@ -538,11 +540,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
         return speedTestResults;
     }
 
-    private async Task<List<string>?> GetDownloadServerList()
+    private async Task<List<string>?> GetDownloadServerList(int serverIndex)
     {
         try
         {
-            var result = await _fileTransferOrchestrator.SendRequestAsync(_serverConfigurationManager.CurrentServerIndex, HttpMethod.Get, new Uri(_fileTransferOrchestrator.FilesCdnUri!, "files/downloadServers"), CancellationToken.None).ConfigureAwait(false);
+            var uri = _fileTransferOrchestrator.GetFileCdnUri(serverIndex);
+            var result = await _fileTransferOrchestrator.SendRequestAsync(_serverConfigurationManager.CurrentServerIndex, HttpMethod.Get, new Uri(uri!, "files/downloadServers"), CancellationToken.None).ConfigureAwait(false);
             result.EnsureSuccessStatusCode();
             return await JsonSerializer.DeserializeAsync<List<string>>(await result.Content.ReadAsStreamAsync().ConfigureAwait(false)).ConfigureAwait(false);
         }

@@ -232,11 +232,11 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         {
             if (!_orchestrator.ForbiddenTransfers.Exists(f => string.Equals(f.Hash, dto.Hash, StringComparison.Ordinal)))
             {
-                _orchestrator.ForbiddenTransfers.Add(new DownloadFileTransfer(dto));
+                _orchestrator.ForbiddenTransfers.Add(new DownloadFileTransfer(dto, serverIndex));
             }
         }
 
-        CurrentDownloads = downloadFileInfoFromService.Distinct().Select(d => new DownloadFileTransfer(d))
+        CurrentDownloads = downloadFileInfoFromService.Distinct().Select(d => new DownloadFileTransfer(d, serverIndex))
             .Where(d => d.CanBeTransferred).ToList();
 
         return CurrentDownloads;
@@ -377,8 +377,12 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
     private async Task<List<DownloadFileDto>> FilesGetSizes(int serverIndex, List<string> hashes, CancellationToken ct)
     {
-        if (!_orchestrator.IsInitialized) throw new InvalidOperationException("FileTransferManager is not initialized");
-        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, SinusFiles.ServerFilesGetSizesFullPath(_orchestrator.FilesCdnUri!), hashes, ct).ConfigureAwait(false);
+        var fileCdnUri = _orchestrator.GetFileCdnUri(serverIndex);
+        if (fileCdnUri == null)
+        {
+            throw new InvalidOperationException("FileTransferManager is not initialized");
+        }
+        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, SinusFiles.ServerFilesGetSizesFullPath(fileCdnUri), hashes, ct).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<List<DownloadFileDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
     }
 

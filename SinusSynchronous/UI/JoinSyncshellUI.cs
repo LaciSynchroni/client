@@ -35,7 +35,8 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             MinimumSize = new(700, 400),
             MaximumSize = new(700, 400)
         };
-
+        
+        // TODO based on server index
         Mediator.Subscribe<DisconnectedMessage>(this, (_) => IsOpen = false);
 
         Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize;

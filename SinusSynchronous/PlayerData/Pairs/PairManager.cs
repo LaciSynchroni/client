@@ -123,7 +123,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     public void ClearPairs(int serverIndex)
     {
         Logger.LogDebug("Clearing all Pairs");
-        DisposePairs();
+        DisposePairs(serverIndex);
         _allClientPairs.Keys
             .Where(key => key.ServerIndex == serverIndex)
             .ToList()
@@ -398,7 +398,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
 
         _dalamudContextMenu.OnMenuOpened -= DalamudContextMenuOnOnOpenGameObjectContextMenu;
 
-        DisposePairs();
+        DisposePairs(null);
     }
 
     private void DalamudContextMenuOnOnOpenGameObjectContextMenu(Dalamud.Game.Gui.ContextMenu.IMenuOpenedArgs args)
@@ -415,15 +415,26 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     private Lazy<List<Pair>> DirectPairsLazy() => new(() => _allClientPairs.Select(k => k.Value)
         .Where(k => k.IndividualPairStatus != API.Data.Enum.IndividualPairStatus.None).ToList());
 
-    private void DisposePairs()
+    private void DisposePairs(int? serverIndex)
     {
-        Logger.LogDebug("Disposing all Pairs");
-        Parallel.ForEach(_allClientPairs, item =>
+        if (serverIndex == null)
         {
-            item.Value.MarkOffline(wait: false);
-        });
-
-        RecreateLazy();
+            Logger.LogDebug("Disposing all Pairs");
+            Parallel.ForEach(_allClientPairs, item =>
+            {
+                item.Value.MarkOffline(wait: false);
+            });
+        }
+        else
+        {
+            Logger.LogDebug("Disposing all Pairs for server {serverIndex}", serverIndex);
+            var toDispose = _allClientPairs.Where(index => index.Key.ServerIndex == serverIndex);
+            Parallel.ForEach(toDispose, item =>
+            {
+                item.Value.MarkOffline(wait: false);
+            });
+        }
+      
     }
 
     private Lazy<Dictionary<GroupFullInfoWithServer, List<Pair>>> GroupPairsLazy()

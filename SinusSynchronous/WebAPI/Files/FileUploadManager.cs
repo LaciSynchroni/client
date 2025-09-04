@@ -33,6 +33,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         _fileDbManager = fileDbManager;
         _serverManager = serverManager;
 
+        // TODO based on server index
         Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
             Reset();
@@ -44,9 +45,9 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
     public async Task DeleteAllFiles(int serverIndex)
     {
-        if (!_orchestrator.IsInitialized) throw new InvalidOperationException("FileTransferManager is not initialized");
+        var uri = RequireUriForServer(serverIndex);
 
-        await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesDeleteAllFullPath(_orchestrator.FilesCdnUri!)).ConfigureAwait(false);
+        await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesDeleteAllFullPath(uri)).ConfigureAwait(false);
     }
 
     public async Task<List<string>> UploadFiles(int serverIndex, List<string> hashesToUpload, IProgress<string> progress, CancellationToken? ct = null)
@@ -117,13 +118,13 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
     private async Task<List<UploadFileDto>> FilesSend(int serverIndex, List<string> hashes, List<string> uids, CancellationToken ct)
     {
-        if (!_orchestrator.IsInitialized) throw new InvalidOperationException("FileTransferManager is not initialized");
+        var uri = RequireUriForServer(serverIndex);
         FilesSendDto filesSendDto = new()
         {
             FileHashes = hashes,
             UIDs = uids
         };
-        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesFilesSendFullPath(_orchestrator.FilesCdnUri!), filesSendDto, ct).ConfigureAwait(false);
+        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesFilesSendFullPath(uri), filesSendDto, ct).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<List<UploadFileDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
     }
 
@@ -158,8 +159,6 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
     private async Task UploadFile(int serverIndex, byte[] compressedFile, string fileHash, bool postProgress, CancellationToken uploadToken)
     {
-        if (!_orchestrator.IsInitialized) throw new InvalidOperationException("FileTransferManager is not initialized");
-
         Logger.LogInformation("[{hash}] Uploading {size}", fileHash, UiSharedService.ByteToString(compressedFile.Length));
 
         if (uploadToken.IsCancellationRequested) return;
@@ -185,6 +184,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
     private async Task UploadFileStream(int serverIndex, byte[] compressedFile, string fileHash, bool munged, bool postProgress, CancellationToken uploadToken)
     {
+        var uri = RequireUriForServer(serverIndex);
         if (munged)
         {
             FileDownloadManager.MungeBuffer(compressedFile.AsSpan());
@@ -196,7 +196,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         {
             try
             {
-                CurrentUploads.Single(f => string.Equals(f.Hash, fileHash, StringComparison.Ordinal)).Transferred = prog.Uploaded;
+                CurrentUploads.Single(f => string.Equals(f.Hash, fileHash, StringComparison.Ordinal) && f.ServerIndex == serverIndex).Transferred = prog.Uploaded;
             }
             catch (Exception ex)
             {
@@ -208,9 +208,9 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         HttpResponseMessage response;
         if (!munged)
-            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesUploadFullPath(_orchestrator.FilesCdnUri!, fileHash), streamContent, uploadToken).ConfigureAwait(false);
+            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesUploadFullPath(uri, fileHash), streamContent, uploadToken).ConfigureAwait(false);
         else
-            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesUploadMunged(_orchestrator.FilesCdnUri!, fileHash), streamContent, uploadToken).ConfigureAwait(false);
+            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesUploadMunged(uri, fileHash), streamContent, uploadToken).ConfigureAwait(false);
         Logger.LogDebug("[{hash}] Upload Status: {status}", fileHash, response.StatusCode);
     }
 
@@ -225,7 +225,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         {
             try
             {
-                CurrentUploads.Add(new UploadFileTransfer(file)
+                CurrentUploads.Add(new UploadFileTransfer(file, serverIndex)
                 {
                     Total = new FileInfo(_fileDbManager.GetFileCacheByHash(file.Hash)!.ResolvedFilepath).Length,
                 });
@@ -240,7 +240,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         {
             if (_orchestrator.ForbiddenTransfers.TrueForAll(f => !string.Equals(f.Hash, file.Hash, StringComparison.Ordinal)))
             {
-                _orchestrator.ForbiddenTransfers.Add(new UploadFileTransfer(file)
+                _orchestrator.ForbiddenTransfers.Add(new UploadFileTransfer(file, serverIndex)
                 {
                     LocalFile = _fileDbManager.GetFileCacheByHash(file.Hash)?.ResolvedFilepath ?? string.Empty,
                 });
@@ -256,7 +256,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         {
             Logger.LogDebug("[{hash}] Compressing", file);
             var data = await _fileDbManager.GetCompressedFileData(file.Hash, uploadToken).ConfigureAwait(false);
-            CurrentUploads.Single(e => string.Equals(e.Hash, data.Item1, StringComparison.Ordinal)).Total = data.Item2.Length;
+            CurrentUploads.Single(e => string.Equals(e.Hash, data.Item1, StringComparison.Ordinal) && e.ServerIndex == serverIndex).Total = data.Item2.Length;
             Logger.LogDebug("[{hash}] Starting upload for {filePath}", data.Item1, _fileDbManager.GetFileCacheByHash(data.Item1)!.ResolvedFilepath);
             await uploadTask.ConfigureAwait(false);
             uploadTask = UploadFile(serverIndex, data.Item2, file.Hash, true, uploadToken);
@@ -271,7 +271,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
             Logger.LogDebug("Upload complete, compressed {size} to {compressed}", UiSharedService.ByteToString(totalSize), UiSharedService.ByteToString(compressedSize));
         }
 
-        foreach (var file in unverifiedUploadHashes.Where(c => !CurrentUploads.Exists(u => string.Equals(u.Hash, c, StringComparison.Ordinal))))
+        foreach (var file in unverifiedUploadHashes.Where(c => !CurrentUploads.Exists(u => string.Equals(u.Hash, c, StringComparison.Ordinal) && u.ServerIndex == serverIndex)))
         {
             _verifiedUploadedHashes[file] = DateTime.UtcNow;
         }
@@ -292,5 +292,12 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         }
 
         return false;
+    }
+
+    private Uri RequireUriForServer(int serverIndex)
+    {
+        var uri = _orchestrator.GetFileCdnUri(serverIndex);
+        if (uri == null) throw new InvalidOperationException("FileTransferManager is not initialized");
+        return uri;
     }
 }

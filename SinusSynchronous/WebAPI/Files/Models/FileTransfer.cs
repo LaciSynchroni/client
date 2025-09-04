@@ -5,10 +5,12 @@ namespace SinusSynchronous.WebAPI.Files.Models;
 public abstract class FileTransfer
 {
     protected readonly ITransferFileDto TransferDto;
+    public readonly int ServerIndex;
 
-    protected FileTransfer(ITransferFileDto transferDto)
+    protected FileTransfer(ITransferFileDto transferDto, int serverIndex)
     {
         TransferDto = transferDto;
+        ServerIndex = serverIndex;
     }
 
     public virtual bool CanBeTransferred => !TransferDto.IsForbidden && (TransferDto is not DownloadFileDto dto || dto.FileExists);

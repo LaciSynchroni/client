@@ -38,6 +38,7 @@ public class SinusProfileManager : MediatorSubscriberBase
             else
                 _sinusProfiles.Clear();
         });
+        // TODO clear only profiles for the disconnected server
         Mediator.Subscribe<DisconnectedMessage>(this, (_) => _sinusProfiles.Clear());
     }
 

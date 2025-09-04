@@ -52,6 +52,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
         Mediator.Subscribe<GposeStartMessage>(this, (_) => { _wasOpen = IsOpen; IsOpen = false; });
         Mediator.Subscribe<GposeEndMessage>(this, (_) => IsOpen = _wasOpen);
+        // TODO based on server index
         Mediator.Subscribe<DisconnectedMessage>(this, (_) => IsOpen = false);
         Mediator.Subscribe<ClearProfileDataMessage>(this, (msg) =>
         {

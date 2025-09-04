@@ -4,7 +4,7 @@ namespace SinusSynchronous.WebAPI.Files.Models;
 
 public class DownloadFileTransfer : FileTransfer
 {
-    public DownloadFileTransfer(DownloadFileDto dto) : base(dto)
+    public DownloadFileTransfer(DownloadFileDto dto, int serverIndex) : base(dto, serverIndex)
     {
     }
 

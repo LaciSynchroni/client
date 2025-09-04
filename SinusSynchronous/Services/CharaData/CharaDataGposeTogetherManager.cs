@@ -83,6 +83,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
         });
         Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
+            // TODO based on server index
             LeaveGPoseLobby();
         });
 

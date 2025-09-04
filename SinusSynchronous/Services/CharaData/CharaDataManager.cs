@@ -80,6 +80,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         });
         sinusMediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
+            // TODO based on server index
             _ownCharaData.Clear();
             _metaInfoCache.Clear();
             _sharedWithYouData.Clear();

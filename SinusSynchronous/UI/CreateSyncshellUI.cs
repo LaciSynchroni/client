@@ -32,6 +32,7 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
 
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse;
 
+        // TODO based on server index
         Mediator.Subscribe<DisconnectedMessage>(this, (_) => IsOpen = false);
     }
 

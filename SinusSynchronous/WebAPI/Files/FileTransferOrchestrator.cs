@@ -9,9 +9,12 @@ using System.Reflection;
 
 namespace SinusSynchronous.WebAPI.Files;
 
+using ServerIndex = int;
+
 public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
 {
     private readonly ConcurrentDictionary<Guid, bool> _downloadReady = new();
+    private readonly ConcurrentDictionary<ServerIndex, Uri> _cdnUris = new();
     private readonly HttpClient _httpClient;
     private readonly SinusConfigService _sinusConfig;
     private readonly object _semaphoreModificationLock = new();
@@ -34,12 +37,13 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
 
         Mediator.Subscribe<ConnectedMessage>(this, (msg) =>
         {
-            FilesCdnUri = msg.Connection.ServerInfo.FileServerAddress;
+            var newUri = msg.Connection.ServerInfo.FileServerAddress;
+            _cdnUris.AddOrUpdate(msg.serverIndex, i => newUri, (i, uri) => newUri);
         });
 
         Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
-            FilesCdnUri = null;
+            _cdnUris.TryRemove(msg.ServerIndex, out _);
         });
         Mediator.Subscribe<DownloadReadyMessage>(this, (msg) =>
         {
@@ -47,9 +51,13 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
         });
     }
 
-    public Uri? FilesCdnUri { private set; get; }
     public List<FileTransfer> ForbiddenTransfers { get; } = [];
-    public bool IsInitialized => FilesCdnUri != null;
+
+    public Uri? GetFileCdnUri(int serverIndex)
+    {
+        _cdnUris.TryGetValue(serverIndex, out var uri);
+        return uri;
+    }
 
     public void ClearDownloadRequest(Guid guid)
     {
