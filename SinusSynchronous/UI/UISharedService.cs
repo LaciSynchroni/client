@@ -22,7 +22,6 @@ using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
-using SinusSynchronous.WebAPI.SignalR;
 using SinusSynchronous.WebAPI.SignalR.Utils;
 using System.IdentityModel.Tokens.Jwt;
 using System.Numerics;
@@ -52,7 +51,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private readonly Dictionary<string, object?> _selectedComboItems = new(StringComparer.Ordinal);
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly ITextureProvider _textureProvider;
-    private readonly TokenProvider _tokenProvider;
+    private readonly MultiConnectTokenService _multiConnectTokenService;
     private bool _brioExists = false;
     private bool _cacheDirectoryHasOtherFilesThanCache = false;
     private bool _cacheDirectoryIsValidPath = true;
@@ -81,7 +80,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         SinusConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
         ITextureProvider textureProvider,
         Dalamud.Localization localization,
-        ServerConfigurationManager serverManager, TokenProvider tokenProvider, SinusMediator mediator) : base(logger, mediator)
+        ServerConfigurationManager serverManager, MultiConnectTokenService multiConnectTokenService, SinusMediator mediator) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
         _apiController = apiController;
@@ -93,7 +92,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         _textureProvider = textureProvider;
         _localization = localization;
         _serverConfigurationManager = serverManager;
-        _tokenProvider = tokenProvider;
+        _multiConnectTokenService = multiConnectTokenService;
         _localization.SetupWithLangCode("en");
 
         _isDirectoryWritable = IsDirectoryWritable(_configService.Current.CacheFolder);
@@ -717,8 +716,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 {
                     if (IconTextButton(FontAwesomeIcon.Exclamation, "Renew OAuth2 token manually") && CtrlPressed())
                     {
-                        // TODO change to multi connect token provider
-                        _ = _tokenProvider.TryUpdateOAuth2LoginTokenAsync(selectedServer, forced: true)
+                        _ = _multiConnectTokenService.TryUpdateOAuth2LoginTokenAsync(serverIndex, selectedServer, forced: true)
                             .ContinueWith((_) => _apiController.CreateConnectionsAsync(serverIndex));
                     }
                 }

@@ -215,7 +215,6 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         if (!_allClientPairs.TryGetValue(key, out var pair))
             throw new InvalidOperationException("No user found for " + dto.User);
 
-        // TODO index yes yes
         Mediator.Publish(new EventMessage(new Event(pair.UserData, nameof(PairManager), EventSeverity.Informational,
             "Received Character Data")));
         _allClientPairs[key].ApplyData(dto);

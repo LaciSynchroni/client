@@ -38,8 +38,16 @@ public class SinusProfileManager : MediatorSubscriberBase
             else
                 _sinusProfiles.Clear();
         });
-        // TODO clear only profiles for the disconnected server
-        Mediator.Subscribe<DisconnectedMessage>(this, (_) => _sinusProfiles.Clear());
+        Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
+        {
+            foreach (var serverBasedUserKey in _sinusProfiles.Keys)
+            {
+                if (msg.ServerIndex == serverBasedUserKey.ServerIndex)
+                {
+                    _sinusProfiles.TryRemove(serverBasedUserKey, out _);
+                }
+            }
+        });
     }
 
     public SinusProfileData GetSinusProfile(ServerBasedUserKey data)
@@ -50,7 +58,7 @@ public class SinusProfileManager : MediatorSubscriberBase
             return (_loadingProfileData);
         }
 
-        return (profile);
+        return profile;
     }
 
     private async Task GetSinusProfileFromService(ServerBasedUserKey data)

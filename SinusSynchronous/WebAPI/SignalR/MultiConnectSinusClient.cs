@@ -58,7 +58,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     public SystemInfoDto? SystemInfoDto { get; private set; }
 
     protected bool IsConnected => _serverState == ServerState.Connected;
-    protected string UID => ConnectionDto?.User.UID ?? string.Empty;
+    public string UID => ConnectionDto?.User.UID ?? string.Empty;
 
     private ServerStorage ServerToUse => _serverConfigurationManager.GetServerByIndex(ServerIndex);
 

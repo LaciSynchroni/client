@@ -11,6 +11,7 @@ using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.UI.Components;
 using SinusSynchronous.WebAPI;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -19,11 +20,15 @@ namespace SinusSynchronous.UI;
 
 public class EditProfileUi : WindowMediatorSubscriberBase
 {
+    private static readonly float windowWidth = 768;
+    
     private readonly ApiController _apiController;
     private readonly FileDialogManager _fileDialogManager;
     private readonly SinusProfileManager _sinusProfileManager;
     private readonly UiSharedService _uiSharedService;
     private readonly ServerConfigurationManager _serverManager;
+    private readonly ServerSelectorSmall _serverSelector;
+    
     private bool _adjustedForScollBarsLocalProfile = false;
     private bool _adjustedForScollBarsOnlineProfile = false;
     private string _descriptionText = string.Empty;
@@ -32,6 +37,8 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     private byte[] _profileImage = [];
     private bool _showFileDialogError = false;
     private bool _wasOpen;
+    private int _serverForProfile = 0;
+    
 
     public EditProfileUi(ILogger<EditProfileUi> logger, SinusMediator mediator,
         ApiController apiController, UiSharedService uiSharedService, FileDialogManager fileDialogManager,
@@ -41,8 +48,8 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         IsOpen = false;
         this.SizeConstraints = new()
         {
-            MinimumSize = new(768, 512),
-            MaximumSize = new(768, 2000)
+            MinimumSize = new(windowWidth, 512),
+            MaximumSize = new(windowWidth, 2000)
         };
         _apiController = apiController;
         _uiSharedService = uiSharedService;
@@ -50,10 +57,18 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         _sinusProfileManager = sinusProfileManager;
         _serverManager = serverManager;
 
+        _serverSelector = new ServerSelectorSmall(index => _serverForProfile = index);
+
         Mediator.Subscribe<GposeStartMessage>(this, (_) => { _wasOpen = IsOpen; IsOpen = false; });
         Mediator.Subscribe<GposeEndMessage>(this, (_) => IsOpen = _wasOpen);
-        // TODO based on server index
-        Mediator.Subscribe<DisconnectedMessage>(this, (_) => IsOpen = false);
+        Mediator.Subscribe<DisconnectedMessage>(this, (_) =>
+        {
+            // Only close if we have nothing left to edit for. The selector will auto-swap to the next available server.
+            if (_apiController.ConnectedServerIndexes.Length <= 0)
+            {
+                IsOpen = false;
+            }
+        });
         Mediator.Subscribe<ClearProfileDataMessage>(this, (msg) =>
         {
             if (msg.UserData == null || string.Equals(msg.UserData.UserData.UID, _apiController.UID, StringComparison.Ordinal))
@@ -66,10 +81,13 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
     protected override void DrawInternal()
     {
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        _serverSelector.Draw(_serverManager.GetServerNames(), _apiController.ConnectedServerIndexes, windowWidth - spacing);
         _uiSharedService.BigText("Current Profile (as saved on server)");
 
         // We draw the profile editor for the current server only
-        var userData = new ServerBasedUserKey(new UserData(_apiController.UID), CurrentServerIndex);
+        var loggedInUserUID = _apiController.GetUidByServer(_serverForProfile);
+        var userData = new ServerBasedUserKey(new UserData(loggedInUserUID), _serverForProfile);
         var profile = _sinusProfileManager.GetSinusProfile(userData);
 
         if (profile.IsFlagged)
@@ -96,7 +114,6 @@ public class EditProfileUi : WindowMediatorSubscriberBase
             ImGui.Image(_pfpTextureWrap.Handle, ImGuiHelpers.ScaledVector2(_pfpTextureWrap.Width, _pfpTextureWrap.Height));
         }
 
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
         ImGuiHelpers.ScaledRelativeSameLine(256, spacing);
         using (_uiSharedService.GameFont.Push())
         {
@@ -163,7 +180,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
                     }
 
                     _showFileDialogError = false;
-                    await _apiController.UserSetProfile(CurrentServerIndex, new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, Convert.ToBase64String(fileContent), Description: null))
+                    await _apiController.UserSetProfile(_serverForProfile, new UserProfileDto(new UserData(loggedInUserUID), Disabled: false, IsNSFW: null, Convert.ToBase64String(fileContent), Description: null))
                         .ConfigureAwait(false);
                 });
             });
@@ -172,7 +189,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Clear uploaded profile picture"))
         {
-            _ = _apiController.UserSetProfile(CurrentServerIndex, new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, "", Description: null));
+            _ = _apiController.UserSetProfile(_serverForProfile, new UserProfileDto(new UserData(loggedInUserUID), Disabled: false, IsNSFW: null, "", Description: null));
         }
         UiSharedService.AttachToolTip("Clear your currently uploaded profile picture");
         if (_showFileDialogError)
@@ -182,7 +199,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         var isNsfw = profile.IsNSFW;
         if (ImGui.Checkbox("Profile is NSFW", ref isNsfw))
         {
-            _ = _apiController.UserSetProfile(CurrentServerIndex, new UserProfileDto(new UserData(_apiController.UID), Disabled: false, isNsfw, ProfilePictureBase64: null, Description: null));
+            _ = _apiController.UserSetProfile(_serverForProfile, new UserProfileDto(new UserData(loggedInUserUID), Disabled: false, isNsfw, ProfilePictureBase64: null, Description: null));
         }
         _uiSharedService.DrawHelpText("If your profile description or image can be considered NSFW, toggle this to ON");
         var widthTextBox = 400;
@@ -221,13 +238,13 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Save, "Save Description"))
         {
-            _ = _apiController.UserSetProfile(CurrentServerIndex, new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, ProfilePictureBase64: null, _descriptionText));
+            _ = _apiController.UserSetProfile(_serverForProfile, new UserProfileDto(new UserData(loggedInUserUID), Disabled: false, IsNSFW: null, ProfilePictureBase64: null, _descriptionText));
         }
         UiSharedService.AttachToolTip("Sets your profile description text");
         ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Clear Description"))
         {
-            _ = _apiController.UserSetProfile(CurrentServerIndex, new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, ProfilePictureBase64: null, ""));
+            _ = _apiController.UserSetProfile(_serverForProfile, new UserProfileDto(new UserData(loggedInUserUID), Disabled: false, IsNSFW: null, ProfilePictureBase64: null, ""));
         }
         UiSharedService.AttachToolTip("Clears your profile description text");
     }
@@ -237,8 +254,4 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         base.Dispose(disposing);
         _pfpTextureWrap?.Dispose();
     }
-    
-    // Right now, we always display the profile editor for the one selected in the dropdown
-    // TODO change this to have a server selection or otherwise make sure which server it affects
-    private int CurrentServerIndex => _serverManager.CurrentServerIndex;
 }
