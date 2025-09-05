@@ -7,6 +7,8 @@ using SinusSynchronous.API.Data.Enum;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.UI.Components;
 using SinusSynchronous.WebAPI;
 using System.Numerics;
 
@@ -15,23 +17,27 @@ namespace SinusSynchronous.UI;
 public class TopTabMenu
 {
     private readonly ApiController _apiController;
-
     private readonly SinusMediator _sinusMediator;
-
     private readonly PairManager _pairManager;
     private readonly UiSharedService _uiSharedService;
+    private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly ServerSelectorSmall _pairTabServerSelector;
+    
     private string _filter = string.Empty;
     private int _globalControlCountdown = 0;
 
     private string _pairToAdd = string.Empty;
-
+    private int _pairTabSelectedServer = 0;
+        
     private SelectedTab _selectedTab = SelectedTab.None;
-    public TopTabMenu(SinusMediator sinusMediator, ApiController apiController, PairManager pairManager, UiSharedService uiSharedService)
+    public TopTabMenu(SinusMediator sinusMediator, ApiController apiController, PairManager pairManager, UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager)
     {
         _sinusMediator = sinusMediator;
         _apiController = apiController;
         _pairManager = pairManager;
         _uiSharedService = uiSharedService;
+        _serverConfigurationManager = serverConfigurationManager;
+        _pairTabServerSelector = new ServerSelectorSmall(index => _pairTabSelectedServer = index);
     }
 
     private enum SelectedTab
@@ -179,6 +185,9 @@ public class TopTabMenu
 
     private void DrawAddPair(float availableXWidth, float spacingX)
     {
+        _pairTabServerSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, availableXWidth);
+        UiSharedService.AttachToolTip("Server to use for pair actions");
+        
         var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.UserPlus, "Add");
         ImGui.SetNextItemWidth(availableXWidth - buttonSize - spacingX);
         ImGui.InputTextWithHint("##otheruid", "Other players UID/Alias", ref _pairToAdd, 20);
@@ -189,7 +198,7 @@ public class TopTabMenu
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserPlus, "Add"))
             {
                 // Adds pair for the current 
-                _ = _apiController.UserAddPairToCurrentServer(_pairToAdd);
+                _ = _apiController.UserAddPairToServer(_pairTabSelectedServer, _pairToAdd);
                 _pairToAdd = string.Empty;
             }
         }
@@ -450,8 +459,7 @@ public class TopTabMenu
                         return perm;
                     }, StringComparer.Ordinal);
 
-                // TODO Renable this
-                // _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
             }
         }
         UiSharedService.AttachToolTip("Globally align syncshell permissions to suggested syncshell permissions." + UiSharedService.TooltipSeparator
@@ -535,8 +543,7 @@ public class TopTabMenu
                         return actEnable(g.UserPair.OwnPermissions);
                     }, StringComparer.Ordinal);
 
-                // TODO Renable this
-                // _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
 
@@ -549,8 +556,7 @@ public class TopTabMenu
                     {
                         return actDisable(g.UserPair.OwnPermissions);
                     }, StringComparer.Ordinal);
-                // TODO Renable this
-                // _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();
@@ -574,8 +580,7 @@ public class TopTabMenu
                         return actEnable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
-                // TODO Renable this
-                // _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
 
@@ -589,8 +594,7 @@ public class TopTabMenu
                         return actDisable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
-                // TODO Renable this
-                // _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();

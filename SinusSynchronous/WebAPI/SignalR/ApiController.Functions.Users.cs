@@ -36,9 +36,9 @@ public partial class ApiController
         }
     }
 
-    public Task UserAddPairToCurrentServer(string pairToAdd)
+    public Task UserAddPairToServer(ServerIndex serverIndex, string pairToAdd)
     {
-        return UserAddPair(_serverManager.CurrentServerIndex, new(new(pairToAdd)));
+        return UserAddPair(serverIndex, new(new(pairToAdd)));
     }
 
     public async Task UserAddPair(ServerIndex serverIndex, UserDto user)

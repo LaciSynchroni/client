@@ -80,7 +80,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         _characterAnalyzer = characterAnalyzer;
         _playerPerformanceConfigService = playerPerformanceConfigService;
         _serverConfigService = serverConfigService;
-        _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService);
+        _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService, _serverManager);
 
         CheckForCharacterAnalysis();
 

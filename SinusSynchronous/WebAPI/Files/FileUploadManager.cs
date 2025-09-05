@@ -8,10 +8,13 @@ using SinusSynchronous.Services.ServerConfiguration;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.UI;
 using SinusSynchronous.WebAPI.Files.Models;
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace SinusSynchronous.WebAPI.Files;
+
+using ServerIndex = int;
 
 public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 {
@@ -20,7 +23,10 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
     private readonly FileTransferOrchestrator _orchestrator;
     private readonly ServerConfigurationManager _serverManager;
     private readonly Dictionary<string, DateTime> _verifiedUploadedHashes = new(StringComparer.Ordinal);
-    private CancellationTokenSource? _uploadCancellationTokenSource = new();
+    /// <summary>
+    /// One Cancellation token per server, since we can concurrently upload to each server connected.
+    /// </summary>
+    private readonly ConcurrentDictionary<ServerIndex, CancellationTokenSource> _cancellationTokens = new();
 
     public FileUploadManager(ILogger<FileUploadManager> logger, SinusMediator mediator,
         SinusConfigService sinusConfigService,
@@ -33,15 +39,13 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         _fileDbManager = fileDbManager;
         _serverManager = serverManager;
 
-        // TODO based on server index
         Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
-            Reset();
+            ResetForServer(msg.ServerIndex);
         });
     }
 
     public List<FileTransfer> CurrentUploads { get; } = [];
-    public bool IsUploading => CurrentUploads.Count > 0;
 
     public async Task DeleteAllFiles(int serverIndex)
     {
@@ -50,7 +54,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesDeleteAllFullPath(uri)).ConfigureAwait(false);
     }
 
-    public async Task<List<string>> UploadFiles(int serverIndex, List<string> hashesToUpload, IProgress<string> progress, CancellationToken? ct = null)
+    public async Task<List<string>> UploadFiles(int serverIndex, List<string> hashesToUpload, IProgress<string> progress, CancellationToken ct)
     {
         Logger.LogDebug("Trying to upload files");
         var filesPresentLocally = hashesToUpload.Where(h => _fileDbManager.GetFileCacheByHash(h) != null).ToHashSet(StringComparer.Ordinal);
@@ -62,7 +66,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
         progress.Report($"Starting upload for {filesPresentLocally.Count} files");
 
-        var filesToUpload = await FilesSend(serverIndex, [.. filesPresentLocally], [], ct ?? CancellationToken.None).ConfigureAwait(false);
+        var filesToUpload = await FilesSend(serverIndex, [.. filesPresentLocally], [], ct).ConfigureAwait(false);
 
         if (filesToUpload.Exists(f => f.IsForbidden))
         {
@@ -75,11 +79,11 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         {
             progress.Report($"Uploading file {i++}/{filesToUpload.Count}. Please wait until the upload is completed.");
             Logger.LogDebug("[{hash}] Compressing", file);
-            var data = await _fileDbManager.GetCompressedFileData(file.Hash, ct ?? CancellationToken.None).ConfigureAwait(false);
+            var data = await _fileDbManager.GetCompressedFileData(file.Hash, ct).ConfigureAwait(false);
             Logger.LogDebug("[{hash}] Starting upload for {filePath}", data.Item1, _fileDbManager.GetFileCacheByHash(data.Item1)!.ResolvedFilepath);
             await uploadTask.ConfigureAwait(false);
-            uploadTask = UploadFile(serverIndex, data.Item2, file.Hash, false, ct ?? CancellationToken.None);
-            (ct ?? CancellationToken.None).ThrowIfCancellationRequested();
+            uploadTask = UploadFile(serverIndex, data.Item2, file.Hash, false, ct);
+            ct.ThrowIfCancellationRequested();
         }
 
         await uploadTask.ConfigureAwait(false);
@@ -87,12 +91,16 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         return [];
     }
 
-    public async Task<CharacterData> UploadFiles(int serverIndex, CharacterData data, List<UserData> visiblePlayers)
+    public async Task<CharacterData> UploadFiles(ServerIndex serverIndex, CharacterData data, List<UserData> visiblePlayers)
     {
-        CancelUpload();
+        CancelUpload(serverIndex);
 
-        _uploadCancellationTokenSource = new CancellationTokenSource();
-        var uploadToken = _uploadCancellationTokenSource.Token;
+        var tokenSource = new CancellationTokenSource();    
+        if (!_cancellationTokens.TryAdd(serverIndex, tokenSource))
+        {
+            Logger.LogError("[{serverIndex} Failed to add cancellation token, token already present.", serverIndex);
+        }
+        var uploadToken = tokenSource.Token;
         Logger.LogDebug("Sending Character data {hash} to service {url}", data.DataHash.Value, _serverManager.CurrentApiUrl);
 
         HashSet<string> unverifiedUploads = GetUnverifiedFiles(data);
@@ -108,12 +116,6 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         }
 
         return data;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-        Reset();
     }
 
     private async Task<List<UploadFileDto>> FilesSend(int serverIndex, List<string> hashes, List<string> uids, CancellationToken ct)
@@ -148,14 +150,6 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         return unverifiedUploadHashes;
     }
 
-    private void Reset()
-    {
-        _uploadCancellationTokenSource?.Cancel();
-        _uploadCancellationTokenSource?.Dispose();
-        _uploadCancellationTokenSource = null;
-        CurrentUploads.Clear();
-        _verifiedUploadedHashes.Clear();
-    }
 
     private async Task UploadFile(int serverIndex, byte[] compressedFile, string fileHash, bool postProgress, CancellationToken uploadToken)
     {
@@ -279,25 +273,52 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         CurrentUploads.Clear();
     }
     
-    private bool CancelUpload()
+    private void CancelUpload(ServerIndex serverIndex)
     {
-        if (CurrentUploads.Any())
+        if (CurrentUploads.Any(f => f.ServerIndex == serverIndex))
         {
-            Logger.LogDebug("Cancelling current upload");
-            _uploadCancellationTokenSource?.Cancel();
-            _uploadCancellationTokenSource?.Dispose();
-            _uploadCancellationTokenSource = null;
-            CurrentUploads.Clear();
-            return true;
+            CancelUploadsToServer(serverIndex);
         }
-
-        return false;
     }
 
+    private void CancelUploadsToServer(ServerIndex serverIndex)
+    {
+        if (_cancellationTokens.TryRemove(serverIndex, out var token))
+        {
+            token.Cancel();
+            token.Dispose();
+        }
+        CurrentUploads.RemoveAll(transfer => transfer.ServerIndex == serverIndex);
+    }
+    
     private Uri RequireUriForServer(int serverIndex)
     {
         var uri = _orchestrator.GetFileCdnUri(serverIndex);
         if (uri == null) throw new InvalidOperationException("FileTransferManager is not initialized");
         return uri;
+    }
+    
+    private void ResetForServer(ServerIndex serverIndex)
+    {
+        CancelUploadsToServer(serverIndex);
+        _verifiedUploadedHashes.Clear();
+    }
+    
+    private void Reset()
+    {
+        _cancellationTokens.Values.ToList().ForEach(c =>
+        {
+            c.Cancel();
+            c.Dispose();
+        });
+        _cancellationTokens.Clear();
+        CurrentUploads.Clear();
+        _verifiedUploadedHashes.Clear();
+    }
+    
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        Reset();
     }
 }

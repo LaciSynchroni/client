@@ -75,12 +75,11 @@ public partial class ApiController
         await _sinusHub!.SendAsync(nameof(GroupClear), group).ConfigureAwait(false);
     }
 
-    public async Task<GroupJoinDto> GroupCreate()
+    public async Task<GroupJoinDto> GroupCreate(ServerIndex serverIndex)
     {
         if (UseMultiConnect)
         {
-            // TODO needs a server selection instead of doing it for current
-            return await GetClientForServer(_serverManager.CurrentServerIndex)!.GroupCreate().ConfigureAwait(false);
+            return await GetClientForServer(serverIndex)!.GroupCreate().ConfigureAwait(false);
         }
         CheckConnection();
         return await _sinusHub!.InvokeAsync<GroupJoinDto>(nameof(GroupCreate)).ConfigureAwait(false);
@@ -117,9 +116,9 @@ public partial class ApiController
         return await _sinusHub!.InvokeAsync<List<BannedGroupUserDto>>(nameof(GroupGetBannedUsers), group).ConfigureAwait(false);
     }
 
-    public Task<GroupJoinInfoDto> GroupJoinCurrentServer(GroupPasswordDto passwordedGroup)
+    public Task<GroupJoinInfoDto> GroupJoinForServer(ServerIndex serverIndex, GroupPasswordDto passwordedGroup)
     {
-        return GroupJoin(_serverManager.CurrentServerIndex, passwordedGroup);
+        return GroupJoin(serverIndex, passwordedGroup);
     }
 
     public async Task<GroupJoinInfoDto> GroupJoin(ServerIndex serverIndex, GroupPasswordDto passwordedGroup)
@@ -132,9 +131,9 @@ public partial class ApiController
         return await _sinusHub!.InvokeAsync<GroupJoinInfoDto>(nameof(GroupJoin), passwordedGroup).ConfigureAwait(false);
     }
     
-    public Task<bool> GroupJoinFinalizeCurrentServer(GroupJoinDto passwordedGroup)
+    public Task<bool> GroupJoinFinalizeForServer(ServerIndex serverIndex, GroupJoinDto passwordedGroup)
     {
-        return GroupJoinFinalize(_serverManager.CurrentServerIndex, passwordedGroup);
+        return GroupJoinFinalize(serverIndex, passwordedGroup);
     }
 
     public async Task<bool> GroupJoinFinalize(ServerIndex serverIndex, GroupJoinDto passwordedGroup)

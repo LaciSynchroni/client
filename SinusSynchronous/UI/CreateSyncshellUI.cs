@@ -6,6 +6,8 @@ using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.UI.Components;
 using SinusSynchronous.WebAPI;
 using System.Numerics;
 
@@ -15,15 +17,20 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly UiSharedService _uiSharedService;
+    private readonly ServerSelectorSmall _serverSelector;
+    private readonly ServerConfigurationManager _serverConfigurationManager;
     private bool _errorGroupCreate;
     private GroupJoinDto? _lastCreatedGroup;
+    private int _serverIndexForCreation = 0;
 
     public CreateSyncshellUI(ILogger<CreateSyncshellUI> logger, SinusMediator sinusMediator, ApiController apiController, UiSharedService uiSharedService,
-        PerformanceCollectorService performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService, ServerConfigurationManager serverConfigurationManager)
         : base(logger, sinusMediator, "Create new Syncshell###SinusSynchronousCreateSyncshell", performanceCollectorService)
     {
         _apiController = apiController;
         _uiSharedService = uiSharedService;
+        _serverConfigurationManager = serverConfigurationManager;
+        _serverSelector = new ServerSelectorSmall(newIndex => _serverIndexForCreation = newIndex);
         SizeConstraints = new()
         {
             MinimumSize = new(550, 330),
@@ -32,8 +39,14 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
 
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse;
 
-        // TODO based on server index
-        Mediator.Subscribe<DisconnectedMessage>(this, (_) => IsOpen = false);
+        Mediator.Subscribe<DisconnectedMessage>(this, (msg) =>
+        {
+            // Only disconnect if we have nothing left to create for. The selector will auto-swap to the next available server.
+            if (_apiController.ConnectedServerIndexes.Length <= 0)
+            {
+                IsOpen = false;
+            }
+        });
     }
 
     protected override void DrawInternal()
@@ -43,11 +56,14 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
 
         if (_lastCreatedGroup == null)
         {
+            _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 300f);
+            UiSharedService.AttachToolTip("Server to create the Syncshell for. Only connected servers can be selected.");
+            ImGui.SameLine();
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create Syncshell"))
             {
                 try
                 {
-                    _lastCreatedGroup = _apiController.GroupCreate().Result;
+                    _lastCreatedGroup = _apiController.GroupCreate(_serverIndexForCreation).Result;
                 }
                 catch
                 {
