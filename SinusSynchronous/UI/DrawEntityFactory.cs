@@ -57,28 +57,26 @@ public class DrawEntityFactory
     }
 
     public DrawFolderTag CreateDrawTagFolder(string tag,
-        int serverIndex,
         Dictionary<Pair, List<GroupFullInfoDto>> filteredPairs,
         IImmutableList<Pair> allPairs)
     {
-        return new(tag, filteredPairs.Select(u => CreateDrawPair(tag, serverIndex, u.Key, u.Value, null)).ToImmutableList(),
+        return new(tag, filteredPairs.Select(u => CreateDrawPair(tag, u.Key, u.Value, null)).ToImmutableList(),
             allPairs, _tagHandler, _apiController, _selectPairForTagUi, _uiSharedService);
     }
     
-    public DrawUserPair CreateDrawPair(string id, int serverIndex, Pair user, List<GroupFullInfoDto> groups, GroupFullInfoDto? currentGroup)
+    public DrawUserPair CreateDrawPair(string id, Pair user, List<GroupFullInfoDto> groups, GroupFullInfoDto? currentGroup)
     {
-        return new DrawUserPair(id + user.UserData.UID, serverIndex, user, groups, currentGroup, _apiController, _uidDisplayHandler,
+        return new DrawUserPair(id + user.UserData.UID, user, groups, currentGroup, _apiController, _uidDisplayHandler,
             _mediator, _selectTagForPairUi, _serverConfigurationManager, _uiSharedService, _playerPerformanceConfigService,
             _charaDataManager);
     }
 
     private DrawUserPair CreateDrawPair(GroupFullInfoWithServer groupFullInfoWithServer, KeyValuePair<Pair, List<GroupFullInfoDto>> filteredPairs)
     {
-        var serverIndex = groupFullInfoWithServer.ServerIndex;
         var pair = filteredPairs.Key;
         var groups = filteredPairs.Value;
         var id = groupFullInfoWithServer.GroupFullInfo.Group.GID + pair.UserData.UID;
-        return CreateDrawPair(id, serverIndex, pair, groups, groupFullInfoWithServer.GroupFullInfo);
+        return CreateDrawPair(id, pair, groups, groupFullInfoWithServer.GroupFullInfo);
     }
     
 }

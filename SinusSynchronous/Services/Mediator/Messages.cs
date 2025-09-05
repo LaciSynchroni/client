@@ -31,7 +31,6 @@ public record GposeEndMessage : MessageBase;
 public record CutsceneEndMessage : MessageBase;
 public record CutsceneFrameworkUpdateMessage : SameThreadMessage;
 public record ConnectedMessage(ConnectionDto Connection, int serverIndex) : MessageBase;
-// TODO this message has a lot of usages that are not yet per-server
 public record DisconnectedMessage(int ServerIndex) : SameThreadMessage;
 public record PenumbraModSettingChangedMessage : MessageBase;
 public record PenumbraInitializedMessage : MessageBase;

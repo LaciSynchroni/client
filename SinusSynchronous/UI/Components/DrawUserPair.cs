@@ -23,7 +23,6 @@ public class DrawUserPair
     protected readonly SinusMediator _mediator;
     protected readonly List<GroupFullInfoDto> _syncedGroups;
     private readonly GroupFullInfoDto? _currentGroup;
-    private readonly int _serverIndex; // TODO use this
     protected Pair _pair;
     private readonly string _id;
     private readonly SelectTagForPairUi _selectTagForPairUi;
@@ -34,7 +33,7 @@ public class DrawUserPair
     private float _menuWidth = -1;
     private bool _wasHovered = false;
 
-    public DrawUserPair(string id, int serverIndex, Pair entry, List<GroupFullInfoDto> syncedGroups,
+    public DrawUserPair(string id, Pair entry, List<GroupFullInfoDto> syncedGroups,
         GroupFullInfoDto? currentGroup,
         ApiController apiController, IdDisplayHandler uIDDisplayHandler,
         SinusMediator sinusMediator, SelectTagForPairUi selectTagForPairUi,
@@ -43,7 +42,6 @@ public class DrawUserPair
         CharaDataManager charaDataManager)
     {
         _id = id;
-        _serverIndex = serverIndex;
         _pair = entry;
         _syncedGroups = syncedGroups;
         _currentGroup = currentGroup;
