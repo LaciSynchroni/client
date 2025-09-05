@@ -91,7 +91,7 @@ public record PenumbraRedrawCharacterMessage(ICharacter Character) : SameThreadM
 public record GameObjectHandlerCreatedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : SameThreadMessage;
 public record GameObjectHandlerDestroyedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : SameThreadMessage;
 public record HaltCharaDataCreation(bool Resume = false) : SameThreadMessage;
-public record GposeLobbyUserJoin(UserData UserData) : MessageBase;
+public record GposeLobbyUserJoin(int ServerIndex, UserData UserData) : MessageBase;
 public record GPoseLobbyUserLeave(UserData UserData) : MessageBase;
 public record GPoseLobbyReceiveCharaData(CharaDataDownloadDto CharaDataDownloadDto) : MessageBase;
 public record GPoseLobbyReceivePoseData(UserData UserData, PoseData PoseData) : MessageBase;

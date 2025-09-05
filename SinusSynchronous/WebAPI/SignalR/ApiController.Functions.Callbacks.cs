@@ -190,10 +190,10 @@ public partial class ApiController
         return Task.CompletedTask;
     }
 
-    public Task Client_GposeLobbyJoin(UserData userData)
+    public Task Client_GposeLobbyJoin(int serverIndex, UserData userData)
     {
         Logger.LogDebug("Client_GposeLobbyJoin: {dto}", userData);
-        ExecuteSafely(() => Mediator.Publish(new GposeLobbyUserJoin(userData)));
+        ExecuteSafely(() => Mediator.Publish(new GposeLobbyUserJoin(serverIndex, userData)));
         return Task.CompletedTask;
     }
 

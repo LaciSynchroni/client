@@ -275,10 +275,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
     
     private void CancelUpload(ServerIndex serverIndex)
     {
-        if (CurrentUploads.Any(f => f.ServerIndex == serverIndex))
-        {
-            CancelUploadsToServer(serverIndex);
-        }
+        CancelUploadsToServer(serverIndex);
     }
 
     private void CancelUploadsToServer(ServerIndex serverIndex)

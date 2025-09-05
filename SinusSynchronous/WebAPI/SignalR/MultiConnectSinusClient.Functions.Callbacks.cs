@@ -200,7 +200,7 @@ public partial class MultiConnectSinusClient
     public Task Client_GposeLobbyJoin(UserData userData)
     {
         Logger.LogDebug("Client_GposeLobbyJoin: {dto}", userData);
-        ExecuteSafely(() => Mediator.Publish(new GposeLobbyUserJoin(userData)));
+        ExecuteSafely(() => Mediator.Publish(new GposeLobbyUserJoin(ServerIndex, userData)));
         return Task.CompletedTask;
     }
 

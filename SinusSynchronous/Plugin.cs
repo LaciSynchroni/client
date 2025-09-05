@@ -192,6 +192,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<ConfigurationSaveService>();
 
             collection.AddSingleton<HubFactory>();
+            collection.AddSingleton<ConcurrentPairLockService>();
 
             // add scoped services
             collection.AddScoped<DrawEntityFactory>();

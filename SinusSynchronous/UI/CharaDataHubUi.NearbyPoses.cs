@@ -150,7 +150,7 @@ internal partial class CharaDataHubUi
                     {
                         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Spawn and Pose"))
                         {
-                            _charaDataManager.SpawnAndApplyWorldTransform(pose.Key.MetaInfo, pose.Key);
+                            _charaDataManager.SpawnAndApplyWorldTransform(_selectedServerIndex, pose.Key.MetaInfo, pose.Key);
                         }
                     }, "Spawn actor and apply pose and position", pose.Key.MetaInfo, _hasValidGposeTarget, true);
                 }
@@ -196,7 +196,7 @@ internal partial class CharaDataHubUi
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Update Data Shared With You"))
             {
-                _ = _charaDataManager.GetAllSharedData(_disposalCts.Token).ContinueWith(u => UpdateFilteredItems());
+                _ = _charaDataManager.GetAllSharedData(_selectedServerIndex, _disposalCts.Token).ContinueWith(u => UpdateFilteredItems());
             }
         }
         if (_charaDataManager.GetSharedWithYouTimeoutTask != null && !_charaDataManager.GetSharedWithYouTimeoutTask.IsCompleted)

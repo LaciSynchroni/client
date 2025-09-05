@@ -42,20 +42,20 @@ internal sealed partial class CharaDataHubUi
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create New GPose Together Lobby"))
             {
-                _charaDataGposeTogetherManager.CreateNewLobby();
+                _charaDataGposeTogetherManager.CreateNewLobby(_selectedServerIndex);
             }
             ImGuiHelpers.ScaledDummy(5);
             UiSharedService.ScaledNextItemWidth(250);
             ImGui.InputTextWithHint("##lobbyId", "GPose Lobby Id", ref _joinLobbyId, 30);
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowRight, "Join GPose Together Lobby"))
             {
-                _charaDataGposeTogetherManager.JoinGPoseLobby(_joinLobbyId);
+                _charaDataGposeTogetherManager.JoinGPoseLobby(_selectedServerIndex, _joinLobbyId);
                 _joinLobbyId = string.Empty;
             }
             if (!string.IsNullOrEmpty(_charaDataGposeTogetherManager.LastGPoseLobbyId)
                 && _uiSharedService.IconTextButton(FontAwesomeIcon.LongArrowAltRight, $"Rejoin Last Lobby {_charaDataGposeTogetherManager.LastGPoseLobbyId}"))
             {
-                _charaDataGposeTogetherManager.JoinGPoseLobby(_charaDataGposeTogetherManager.LastGPoseLobbyId);
+                _charaDataGposeTogetherManager.JoinGPoseLobby(_selectedServerIndex, _charaDataGposeTogetherManager.LastGPoseLobbyId);
             }
         }
         else
@@ -74,7 +74,7 @@ internal sealed partial class CharaDataHubUi
             {
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowLeft, "Leave GPose Lobby"))
                 {
-                    _charaDataGposeTogetherManager.LeaveGPoseLobby();
+                    _charaDataGposeTogetherManager.LeaveGPoseLobby(_selectedServerIndex);
                 }
             }
             UiSharedService.AttachToolTip("Leave the current GPose lobby." + UiSharedService.TooltipSeparator + "Hold CTRL and click to leave.");
@@ -84,13 +84,13 @@ internal sealed partial class CharaDataHubUi
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowUp, "Send Updated Character Data"))
             {
-                _ = _charaDataGposeTogetherManager.PushCharacterDownloadDto();
+                _ = _charaDataGposeTogetherManager.PushCharacterDownloadDto(_selectedServerIndex);
             }
             UiSharedService.AttachToolTip("This will send your current appearance, pose and world data to all users in the lobby.");
             if (!_uiSharedService.IsInGpose)
             {
                 ImGuiHelpers.ScaledDummy(5);
-                UiSharedService.DrawGroupedCenteredColorText("Assigning users to characters is only available in GPose.", ImGuiColors.DalamudYellow, 300);
+                UiSharedService.DrawGroupedCenteredColorText("Assigning users to characters is only avail   able in GPose.", ImGuiColors.DalamudYellow, 300);
             }
             UiSharedService.DistanceSeparator();
             ImGui.TextUnformatted("Users In Lobby");
