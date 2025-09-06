@@ -402,7 +402,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         if (ImGui.BeginTabBar("TransfersTabBar"))
         {
-            if (ApiController.ServerState is ServerState.Connected && ImGui.BeginTabItem("Transfers"))
+eeeeeeeeeee            if (ApiController.AnyServerConnected && ImGui.BeginTabItem("Transfers"))
             {
                 ImGui.TextUnformatted("Uploads");
                 if (ImGui.BeginTable("UploadsTable", 3))
@@ -1296,7 +1296,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private void DrawServerConfiguration()
     {
         _lastTab = "Service Settings";
-        if (ApiController.ServerAlive)
+        if (ApiController.IsServerAlive(_serverConfigurationManager.CurrentServerIndex))
         {
             _uiShared.BigText("Service Actions");
             ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
@@ -1971,7 +1971,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
     private void DrawSettingsContent()
     {
-        if (_apiController.ServerState is ServerState.Connected)
+        if (_apiController.IsServerConnected(_serverConfigurationManager.CurrentServerIndex))
         {
             ImGui.TextUnformatted("Service " + _serverConfigurationManager.CurrentServer!.ServerName + ":");
             ImGui.SameLine();

@@ -63,11 +63,12 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
             _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 300f);
             UiSharedService.AttachToolTip("Server to create the Syncshell for. Only connected servers can be selected.");
             ImGui.SameLine();
+            var maxGroupsCreateable = _apiController.GetMaxGroupsCreatedByUser(_serverIndexForCreation);
             var currentUserUid = _apiController.GetUidByServer(_serverIndexForCreation);
             using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct()
                                        .Count(g => string.Equals(g.GroupFullInfo.OwnerUID, currentUserUid,
                                            StringComparison.Ordinal)) >=
-                                   _apiController.ServerInfo.MaxGroupsCreatedByUser))
+                                   maxGroupsCreateable))
             {
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create Syncshell"))
                 {

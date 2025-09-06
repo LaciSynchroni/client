@@ -87,7 +87,7 @@ public record GameObjectHandlerDestroyedMessage(GameObjectHandler GameObjectHand
 public record HaltCharaDataCreation(bool Resume = false) : SameThreadMessage;
 public record GposeLobbyUserJoin(int ServerIndex, UserData UserData) : MessageBase;
 public record GPoseLobbyUserLeave(UserData UserData) : MessageBase;
-public record GPoseLobbyReceiveCharaData(CharaDataDownloadDto CharaDataDownloadDto) : MessageBase;
+public record GPoseLobbyReceiveCharaData(int ServerIndex, CharaDataDownloadDto CharaDataDownloadDto) : MessageBase;
 public record GPoseLobbyReceivePoseData(UserData UserData, PoseData PoseData) : MessageBase;
 public record GPoseLobbyReceiveWorldData(UserData UserData, WorldData WorldData) : MessageBase;
 public record OpenCharaDataHubWithFilterMessage(UserData UserData) : MessageBase;

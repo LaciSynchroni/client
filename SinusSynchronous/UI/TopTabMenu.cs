@@ -487,13 +487,10 @@ public class TopTabMenu
             _sinusMediator.Publish(new UiToggleMessage(typeof(CreateSyncshellUI)));
         }
         ImGui.SameLine();
-
-        using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct().Count() >= _apiController.ServerInfo.MaxGroupsJoinedByUser))
+       
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Users, "Join existing Syncshell", buttonX))
         {
-            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Users, "Join existing Syncshell", buttonX))
-            {
-                _sinusMediator.Publish(new UiToggleMessage(typeof(JoinSyncshellUI)));
-            }
+            _sinusMediator.Publish(new UiToggleMessage(typeof(JoinSyncshellUI)));
         }
     }
 

@@ -128,7 +128,7 @@ public partial class MultiConnectSinusClient
     {
         Logger.LogDebug("Client_UserAddClientPair: {dto}", dto);
         ExecuteSafely(() =>
-            _pairManager.AddUserPair(dto, _serverConfigurationManager.CurrentServerIndex, addToLastAddedUser: true));
+e            _pairManager.AddUserPair(dto, ServerIndex, addToLastAddedUser: true));
         return Task.CompletedTask;
     }
 
@@ -213,7 +213,7 @@ public partial class MultiConnectSinusClient
     public Task Client_GposeLobbyPushCharacterData(CharaDataDownloadDto charaDownloadDto)
     {
         Logger.LogDebug("Client_GposeLobbyPushCharacterData: {dto}", charaDownloadDto.Uploader);
-        ExecuteSafely(() => Mediator.Publish(new GPoseLobbyReceiveCharaData(charaDownloadDto)));
+        ExecuteSafely(() => Mediator.Publish(new GPoseLobbyReceiveCharaData(ServerIndex, charaDownloadDto)));
         return Task.CompletedTask;
     }
 

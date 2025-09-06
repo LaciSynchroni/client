@@ -142,7 +142,7 @@ internal sealed partial class CharaDataHubUi
             {
                 if (_uiSharedService.IconButton(FontAwesomeIcon.ArrowRight))
                 {
-                    _ = _charaDataGposeTogetherManager.ApplyCharaData(user);
+                    _ = _charaDataGposeTogetherManager.ApplyCharaData(_selectedServerIndex, user);
                 }
             }
             UiSharedService.AttachToolTip("Apply newly received character data to selected actor." + UiSharedService.TooltipSeparator + "Note: If the button is grayed out, the latest data has already been applied.");
@@ -151,7 +151,7 @@ internal sealed partial class CharaDataHubUi
             {
                 if (_uiSharedService.IconButton(FontAwesomeIcon.Plus))
                 {
-                    _ = _charaDataGposeTogetherManager.SpawnAndApplyData(user);
+                    _ = _charaDataGposeTogetherManager.SpawnAndApplyData(_selectedServerIndex, user);
                 }
             }
             UiSharedService.AttachToolTip("Spawn new actor, apply character data and and assign it to this user." + UiSharedService.TooltipSeparator + "Note: If the button is grayed out, " +

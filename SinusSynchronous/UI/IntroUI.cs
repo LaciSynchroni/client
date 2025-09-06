@@ -200,7 +200,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                     "loading of other characters. It is recommended to keep it enabled. You can change this setting later anytime in the Sinus settings.", ImGuiColors.DalamudYellow);
             }
         }
-        else if (!_uiShared.ApiController.ServerAlive)
+        else if (!_uiShared.ApiController.IsServerAlive(_serverConfigurationManager.CurrentServerIndex))
         {
             using (_uiShared.UidFont.Push())
                 ImGui.TextUnformatted("Service Registration");

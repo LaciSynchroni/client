@@ -20,6 +20,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     private readonly ApiController _apiController;
     private readonly bool _isModerator = false;
     private readonly bool _isOwner = false;
+    private readonly int _serverIndex;
     private readonly List<string> _oneTimeInvites = [];
     private readonly PairManager _pairManager;
     private readonly UiSharedService _uiSharedService;
@@ -30,7 +31,6 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     private Task<int>? _pruneTestTask;
     private Task<int>? _pruneTask;
     private int _pruneDays = 14;
-    private int _serverIndex;
 
     public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, SinusMediator mediator, ApiController apiController,
         UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService, int serverIndex)
@@ -40,7 +40,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
         _apiController = apiController;
         _uiSharedService = uiSharedService;
         _pairManager = pairManager;
-        _isOwner = string.Equals(GroupFullInfo.OwnerUID, _apiController.UID, StringComparison.Ordinal);
+        _isOwner = string.Equals(GroupFullInfo.OwnerUID, _apiController.GetUidByServer(serverIndex), StringComparison.Ordinal);
         _isModerator = GroupFullInfo.GroupUserInfo.IsModerator();
         _newPassword = string.Empty;
         _multiInvites = 30;

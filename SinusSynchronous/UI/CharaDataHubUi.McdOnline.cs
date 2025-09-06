@@ -206,7 +206,7 @@ internal sealed partial class CharaDataHubUi
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.CheckCircle, "Preview Saved Apperance on Self"))
             {
-                _charaDataManager.ApplyDataToSelf(dataDto);
+                _charaDataManager.ApplyDataToSelf(_selectedServerIndex, dataDto);
             }
         }
         _uiSharedService.DrawHelpText("This will download and apply the saved character data to yourself. Once loaded it will automatically revert itself within 15 seconds." + UiSharedService.TooltipSeparator
