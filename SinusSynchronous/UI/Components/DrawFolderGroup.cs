@@ -164,7 +164,7 @@ public class DrawFolderGroup : DrawFolderBase
 
     protected override void DrawName(float width)
     {
-        _idDisplayHandler.DrawGroupText(_id, _groupFullInfoDto, ImGui.GetCursorPosX(), () => width);
+        _idDisplayHandler.DrawGroupText(_serverIndex, _id, _groupFullInfoDto, ImGui.GetCursorPosX(), () => width);
     }
 
     protected override float DrawRightSide(float currentRightSideX)

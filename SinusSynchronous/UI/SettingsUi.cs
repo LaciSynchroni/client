@@ -847,7 +847,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             _notesSuccessfullyApplied = null;
             var notes = ImGui.GetClipboardText();
-            _notesSuccessfullyApplied = _uiShared.ApplyNotesFromClipboard(notes, _overwriteExistingLabels);
+            _notesSuccessfullyApplied = _uiShared.ApplyNotesFromClipboard(_serverConfigurationManager.CurrentServerIndex, notes, _overwriteExistingLabels);
         }
 
         ImGui.SameLine();

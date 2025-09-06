@@ -578,7 +578,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                             uidText = uid;
                         }
 
-                        var note = _serverConfigurationManager.GetNoteForUid(uid);
+                        var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, uid);
                         if (note != null)
                         {
                             uidText = $"{note} ({uidText})";
@@ -766,7 +766,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                     _filteredDict = _charaDataManager.SharedWithYouData
                         .ToDictionary(k =>
                         {
-                            var note = _serverConfigurationManager.GetNoteForUid(k.Key.UID);
+                            var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, k.Key.UID);
                             if (note == null) return k.Key.AliasOrUID;
                             return $"{note} ({k.Key.AliasOrUID})";
                         }, k => k.Value, StringComparer.OrdinalIgnoreCase)

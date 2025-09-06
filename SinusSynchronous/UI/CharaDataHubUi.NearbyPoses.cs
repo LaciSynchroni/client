@@ -108,7 +108,7 @@ internal partial class CharaDataHubUi
 
             UiSharedService.DrawGrouped(() =>
             {
-                string? userNote = _serverConfigurationManager.GetNoteForUid(pose.Key.MetaInfo.Uploader.UID);
+                string? userNote = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, pose.Key.MetaInfo.Uploader.UID);
                 var noteText = pose.Key.MetaInfo.IsOwnData ? "YOU" : (userNote == null ? pose.Key.MetaInfo.Uploader.AliasOrUID : $"{userNote} ({pose.Key.MetaInfo.Uploader.AliasOrUID})");
                 ImGui.TextUnformatted("Pose by");
                 ImGui.SameLine();

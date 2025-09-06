@@ -118,7 +118,7 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
             ImGui.Separator();
             var imagePos = ImGui.GetCursorPos();
             ImGuiHelpers.ScaledDummy(256, 256 * ImGuiHelpers.GlobalScale + spacing.Y);
-            var note = _serverManager.GetNoteForUid(_pair.UserData.UID);
+            var note = _serverManager.GetNoteForUid(_pair.ServerIndex, _pair.UserData.UID);
             if (!string.IsNullOrEmpty(note))
             {
                 UiSharedService.ColorText(note, ImGuiColors.DalamudGrey);
@@ -149,7 +149,7 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
                 ImGui.TextUnformatted("Paired through Syncshells:");
                 foreach (var group in _pair.UserPair.Groups)
                 {
-                    var groupNote = _serverManager.GetNoteForGid(group);
+                    var groupNote = _serverManager.GetNoteForGid(_pair.ServerIndex, group);
                     var groupName = _pairManager.GroupPairs.First(f => string.Equals(f.Key.GroupFullInfo.GID, group, StringComparison.Ordinal)).Key.GroupFullInfo.GroupAliasOrGID;
                     var groupString = string.IsNullOrEmpty(groupNote) ? groupName : $"{groupNote} ({groupName})";
                     ImGui.TextUnformatted("- " + groupString);

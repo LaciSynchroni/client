@@ -130,7 +130,7 @@ internal sealed partial class CharaDataHubUi
         {
             var availWidth = ImGui.GetContentRegionAvail().X;
             ImGui.AlignTextToFramePadding();
-            var note = _serverConfigurationManager.GetNoteForUid(user.UserData.UID);
+            var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, user.UserData.UID);
             var userText = note == null ? user.UserData.AliasOrUID : $"{note} ({user.UserData.AliasOrUID})";
             UiSharedService.ColorText(userText, ImGuiColors.ParsedGreen);
 

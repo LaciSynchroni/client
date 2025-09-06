@@ -256,7 +256,7 @@ public class DrawUserPair
             userPairText += UiSharedService.TooltipSeparator + string.Join(Environment.NewLine,
                 _syncedGroups.Select(g =>
                 {
-                    var groupNote = _serverConfigurationManager.GetNoteForGid(g.GID);
+                    var groupNote = _serverConfigurationManager.GetNoteForGid(_pair.ServerIndex, g.GID);
                     var groupString = string.IsNullOrEmpty(groupNote) ? g.GroupAliasOrGID : $"{groupNote} ({g.GroupAliasOrGID})";
                     return "Paired through " + groupString;
                 }));
@@ -316,7 +316,7 @@ public class DrawUserPair
             bool userIsPinned = entry.GroupPairUserInfos.TryGetValue(_pair.UserData.UID, out var info) && info.IsPinned();
             if (selfIsOwner || selfIsModerator)
             {
-                var groupNote = _serverConfigurationManager.GetNoteForGid(entry.GID);
+                var groupNote = _serverConfigurationManager.GetNoteForGid(_pair.ServerIndex, entry.GID);
                 var groupString = string.IsNullOrEmpty(groupNote) ? entry.GroupAliasOrGID : $"{groupNote} ({entry.GroupAliasOrGID})";
 
                 if (ImGui.BeginMenu(groupString + " Moderation Functions"))

@@ -398,7 +398,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public static Vector4 UploadColor((long, long) data) => data.Item1 == 0 ? ImGuiColors.DalamudGrey :
         data.Item1 == data.Item2 ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudYellow;
 
-    public bool ApplyNotesFromClipboard(string notes, bool overwrite)
+    public bool ApplyNotesFromClipboard(int serverIndex, string notes, bool overwrite)
     {
         var splitNotes = notes.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
         var splitNotesStart = splitNotes.FirstOrDefault();
@@ -417,16 +417,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 var splittedEntry = note.Split(":", 2, StringSplitOptions.RemoveEmptyEntries);
                 var uid = splittedEntry[0];
                 var comment = splittedEntry[1].Trim('"');
-                if (_serverConfigurationManager.GetNoteForUid(uid) != null && !overwrite) continue;
-                _serverConfigurationManager.SetNoteForUid(uid, comment);
+                if (_serverConfigurationManager.GetNoteForUid(serverIndex, uid) != null && !overwrite) continue;
+                _serverConfigurationManager.SetNoteForUid(serverIndex, uid, comment);
             }
             catch
             {
                 Logger.LogWarning("Could not parse {note}", note);
             }
         }
-
-        _serverConfigurationManager.SaveNotes();
 
         return true;
     }

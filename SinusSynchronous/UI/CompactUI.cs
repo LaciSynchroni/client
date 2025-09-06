@@ -271,7 +271,7 @@ public class CompactUi : WindowMediatorSubscriberBase
                 ImGui.InputTextWithHint("##noteforuser", $"Note for {_lastAddedUser.UserData.AliasOrUID}", ref _lastAddedUserComment, 100);
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Save, "Save Note"))
                 {
-                    _serverConfigManager.SetNoteForUid(_lastAddedUser.UserData.UID, _lastAddedUserComment);
+                    _serverConfigManager.SetNoteForUid(_lastAddedUser.ServerIndex, _lastAddedUser.UserData.UID, _lastAddedUserComment);
                     _lastAddedUser = null;
                     _lastAddedUserComment = string.Empty;
                     _showModalForUserAddition = false;

@@ -372,9 +372,9 @@ public class ServerConfigurationManager
         Save();
     }
 
-    internal string? GetNoteForGid(string gID)
+    internal string? GetNoteForGid(int serverIndex, string gID)
     {
-        if (CurrentNotesStorage().GidServerComments.TryGetValue(gID, out var note))
+        if (NotesStorageForServer(serverIndex).GidServerComments.TryGetValue(gID, out var note))
         {
             if (string.IsNullOrEmpty(note)) return null;
             return note;
@@ -383,9 +383,9 @@ public class ServerConfigurationManager
         return null;
     }
 
-    internal string? GetNoteForUid(string uid)
+    internal string? GetNoteForUid(int serverIndex, string uid)
     {
-        if (CurrentNotesStorage().UidServerComments.TryGetValue(uid, out var note))
+        if (NotesStorageForServer(serverIndex).UidServerComments.TryGetValue(uid, out var note))
         {
             if (string.IsNullOrEmpty(note)) return null;
             return note;
@@ -472,37 +472,38 @@ public class ServerConfigurationManager
         _notesConfig.Save();
     }
 
-    internal void SetNoteForGid(string gid, string note, bool save = true)
+    internal void SetNoteForGid(int serverIndex, string gid, string note, bool save = true)
     {
         if (string.IsNullOrEmpty(gid)) return;
 
-        CurrentNotesStorage().GidServerComments[gid] = note;
+        NotesStorageForServer(serverIndex).GidServerComments[gid] = note;
         if (save)
-            _notesConfig.Save();
+            SaveNotes();
     }
 
-    internal void SetNoteForUid(string uid, string note, bool save = true)
+    internal void SetNoteForUid(int serverIndex, string uid, string note, bool save = true)
     {
         if (string.IsNullOrEmpty(uid)) return;
 
-        CurrentNotesStorage().UidServerComments[uid] = note;
+        NotesStorageForServer(serverIndex).UidServerComments[uid] = note;
         if (save)
-            _notesConfig.Save();
+            SaveNotes();
     }
 
-    internal void AutoPopulateNoteForUid(string uid, string note)
+    internal void AutoPopulateNoteForUid(int serverIndex, string uid, string note)
     {
         if (!_sinusConfigService.Current.AutoPopulateEmptyNotesFromCharaName
-            || GetNoteForUid(uid) != null)
+            || GetNoteForUid(serverIndex, uid) != null)
             return;
 
-        SetNoteForUid(uid, note, save: true);
+        SetNoteForUid(serverIndex, uid, note, save: true);
     }
 
-    private ServerNotesStorage CurrentNotesStorage()
+    private ServerNotesStorage NotesStorageForServer(int serverIndex)
     {
-        TryCreateCurrentNotesStorage();
-        return _notesConfig.Current.ServerNotes[CurrentApiUrl];
+        var serverUri = GetServerByIndex(serverIndex).ServerUri;
+        TryCreateNotesStorage(serverUri);
+        return _notesConfig.Current.ServerNotes[serverUri];
     }
 
     private ServerTagStorage CurrentServerTagStorage()
@@ -520,11 +521,11 @@ public class ServerConfigurationManager
         Save();
     }
 
-    private void TryCreateCurrentNotesStorage()
+    private void TryCreateNotesStorage(string apiUrl)
     {
-        if (!_notesConfig.Current.ServerNotes.ContainsKey(CurrentApiUrl))
+        if (!_notesConfig.Current.ServerNotes.ContainsKey(apiUrl))
         {
-            _notesConfig.Current.ServerNotes[CurrentApiUrl] = new();
+            _notesConfig.Current.ServerNotes[apiUrl] = new();
         }
     }
 
