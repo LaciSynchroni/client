@@ -84,13 +84,13 @@ public class DrawFolderTag : DrawFolderBase
 
         if (RenderCount)
         {
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
-            {
-                ImGui.SameLine();
-                ImGui.AlignTextToFramePadding();
+            //using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
+            //{
+            //    ImGui.SameLine();
+            //    ImGui.AlignTextToFramePadding();
 
-                ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
-            }
+            //    ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
+            //}
             UiSharedService.AttachToolTip(OnlinePairs + " online" + Environment.NewLine + TotalPairs + " total");
         }
         ImGui.SameLine();

@@ -194,20 +194,19 @@ public class DrawUserPair
 
         ImGui.AlignTextToFramePadding();
 
-        if (_pair.IsPaused)
+        if (_pair.ServerIndex >= 0)
         {
-            using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
-            _uiSharedService.IconText(FontAwesomeIcon.PauseCircle);
-            userPairText = _pair.UserData.AliasOrUID + " is paused";
+            userPairText = _apiController.GetServerNameByIndex(_pair.ServerIndex);
         }
-        else if (!_pair.IsOnline)
+        
+        if (!_pair.IsOnline)
         {
             using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
             _uiSharedService.IconText(_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.OneSided
                 ? FontAwesomeIcon.ArrowsLeftRight
                 : (_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional
                     ? FontAwesomeIcon.User : FontAwesomeIcon.Users));
-            userPairText = _pair.UserData.AliasOrUID + " is offline";
+            userPairText += UiSharedService.TooltipSeparator + _pair.UserData.AliasOrUID + " is offline";
         }
         else if (_pair.IsVisible)
         {
@@ -251,7 +250,7 @@ public class DrawUserPair
             }
         }
 
-        if (_syncedGroups.Any())
+        if (_syncedGroups.Count > 0)
         {
             userPairText += UiSharedService.TooltipSeparator + string.Join(Environment.NewLine,
                 _syncedGroups.Select(g =>
@@ -502,7 +501,7 @@ public class DrawUserPair
 
         if (ImGui.BeginPopup("User Flyout Menu"))
         {
-            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}"))
+            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}-{_pair.ServerIndex}"))
             {
                 ImGui.TextUnformatted("Common Pair Functions");
                 DrawCommonClientMenu();

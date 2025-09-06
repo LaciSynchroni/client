@@ -235,8 +235,6 @@ public class IdDisplayHandler
             }
         }
 
-        playerText = $"[{pair.ServerIndex}] " + playerText;
-
         return (textIsUid, playerText!);
     }
 

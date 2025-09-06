@@ -50,14 +50,22 @@ public class DrawFolderGroup : DrawFolderBase
             UiSharedService.AttachToolTip("Syncshell " + _groupFullInfoDto.GroupAliasOrGID + " is closed for invites");
         }
 
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
-        {
-            ImGui.SameLine();
-            ImGui.AlignTextToFramePadding();
+        //using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
+        //{
+        //    ImGui.SameLine();
+        //    ImGui.AlignTextToFramePadding();
 
-            ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
+        //    ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
+        //}
+
+        var syncshellTooltipText = OnlinePairs + " online" + Environment.NewLine + TotalPairs + " total";
+        if (_serverIndex >= 0)
+        {
+            syncshellTooltipText = _apiController.GetServerNameByIndex(_serverIndex) +
+                UiSharedService.TooltipSeparator +
+                syncshellTooltipText;
         }
-        UiSharedService.AttachToolTip(OnlinePairs + " online" + Environment.NewLine + TotalPairs + " total");
+        UiSharedService.AttachToolTip(syncshellTooltipText);
 
         ImGui.SameLine();
         if (IsOwner)

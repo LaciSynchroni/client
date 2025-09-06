@@ -50,12 +50,12 @@ public class DrawGroupedGroupFolder : IDrawFolder
             ImGui.SameLine();
             ImGui.AlignTextToFramePadding();
             _uiSharedService.IconText(FontAwesomeIcon.UsersRectangle);
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
-            {
-                ImGui.SameLine();
-                ImGui.AlignTextToFramePadding();
-                ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
-            }
+            //using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
+            //{
+            //    ImGui.SameLine();
+            //    ImGui.AlignTextToFramePadding();
+            //    ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
+            //}
             UiSharedService.AttachToolTip(OnlinePairs + " online in all of your joined syncshells" + Environment.NewLine +
                 TotalPairs + " pairs combined in all of your joined syncshells");
             ImGui.SameLine();
