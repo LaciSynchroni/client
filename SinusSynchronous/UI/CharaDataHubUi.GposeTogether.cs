@@ -19,7 +19,9 @@ internal sealed partial class CharaDataHubUi
             ImGuiHelpers.ScaledDummy(5);
         }
 
-        if (!_uiSharedService.ApiController.IsConnected)
+        bool isServerConnected = _uiSharedService.ApiController.IsServerConnected(_selectedServerIndex);
+
+        if (!isServerConnected)
         {
             ImGuiHelpers.ScaledDummy(5);
             UiSharedService.DrawGroupedCenteredColorText("CANNOT USE GPOSE TOGETHER WHILE DISCONNECTED FROM THE SERVER.", ImGuiColors.DalamudRed);
@@ -34,7 +36,7 @@ internal sealed partial class CharaDataHubUi
             + "Once you are close to each other you can initiate GPose. You must either assign or spawn characters for each of the lobby users. Their own poses and positions to their character will be automatically applied." + Environment.NewLine
             + "Pose and location data during GPose are updated approximately every 10-20s.");
 
-        using var disabled = ImRaii.Disabled(!_charaDataManager.BrioAvailable || !_uiSharedService.ApiController.IsConnected);
+        using var disabled = ImRaii.Disabled(!_charaDataManager.BrioAvailable || !isServerConnected);
 
         UiSharedService.DistanceSeparator();
         _uiSharedService.BigText("Lobby Controls");

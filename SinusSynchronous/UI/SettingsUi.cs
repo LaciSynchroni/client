@@ -337,7 +337,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         if (!showUploading) ImGui.EndDisabled();
         if (!showTransferBars) ImGui.EndDisabled();
 
-        if (_apiController.IsConnected)
+        if (_apiController.AnyServerConnected)
         {
             ImGuiHelpers.ScaledDummy(5);
             ImGui.Separator();
@@ -1815,12 +1815,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (ImGui.BeginTabItem("Permission Settings"))
             {
                 _uiShared.BigText("Default Permission Settings");
-                if (selectedServer == _serverConfigurationManager.CurrentServer && _apiController.IsConnected)
+                if (selectedServer == _serverConfigurationManager.CurrentServer && _apiController.IsServerConnected(_serverConfigurationManager.CurrentServerIndex))
                 {
                     UiSharedService.TextWrapped("Note: The default permissions settings here are not applied retroactively to existing pairs or joined Syncshells.");
                     UiSharedService.TextWrapped("Note: The default permissions settings here are sent and stored on the connected service.");
                     ImGuiHelpers.ScaledDummy(5f);
-                    var perms = _apiController.DefaultPermissions!;
+                    var perms = _apiController.GetDefaultPermissionsForServer(_serverConfigurationManager.CurrentServerIndex)!;
                     bool individualIsSticky = perms.IndividualIsSticky;
                     bool disableIndividualSounds = perms.DisableIndividualSounds;
                     bool disableIndividualAnimations = perms.DisableIndividualAnimations;

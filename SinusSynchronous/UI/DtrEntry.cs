@@ -126,7 +126,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
         string text;
         string tooltip;
         Colors colors;
-        if (_apiController.IsConnected)
+        if (_apiController.AnyServerConnected)
         {
             var pairCount = _pairManager.GetVisibleUserCountAcrossAllServers();
             text = $"\uE044 {pairCount}";

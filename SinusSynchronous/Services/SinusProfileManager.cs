@@ -67,12 +67,13 @@ public class SinusProfileManager : MediatorSubscriberBase
         {
             _sinusProfiles[data] = _loadingProfileData;
             var userData = data.UserData;
+            var userUid = _apiController.GetUidByServer(data.ServerIndex);
             var profile = await _apiController.UserGetProfile(data.ServerIndex, new API.Dto.User.UserDto(data.UserData)).ConfigureAwait(false);
             SinusProfileData profileData = new(profile.Disabled, profile.IsNSFW ?? false,
                 string.IsNullOrEmpty(profile.ProfilePictureBase64) ? _sinusLogo : profile.ProfilePictureBase64,
                 !string.IsNullOrEmpty(userData.Alias) && !string.Equals(userData.Alias, userData.UID, StringComparison.Ordinal) ? _sinusSupporter : string.Empty,
                 string.IsNullOrEmpty(profile.Description) ? _noDescription : profile.Description);
-            if (profileData.IsNSFW && !_sinusConfigService.Current.ProfilesAllowNsfw && !string.Equals(_apiController.UID, userData.UID, StringComparison.Ordinal))
+            if (profileData.IsNSFW && !_sinusConfigService.Current.ProfilesAllowNsfw && !string.Equals(userUid, userData.UID, StringComparison.Ordinal))
             {
                 _sinusProfiles[data] = _nsfwProfileData;
             }

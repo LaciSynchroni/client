@@ -1,9 +1,11 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.API.Dto.Group;
+using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
@@ -19,17 +21,19 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
     private readonly ServerSelectorSmall _serverSelector;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly PairManager _pairManager;
     private bool _errorGroupCreate;
     private GroupJoinDto? _lastCreatedGroup;
     private int _serverIndexForCreation = 0;
 
     public CreateSyncshellUI(ILogger<CreateSyncshellUI> logger, SinusMediator sinusMediator, ApiController apiController, UiSharedService uiSharedService,
-        PerformanceCollectorService performanceCollectorService, ServerConfigurationManager serverConfigurationManager)
+        PerformanceCollectorService performanceCollectorService, ServerConfigurationManager serverConfigurationManager, PairManager pairManager)
         : base(logger, sinusMediator, "Create new Syncshell###SinusSynchronousCreateSyncshell", performanceCollectorService)
     {
         _apiController = apiController;
         _uiSharedService = uiSharedService;
         _serverConfigurationManager = serverConfigurationManager;
+        _pairManager = pairManager;
         _serverSelector = new ServerSelectorSmall(newIndex => _serverIndexForCreation = newIndex);
         SizeConstraints = new()
         {
@@ -59,40 +63,49 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
             _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 300f);
             UiSharedService.AttachToolTip("Server to create the Syncshell for. Only connected servers can be selected.");
             ImGui.SameLine();
-            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create Syncshell"))
+            var currentUserUid = _apiController.GetUidByServer(_serverIndexForCreation);
+            using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct()
+                                       .Count(g => string.Equals(g.GroupFullInfo.OwnerUID, currentUserUid,
+                                           StringComparison.Ordinal)) >=
+                                   _apiController.ServerInfo.MaxGroupsCreatedByUser))
             {
-                try
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create Syncshell"))
                 {
-                    _lastCreatedGroup = _apiController.GroupCreate(_serverIndexForCreation).Result;
+                    try
+                    {
+                        _lastCreatedGroup = _apiController.GroupCreate(_serverIndexForCreation).Result;
+                    }
+                    catch
+                    {
+                        _lastCreatedGroup = null;
+                        _errorGroupCreate = true;
+                    }
                 }
-                catch
-                {
-                    _lastCreatedGroup = null;
-                    _errorGroupCreate = true;
-                }
+                ImGui.SameLine();
             }
-            ImGui.SameLine();
         }
 
         ImGui.Separator();
 
         if (_lastCreatedGroup == null)
         {
+            var defaultPermissions = _apiController.GetDefaultPermissionsForServer(_serverIndexForCreation);
+            var serverInfo = _apiController.GetServerInfoForServer(_serverIndexForCreation);
             UiSharedService.TextWrapped("Creating a new Syncshell will create it with your current preferred permissions for Syncshells as default suggested permissions." + Environment.NewLine +
-                "- You can own up to " + _apiController.ServerInfo.MaxGroupsCreatedByUser + " Syncshells on this server." + Environment.NewLine +
-                "- You can join up to " + _apiController.ServerInfo.MaxGroupsJoinedByUser + " Syncshells on this server (including your own)" + Environment.NewLine +
-                "- Syncshells on this server can have a maximum of " + _apiController.ServerInfo.MaxGroupUserCount + " users");
+                "- You can own up to " + serverInfo?.MaxGroupsCreatedByUser + " Syncshells on this server." + Environment.NewLine +
+                "- You can join up to " + serverInfo?.MaxGroupsJoinedByUser + " Syncshells on this server (including your own)" + Environment.NewLine +
+                "- Syncshells on this server can have a maximum of " + serverInfo?.MaxGroupUserCount + " users");
             ImGuiHelpers.ScaledDummy(2f);
             ImGui.TextUnformatted("Your current Syncshell preferred permissions are:");
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("- Animations");
-            _uiSharedService.BooleanToColoredIcon(!_apiController.DefaultPermissions!.DisableGroupAnimations);
+            _uiSharedService.BooleanToColoredIcon(!defaultPermissions!.DisableGroupAnimations);
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("- Sounds");
-            _uiSharedService.BooleanToColoredIcon(!_apiController.DefaultPermissions!.DisableGroupSounds);
+            _uiSharedService.BooleanToColoredIcon(!defaultPermissions!.DisableGroupSounds);
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("- VFX");
-            _uiSharedService.BooleanToColoredIcon(!_apiController.DefaultPermissions!.DisableGroupVFX);
+            _uiSharedService.BooleanToColoredIcon(!defaultPermissions!.DisableGroupVFX);
             UiSharedService.TextWrapped("(Those preferred permissions can be changed anytime after Syncshell creation, your defaults can be changed anytime in the Sinus Settings)");
         }
         else

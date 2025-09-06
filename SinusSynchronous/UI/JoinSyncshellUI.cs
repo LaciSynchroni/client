@@ -38,7 +38,13 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
         _uiSharedService = uiSharedService;
         _apiController = apiController;
         _serverConfigurationManager = serverConfigurationManager;
-        _serverSelector = new ServerSelectorSmall(index => _desiredServerForSyncshell = index);
+        _serverSelector = new ServerSelectorSmall(index =>
+        {
+            _desiredServerForSyncshell = index;
+            // Also update default permissions
+            // They must not be null because only connected servers can be connected
+            _ownPermissions = _apiController.GetDefaultPermissionsForServer(index)!.DeepClone();
+        });
         SizeConstraints = new()
         {
             MinimumSize = new(700, 400),
@@ -63,7 +69,11 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
         _syncshellPassword = string.Empty;
         _previousPassword = string.Empty;
         _groupJoinInfo = null;
-        _ownPermissions = _apiController.DefaultPermissions.DeepClone()!;
+        var defaultPermissionsForServer = _apiController.GetDefaultPermissionsForServer(_desiredServerForSyncshell);
+        if (defaultPermissionsForServer != null)
+        {
+            _ownPermissions = defaultPermissionsForServer.DeepClone();
+        }
     }
 
     protected override void DrawInternal()

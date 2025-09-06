@@ -71,7 +71,8 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         });
         Mediator.Subscribe<ClearProfileDataMessage>(this, (msg) =>
         {
-            if (msg.UserData == null || string.Equals(msg.UserData.UserData.UID, _apiController.UID, StringComparison.Ordinal))
+            var userUid = _apiController.GetUidByServer(_serverForProfile);
+            if (msg.UserData == null || string.Equals(msg.UserData.UserData.UID, userUid, StringComparison.Ordinal))
             {
                 _pfpTextureWrap?.Dispose();
                 _pfpTextureWrap = null;

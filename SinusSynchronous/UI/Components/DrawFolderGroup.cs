@@ -35,8 +35,9 @@ public class DrawFolderGroup : DrawFolderBase
 
     protected override bool RenderIfEmpty => true;
     protected override bool RenderMenu => true;
+    private string OwnUid => _apiController.GetUidByServer(_serverIndex);
     private bool IsModerator => IsOwner || _groupFullInfoDto.GroupUserInfo.IsModerator();
-    private bool IsOwner => string.Equals(_groupFullInfoDto.OwnerUID, _apiController.UID, StringComparison.Ordinal);
+    private bool IsOwner => string.Equals(_groupFullInfoDto.OwnerUID, OwnUid, StringComparison.Ordinal);
     private bool IsPinned => _groupFullInfoDto.GroupUserInfo.IsPinned();
 
     protected override float DrawIcon()
@@ -106,7 +107,7 @@ public class DrawFolderGroup : DrawFolderBase
             _ = _apiController.GroupLeave(_serverIndex, _groupFullInfoDto);
             ImGui.CloseCurrentPopup();
         }
-        UiSharedService.AttachToolTip("Hold CTRL and click to leave this Syncshell" + (!string.Equals(_groupFullInfoDto.OwnerUID, _apiController.UID, StringComparison.Ordinal)
+        UiSharedService.AttachToolTip("Hold CTRL and click to leave this Syncshell" + (!string.Equals(_groupFullInfoDto.OwnerUID, OwnUid, StringComparison.Ordinal)
             ? string.Empty : Environment.NewLine + "WARNING: This action is irreversible" + Environment.NewLine + "Leaving an owned Syncshell will transfer the ownership to a random person in the Syncshell."));
 
         ImGui.Separator();
@@ -124,28 +125,28 @@ public class DrawFolderGroup : DrawFolderBase
             perm.SetDisableVFX(_groupFullInfoDto.GroupPermissions.IsPreferDisableVFX());
             perm.SetDisableSounds(_groupFullInfoDto.GroupPermissions.IsPreferDisableSounds());
             perm.SetDisableAnimations(_groupFullInfoDto.GroupPermissions.IsPreferDisableAnimations());
-            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(_apiController.UID), perm));
+            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(OwnUid), perm));
             ImGui.CloseCurrentPopup();
         }
 
         if (_uiSharedService.IconTextButton(disableSounds ? FontAwesomeIcon.VolumeUp : FontAwesomeIcon.VolumeOff, disableSounds ? "Enable Sound Sync" : "Disable Sound Sync", menuWidth, true))
         {
             perm.SetDisableSounds(!disableSounds);
-            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(_apiController.UID), perm));
+            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(OwnUid), perm));
             ImGui.CloseCurrentPopup();
         }
 
         if (_uiSharedService.IconTextButton(disableAnims ? FontAwesomeIcon.Running : FontAwesomeIcon.Stop, disableAnims ? "Enable Animation Sync" : "Disable Animation Sync", menuWidth, true))
         {
             perm.SetDisableAnimations(!disableAnims);
-            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(_apiController.UID), perm));
+            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(OwnUid), perm));
             ImGui.CloseCurrentPopup();
         }
 
         if (_uiSharedService.IconTextButton(disableVfx ? FontAwesomeIcon.Sun : FontAwesomeIcon.Circle, disableVfx ? "Enable VFX Sync" : "Disable VFX Sync", menuWidth, true))
         {
             perm.SetDisableVFX(!disableVfx);
-            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(_apiController.UID), perm));
+            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new(_groupFullInfoDto.Group, new(OwnUid), perm));
             ImGui.CloseCurrentPopup();
         }
 
@@ -239,7 +240,7 @@ public class DrawFolderGroup : DrawFolderBase
         {
             var perm = _groupFullInfoDto.GroupUserPermissions;
             perm.SetPaused(!perm.IsPaused());
-            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new GroupPairUserPermissionDto(_groupFullInfoDto.Group, new(_apiController.UID), perm));
+            _ = _apiController.GroupChangeIndividualPermissionState(_serverIndex, new GroupPairUserPermissionDto(_groupFullInfoDto.Group, new(OwnUid), perm));
         }
         return currentRightSideX;
     }

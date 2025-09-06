@@ -482,15 +482,11 @@ public class TopTabMenu
     {
         var buttonX = (availableWidth - (spacingX)) / 2f;
 
-        using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct()
-            .Count(g => string.Equals(g.GroupFullInfo.OwnerUID, _apiController.UID, StringComparison.Ordinal)) >= _apiController.ServerInfo.MaxGroupsCreatedByUser))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create new Syncshell", buttonX))
         {
-            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create new Syncshell", buttonX))
-            {
-                _sinusMediator.Publish(new UiToggleMessage(typeof(CreateSyncshellUI)));
-            }
-            ImGui.SameLine();
+            _sinusMediator.Publish(new UiToggleMessage(typeof(CreateSyncshellUI)));
         }
+        ImGui.SameLine();
 
         using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct().Count() >= _apiController.ServerInfo.MaxGroupsJoinedByUser))
         {

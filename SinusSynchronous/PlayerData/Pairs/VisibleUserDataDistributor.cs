@@ -93,7 +93,7 @@ public class VisibleUserDataDistributor : DisposableMediatorSubscriberBase
 
     private void FrameworkOnUpdate()
     {
-        if (!_dalamudUtil.GetIsPlayerPresent() || !_apiController.IsConnected) return;
+        if (!_dalamudUtil.GetIsPlayerPresent() || !_apiController.AnyServerConnected) return;
 
         var allVisibleUsers = _pairManager.GetVisibleUsersAcrossAllServers();
         var newVisibleUsers = allVisibleUsers.Except(_previouslyVisiblePlayers).ToList();
