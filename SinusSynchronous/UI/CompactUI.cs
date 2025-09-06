@@ -27,6 +27,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using static FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase.Delegates;
 
 namespace SinusSynchronous.UI;
 
@@ -340,12 +341,17 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         if (_apiController.AnyServerConnected)
         {
-            ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth()) / 2 - (userSize.X + textSize.X) / 2 - ImGui.GetStyle().ItemSpacing.X / 2);
-            if (!printShard) ImGui.AlignTextToFramePadding();
-            ImGui.TextColored(ImGuiColors.ParsedGreen, userCount);
-            ImGui.SameLine();
-            if (!printShard) ImGui.AlignTextToFramePadding();
-            ImGui.TextUnformatted("Users Online");
+            DrawConnectedToServer();
+
+            if (_apiController.IsServerConnected(_serverConfigManager.CurrentServerIndex))
+            {
+                ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth()) / 2 - (userSize.X + textSize.X) / 2 - ImGui.GetStyle().ItemSpacing.X / 2);
+                if (!printShard) ImGui.AlignTextToFramePadding();
+                ImGui.TextColored(ImGuiColors.ParsedGreen, userCount);
+                ImGui.SameLine();
+                if (!printShard) ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("Users Online");
+            }
         }
         else
         {
@@ -403,6 +409,22 @@ public class CompactUi : WindowMediatorSubscriberBase
                 UiSharedService.AttachToolTip(isConnectingOrConnected ? "Disconnect from " + _serverConfigManager.CurrentServer.ServerName : "Connect to " + _serverConfigManager.CurrentServer.ServerName);
             }
         }
+    }
+
+    private void DrawConnectedToServer()
+    {
+        var serverConnected = _apiController.IsServerConnected(_serverConfigManager.CurrentServerIndex);
+        var connectToText = serverConnected ?
+            "Connected to" :
+            "Disconencted from";
+        var connectedToSize = ImGui.CalcTextSize(connectToText);
+        var serverNameTextSize = ImGui.CalcTextSize(_serverConfigManager.CurrentServer.ServerName);
+        ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth()) / 2 - (connectedToSize.X + serverNameTextSize.X) / 2 - ImGui.GetStyle().ItemSpacing.X / 2);
+
+        ImGui.TextUnformatted(connectToText);
+        ImGui.SameLine();
+        ImGui.TextColored(serverConnected ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed, 
+            _serverConfigManager.CurrentServer.ServerName);
     }
 
     private void ToggleMultiServerSelect()
