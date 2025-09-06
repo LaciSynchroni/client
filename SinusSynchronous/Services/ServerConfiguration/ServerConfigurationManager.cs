@@ -102,8 +102,6 @@ public class ServerConfigurationManager
         }
     }
 
-    public bool EnableMultiConnect => _serverConfigService.Current.EnableMultiConnect;
-
     public (string OAuthToken, string UID)? GetOAuth2(out bool hasMulti, int serverIdx = -1)
     {
         ServerStorage? currentServer;
