@@ -522,7 +522,7 @@ public class TopTabMenu
         {
             _sinusMediator.Publish(new ToggleServerSelectMessage());
         }
-        UiSharedService.AttachToolTip("Toggle the server selection list");
+        UiSharedService.AttachToolTip("Toggle the server connections list");
     }
 
     private async Task GlobalControlCountdown(int countdown)
