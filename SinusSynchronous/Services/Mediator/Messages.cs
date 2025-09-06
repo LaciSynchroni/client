@@ -19,6 +19,7 @@ public record SwitchToMainUiMessage : MessageBase;
 public record OpenSettingsUiMessage : MessageBase;
 public record DalamudLoginMessage : MessageBase;
 public record DalamudLogoutMessage : MessageBase;
+public record ToggleServerSelectMessage : MessageBase;
 public record PriorityFrameworkUpdateMessage : SameThreadMessage;
 public record FrameworkUpdateMessage : SameThreadMessage;
 public record ClassJobChangedMessage(GameObjectHandler GameObjectHandler) : MessageBase;

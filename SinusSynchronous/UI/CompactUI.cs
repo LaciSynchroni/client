@@ -24,6 +24,7 @@ using SinusSynchronous.WebAPI.SignalR.Utils;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Linq;
 using System.Numerics;
 using System.Reflection;
 
@@ -40,7 +41,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly SelectTagForPairUi _selectGroupForPairUi;
     private readonly SelectPairForTagUi _selectPairsForGroupUi;
     private readonly IpcManager _ipcManager;
-    private readonly ServerConfigurationManager _serverManager;
+    private readonly ServerConfigurationManager _serverConfigManager;
     private readonly TopTabMenu _tabMenu;
     private readonly TagHandler _tagHandler;
     private readonly UiSharedService _uiSharedService;
@@ -59,9 +60,10 @@ public class CompactUi : WindowMediatorSubscriberBase
     private float _transferPartHeight;
     private bool _wasOpen;
     private float _windowContentWidth;
+    private bool _showMultiServerSelect = false;
 
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, SinusConfigService configService, ApiController apiController, PairManager pairManager,
-        ServerConfigurationManager serverManager, SinusMediator mediator, FileUploadManager fileTransferManager,
+        ServerConfigurationManager serverConfigManager, SinusMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
         PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService, ServerConfigService serverConfigService)
         : base(logger, mediator, "###SinusSynchronousMainUI", performanceCollectorService)
@@ -70,7 +72,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         _configService = configService;
         _apiController = apiController;
         _pairManager = pairManager;
-        _serverManager = serverManager;
+        _serverConfigManager = serverConfigManager;
         _fileTransferManager = fileTransferManager;
         _tagHandler = tagHandler;
         _drawEntityFactory = drawEntityFactory;
@@ -80,7 +82,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         _characterAnalyzer = characterAnalyzer;
         _playerPerformanceConfigService = playerPerformanceConfigService;
         _serverConfigService = serverConfigService;
-        _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService, _serverManager);
+        _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService, _serverConfigManager);
 
         CheckForCharacterAnalysis();
 
@@ -138,6 +140,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 #endif
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (_) => IsOpen = true);
         Mediator.Subscribe<SwitchToIntroUiMessage>(this, (_) => IsOpen = false);
+        Mediator.Subscribe<ToggleServerSelectMessage>(this, (_) => ToggleMultiServerSelect());
         Mediator.Subscribe<CutsceneStartMessage>(this, (_) => UiSharedService_GposeStart());
         Mediator.Subscribe<CutsceneEndMessage>(this, (_) => UiSharedService_GposeEnd());
         Mediator.Subscribe<DownloadStartedMessage>(this, (msg) => _currentDownloads[msg.DownloadId] = msg.DownloadStatus);
@@ -200,43 +203,20 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.Separator();
         }
 
-        if (_serverConfigService.Current.ShowServerPickerInMainMenu)
+        //if (_serverConfigService.Current.ShowServerPickerInMainMenu)
+        //{
+        //    using (ImRaii.PushId("serverpicker")) _uiSharedService.DrawServiceSelection(hideServiceCreation: true, showMinifiedConnect: true, hideSelectLabel: true);
+        //}
+
+        if (_serverConfigService.Current.EnableMultiConnect)
+        {
+            DrawMultiServerSection();
+        }
+        else
         {
             using (ImRaii.PushId("serverpicker")) _uiSharedService.DrawServiceSelection(hideServiceCreation: true, showMinifiedConnect: true, hideSelectLabel: true);
         }
 
-        if (_serverConfigService.Current.EnableMultiConnect)
-        {
-            foreach (int serverIndex in _serverManager.ServerIndexes)
-            {
-                ImGui.PushID($"ServerToConenctTo-{serverIndex}-entry");
-                var isConnected = _apiController.IsServerConnected(serverIndex);
-                var serverText = _serverManager.GetServerByIndex(serverIndex).ServerName;
-                if (isConnected)
-                {
-                    serverText += $" | {_apiController.GetOnlineUsersForServer(serverIndex)} users online";
-                }
-              
-                ImGui.TextUnformatted(serverText);
-                var text = isConnected ? "Disconnect" : "Connect";
-                var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.Link, "Disconnect");
-                var windowEndX = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth();
-                float currentRightSide = windowEndX - buttonSize;
-                ImGui.SameLine(currentRightSide);
-                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Link, text, buttonSize))
-                {
-                    if (isConnected)
-                    {
-                        _ = _apiController.PauseConnectionAsync(serverIndex);
-                    }
-                    else
-                    {
-                        _ = _apiController.CreateConnectionsAsync(serverIndex);
-                    }
-                }
-                ImGui.PopID();
-            }
-        }
         using (ImRaii.PushId("serverstatus")) DrawServerStatus();
         ImGui.Separator();
         using (ImRaii.PushId("header")) DrawUIDHeader();
@@ -246,18 +226,28 @@ public class CompactUi : WindowMediatorSubscriberBase
             using (ImRaii.PushId("modload")) DrawModLoad();
         }
 
+        using (ImRaii.PushId("global-topmenu")) _tabMenu.Draw();
 
-        if (_apiController.AnyServerConnected)
+        ImGui.BeginDisabled(!_apiController.AnyServerConnected);
+
+        if (!_tabMenu.IsUserConfigTabSelected)
         {
-            using (ImRaii.PushId("global-topmenu")) _tabMenu.Draw();
             using (ImRaii.PushId("pairlist")) DrawPairs();
             ImGui.Separator();
-            float pairlistEnd = ImGui.GetCursorPosY();
-            using (ImRaii.PushId("transfers")) DrawTransfers();
-            _transferPartHeight = ImGui.GetCursorPosY() - pairlistEnd - ImGui.GetTextLineHeight();
-            using (ImRaii.PushId("group-user-popup")) _selectPairsForGroupUi.Draw(_pairManager.DirectPairs);
-            using (ImRaii.PushId("grouping-popup")) _selectGroupForPairUi.Draw();
         }
+        else
+        {
+            using (ImRaii.PushId("pairlist")) DrawEmptyPairs();
+            ImGui.Separator();
+        }
+
+        ImGui.Separator();
+        float pairlistEnd = ImGui.GetCursorPosY();
+        using (ImRaii.PushId("transfers")) DrawTransfers();
+        _transferPartHeight = ImGui.GetCursorPosY() - pairlistEnd - ImGui.GetTextLineHeight();
+        using (ImRaii.PushId("group-user-popup")) _selectPairsForGroupUi.Draw(_pairManager.DirectPairs);
+        using (ImRaii.PushId("grouping-popup")) _selectGroupForPairUi.Draw();
+        ImGui.EndDisabled();
 
         if (_configService.Current.OpenPopupOnAdd && _pairManager.LastAddedUser != null)
         {
@@ -280,7 +270,7 @@ public class CompactUi : WindowMediatorSubscriberBase
                 ImGui.InputTextWithHint("##noteforuser", $"Note for {_lastAddedUser.UserData.AliasOrUID}", ref _lastAddedUserComment, 100);
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Save, "Save Note"))
                 {
-                    _serverManager.SetNoteForUid(_lastAddedUser.UserData.UID, _lastAddedUserComment);
+                    _serverConfigManager.SetNoteForUid(_lastAddedUser.UserData.UID, _lastAddedUserComment);
                     _lastAddedUser = null;
                     _lastAddedUserComment = string.Empty;
                     _showModalForUserAddition = false;
@@ -298,6 +288,17 @@ public class CompactUi : WindowMediatorSubscriberBase
             _lastPosition = pos;
             Mediator.Publish(new CompactUiChange(_lastSize, _lastPosition));
         }
+    }
+
+    private void DrawEmptyPairs()
+    {
+        var ySize = _transferPartHeight == 0
+            ? 1
+            : (ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y
+                + ImGui.GetTextLineHeight() - ImGui.GetStyle().WindowPadding.Y - ImGui.GetStyle().WindowBorderSize) - _transferPartHeight - ImGui.GetCursorPosY();
+
+        ImGui.BeginChild("list", new Vector2(_windowContentWidth, ySize), border: false);
+        ImGui.EndChild();
     }
 
     private void DrawPairs()
@@ -332,9 +333,9 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         if (!_serverConfigService.Current.ShowServerPickerInMainMenu)
         {
-            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() / 2 - ImGui.CalcTextSize(_serverManager.CurrentServer.ServerName).X / 2);
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() / 2 - ImGui.CalcTextSize(_serverConfigManager.CurrentServer.ServerName).X / 2);
             ImGui.AlignTextToFramePadding();
-            ImGui.TextWrapped(_serverManager.CurrentServer.ServerName);
+            ImGui.TextWrapped(_serverConfigManager.CurrentServer.ServerName);
         }
 
         if (_apiController.AnyServerConnected)
@@ -384,24 +385,200 @@ public class CompactUi : WindowMediatorSubscriberBase
                 {
                     if (_uiSharedService.IconButton(connectedIcon))
                     {
-                        if (isConnectingOrConnected && !_serverManager.CurrentServer.FullPause)
+                        if (isConnectingOrConnected && !_serverConfigManager.CurrentServer.FullPause)
                         {
-                            _serverManager.CurrentServer.FullPause = true;
-                            _serverManager.Save();
+                            _serverConfigManager.CurrentServer.FullPause = true;
+                            _serverConfigManager.Save();
                         }
-                        else if (!isConnectingOrConnected && _serverManager.CurrentServer.FullPause)
+                        else if (!isConnectingOrConnected && _serverConfigManager.CurrentServer.FullPause)
                         {
-                            _serverManager.CurrentServer.FullPause = false;
-                            _serverManager.Save();
+                            _serverConfigManager.CurrentServer.FullPause = false;
+                            _serverConfigManager.Save();
                         }
 
-                        _ = _apiController.CreateConnectionsAsync(_serverManager.CurrentServerIndex);
+                        _ = _apiController.CreateConnectionsAsync(_serverConfigManager.CurrentServerIndex);
                     }
                 }
 
-                UiSharedService.AttachToolTip(isConnectingOrConnected ? "Disconnect from " + _serverManager.CurrentServer.ServerName : "Connect to " + _serverManager.CurrentServer.ServerName);
+                UiSharedService.AttachToolTip(isConnectingOrConnected ? "Disconnect from " + _serverConfigManager.CurrentServer.ServerName : "Connect to " + _serverConfigManager.CurrentServer.ServerName);
             }
         }
+    }
+
+    private void ToggleMultiServerSelect()
+    {
+        _showMultiServerSelect = !_showMultiServerSelect;
+    }
+
+    private void DrawMultiServerSection()
+    {
+        if (_showMultiServerSelect)
+        {
+            var mainPos = ImGui.GetWindowPos();
+            var mainSize = ImGui.GetWindowSize();
+            ImGui.SetNextWindowPos(new Vector2(mainPos.X + mainSize.X + 5, mainPos.Y), ImGuiCond.Always);
+            ImGui.SetNextWindowSize(new Vector2(400, 400), ImGuiCond.Once);
+
+            if (ImGui.Begin("MultiServerSidePanel", ref _showMultiServerSelect, ImGuiWindowFlags.NoTitleBar))
+            {
+                DrawMultiServerInterfaceTable();
+                ImGui.End();
+            }
+        }
+    }
+
+    private void DrawMultiServerInterfaceTable()
+    {
+        if (ImGui.BeginTable("MultiServerInterface", 5, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
+        {
+            ImGui.TableSetupColumn($"Server Name", ImGuiTableColumnFlags.None, 4);
+            ImGui.TableSetupColumn($"User ID", ImGuiTableColumnFlags.None, 2);
+            ImGui.TableSetupColumn($"Users", ImGuiTableColumnFlags.None, 1);
+            ImGui.TableSetupColumn($"Visible", ImGuiTableColumnFlags.None, 1);
+            ImGui.TableSetupColumn($"Connection", ImGuiTableColumnFlags.None, 1);
+
+            ImGui.TableHeadersRow();
+
+            var serverList = _serverConfigManager.GetServerInfo();
+
+            foreach (var server in serverList)
+            {
+                ImGui.TableNextColumn();
+                DrawServerName(server.Id, server.Name, server.ServerUri);
+
+                ImGui.TableNextColumn();
+                DrawMultiServerUID(server.Id);
+
+                ImGui.TableNextColumn();
+                DrawOnlineUsers(server.Id);
+
+                ImGui.TableNextColumn();
+                DrawVisiblePairs(server.Id);
+
+                ImGui.TableNextColumn();
+                DrawMultiServerConnectButton(server.Id, server.Name);
+
+                ImGui.TableNextRow();
+            }
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawServerName(int serverId, string serverName, string serverUri)
+    {
+        if (_apiController.ConnectedServerIndexes.Any(p => p == serverId))
+        {
+            ImGui.TextColored(ImGuiColors.ParsedGreen, serverName);
+            if (ImGui.IsItemClicked())
+            {
+                _serverConfigManager.SelectServer(serverId);
+            }
+        }
+        else
+            ImGui.TextUnformatted(serverName);
+
+        if (!string.IsNullOrEmpty(serverUri))
+            UiSharedService.AttachToolTip(serverUri);
+    }
+
+    private void DrawMultiServerUID(int serverId)
+    {
+        var textColor = GetUidColorByServer(serverId);
+        if (_apiController.IsServerConnected(serverId))
+        {
+            var uidText = GetUidTextMultiServer(serverId);
+            ImGui.TextColored(textColor, uidText);
+
+            if (ImGui.IsItemClicked())
+            {
+                ImGui.SetClipboardText(_apiController.DisplayName);
+            }
+            UiSharedService.AttachToolTip("Click to copy");
+
+            if (!string.Equals(_apiController.DisplayName, _apiController.UID, StringComparison.Ordinal))
+            {
+                ImGui.TextColored(textColor, _apiController.UID);
+                if (ImGui.IsItemClicked())
+                {
+                    ImGui.SetClipboardText(_apiController.UID);
+                }
+                UiSharedService.AttachToolTip("Click to copy");
+            }
+        }
+        else if (_apiController.ServerAlive)
+        {
+            var serverError = GetServerErrorByServer(serverId);
+            UiSharedService.ColorTextWrapped("Offline", ImGuiColors.DalamudYellow);
+
+            if (!string.IsNullOrEmpty(serverError))
+                UiSharedService.AttachToolTip(serverError);
+        }
+        else
+        {
+            var serverError = GetServerErrorByServer(serverId);
+            UiSharedService.ColorTextWrapped("Offline", ImGuiColors.DalamudRed);
+
+            if (!string.IsNullOrEmpty(serverError))
+                UiSharedService.AttachToolTip(serverError);
+        }
+    }
+
+    private void DrawMultiServerConnectButton(int serverId, string serverName)
+    {
+        bool isConnectingOrConnected = _apiController.IsServerConnected(serverId);
+        var color = UiSharedService.GetBoolColor(!isConnectingOrConnected);
+        var connectedIcon = isConnectingOrConnected ? FontAwesomeIcon.Unlink : FontAwesomeIcon.Link;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        {
+            if (_uiSharedService.IconButton(connectedIcon, serverId))
+            {
+                if (_apiController.IsServerConnected(serverId))
+                {
+                    _serverConfigManager.CurrentServer.FullPause = true;
+                    _serverConfigManager.Save();
+                    _ = _apiController.PauseConnectionAsync(serverId);
+                }
+                else
+                {
+                    _serverConfigManager.SelectServer(serverId);
+                    _serverConfigManager.CurrentServer.FullPause = false;
+                    _serverConfigManager.Save();
+                    _ = _apiController.CreateConnectionsAsync(serverId);
+                }
+            }
+        }
+
+        UiSharedService.AttachToolTip(isConnectingOrConnected ?
+           "Disconnect from " + serverName :
+           "Connect to " + serverName);
+
+    }
+
+    private void DrawOnlineUsers(int serverId)
+    {
+        if (_apiController.IsServerConnected(serverId))
+            ImGui.TextColored(ImGuiColors.ParsedGreen, _apiController.GetOnlineUsersForServer(serverId).ToString(CultureInfo.InvariantCulture));
+        else
+            ImGui.TextColored(ImGuiColors.DalamudRed, string.Empty);
+    }
+
+    private void DrawVisiblePairs(int serverId)
+    {
+        if (_apiController.IsServerConnected(serverId))
+            ImGui.TextColored(ImGuiColors.ParsedGreen, _pairManager.GetVisibleUserCount(serverId).ToString(CultureInfo.InvariantCulture));
+        else
+            ImGui.TextColored(ImGuiColors.DalamudRed, string.Empty);
+    }
+
+    private string GetUidTextMultiServer(int serverId)
+    {
+        return _apiController.GetServerState(serverId) switch
+        {
+            ServerState.Connected => _apiController.GetUidByServer(serverId),
+            _ => "Offline"
+        };
     }
 
     private void DrawModLoad()
@@ -539,12 +716,13 @@ public class CompactUi : WindowMediatorSubscriberBase
     private void DrawUIDHeader()
     {
         var uidText = GetUidText();
+        var uidColor = GetUidColor();
 
         using (_uiSharedService.UidFont.Push())
         {
             var uidTextSize = ImGui.CalcTextSize(uidText);
             ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X) / 2 - (uidTextSize.X / 2));
-            ImGui.TextColored(GetUidColor(), uidText);
+            ImGui.TextColored(uidColor, uidText);
         }
 
         if (_apiController.AnyServerConnected)
@@ -559,7 +737,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             {
                 var origTextSize = ImGui.CalcTextSize(_apiController.UID);
                 ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X) / 2 - (origTextSize.X / 2));
-                ImGui.TextColored(GetUidColor(), _apiController.UID);
+                ImGui.TextColored(uidColor, _apiController.UID);
                 if (ImGui.IsItemClicked())
                 {
                     ImGui.SetClipboardText(_apiController.UID);
@@ -569,7 +747,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         }
         else
         {
-            UiSharedService.ColorTextWrapped(GetServerError(), GetUidColor());
+            UiSharedService.ColorTextWrapped(GetServerError(), uidColor);
         }
     }
 
@@ -708,7 +886,17 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private string GetServerError()
     {
-        return _apiController.ServerState switch
+        return GetServerErrorByState(_apiController.ServerState);
+    }
+
+    private string GetServerErrorByServer(int serverId)
+    {
+        return GetServerErrorByState(_apiController.GetServerState(serverId));
+    }
+
+    private string GetServerErrorByState(ServerState state)
+    {
+        return state switch
         {
             ServerState.Connecting => "Attempting to connect to the server.",
             ServerState.Reconnecting => "Connection to server interrupted, attempting to reconnect to the server.",
@@ -729,9 +917,20 @@ public class CompactUi : WindowMediatorSubscriberBase
         };
     }
 
+    //TODO this will be removed in favor of GetUidColorByServer.
     private Vector4 GetUidColor()
     {
-        return _apiController.ServerState switch
+        return GetUidColorByState(_apiController.ServerState);
+    }
+
+    private Vector4 GetUidColorByServer(int serverId)
+    {
+        return GetUidColorByState(_apiController.GetServerState(serverId));
+    }
+
+    private static Vector4 GetUidColorByState(ServerState state)
+    {
+        return state switch
         {
             ServerState.Connecting => ImGuiColors.DalamudYellow,
             ServerState.Reconnecting => ImGuiColors.DalamudRed,

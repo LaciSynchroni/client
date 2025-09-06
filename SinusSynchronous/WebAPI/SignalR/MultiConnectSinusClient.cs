@@ -230,7 +230,6 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         }
     }
 
-
     private async Task StopConnectionAsync(ServerState state)
     {
         _serverState = ServerState.Disconnecting;

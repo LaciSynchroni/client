@@ -40,6 +40,8 @@ public class TopTabMenu
         _pairTabServerSelector = new ServerSelectorSmall(index => _pairTabSelectedServer = index);
     }
 
+    public bool IsUserConfigTabSelected => TabSelection == SelectedTab.UserConfig;
+
     private enum SelectedTab
     {
         None,
@@ -89,6 +91,7 @@ public class TopTabMenu
 
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
+            ImGui.BeginDisabled(!_apiController.AnyServerConnected);
             var x = ImGui.GetCursorScreenPos();
             if (ImGui.Button(FontAwesomeIcon.User.ToIconString(), buttonSize))
             {
@@ -100,11 +103,13 @@ public class TopTabMenu
                 drawList.AddLine(x with { Y = x.Y + buttonSize.Y + spacing.Y },
                     xAfter with { Y = xAfter.Y + buttonSize.Y + spacing.Y, X = xAfter.X - spacing.X },
                     underlineColor, 2);
+            ImGui.EndDisabled();
         }
         UiSharedService.AttachToolTip("Individual Pair Menu");
 
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
+            ImGui.BeginDisabled(!_apiController.AnyServerConnected);
             var x = ImGui.GetCursorScreenPos();
             if (ImGui.Button(FontAwesomeIcon.Users.ToIconString(), buttonSize))
             {
@@ -116,12 +121,14 @@ public class TopTabMenu
                 drawList.AddLine(x with { Y = x.Y + buttonSize.Y + spacing.Y },
                     xAfter with { Y = xAfter.Y + buttonSize.Y + spacing.Y, X = xAfter.X - spacing.X },
                     underlineColor, 2);
+            ImGui.EndDisabled();
         }
         UiSharedService.AttachToolTip("Syncshell Menu");
 
         ImGui.SameLine();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
+            ImGui.BeginDisabled(!_apiController.AnyServerConnected);
             var x = ImGui.GetCursorScreenPos();
             if (ImGui.Button(FontAwesomeIcon.Filter.ToIconString(), buttonSize))
             {
@@ -134,6 +141,7 @@ public class TopTabMenu
                 drawList.AddLine(x with { Y = x.Y + buttonSize.Y + spacing.Y },
                     xAfter with { Y = xAfter.Y + buttonSize.Y + spacing.Y, X = xAfter.X - spacing.X },
                     underlineColor, 2);
+            ImGui.EndDisabled();
         }
         UiSharedService.AttachToolTip("Filter");
 
@@ -496,21 +504,32 @@ public class TopTabMenu
     private void DrawUserConfig(float availableWidth, float spacingX)
     {
         var buttonX = (availableWidth - spacingX) / 2f;
-        if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserCircle, "Edit Sinus Profile", buttonX))
-        {
-            _sinusMediator.Publish(new UiToggleMessage(typeof(EditProfileUi)));
-        }
-        UiSharedService.AttachToolTip("Edit your Sinus Profile");
-        ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Chara Data Analysis", buttonX))
         {
             _sinusMediator.Publish(new UiToggleMessage(typeof(DataAnalysisUi)));
         }
         UiSharedService.AttachToolTip("View and analyze your generated character data");
+
+        ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Running, "Character Data Hub", availableWidth))
         {
             _sinusMediator.Publish(new UiToggleMessage(typeof(CharaDataHubUi)));
         }
+
+        ImGui.BeginDisabled(!_apiController.AnyServerConnected);
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserCircle, "Edit Mare Profile", buttonX))
+        {
+            _sinusMediator.Publish(new UiToggleMessage(typeof(EditProfileUi)));
+        }
+        UiSharedService.AttachToolTip("Edit your Mare Profile");
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Satellite, "Connected Servers", availableWidth))
+        {
+            _sinusMediator.Publish(new ToggleServerSelectMessage());
+        }
+        UiSharedService.AttachToolTip("Toggle the server selection list");
     }
 
     private async Task GlobalControlCountdown(int countdown)
