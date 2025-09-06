@@ -12,6 +12,8 @@ using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.WebAPI;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using Lumina.Excel.Sheets;
+using Lumina.Excel.Sheets.Experimental;
 
 namespace SinusSynchronous.UI.Components.Popup;
 
@@ -34,7 +36,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
     public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, SinusMediator mediator, ApiController apiController,
         UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService, int serverIndex)
-        : base(logger, mediator, "Syncshell Admin Panel (" + groupFullInfo.GroupAliasOrGID + ")", performanceCollectorService)
+        : base(logger, mediator, "###SinusSynchronousMainUI", performanceCollectorService)
     {
         GroupFullInfo = groupFullInfo;
         _apiController = apiController;
@@ -52,6 +54,8 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
             MinimumSize = new(700, 500),
             MaximumSize = new(700, 2000),
         };
+
+        WindowName = $"Syncshell Admin Panel ({groupFullInfo.GroupAliasOrGID} @ {_apiController.GetServerNameByIndex(serverIndex)})";
     }
 
     public GroupFullInfoDto GroupFullInfo { get; private set; }
