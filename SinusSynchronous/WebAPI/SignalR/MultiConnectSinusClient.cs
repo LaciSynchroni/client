@@ -213,7 +213,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         }
         // Also trigger some warnings
         TriggerConnectionWarnings(ConnectionDto);
-        
+
         _serverState = ServerState.Connected;
 
         await LoadIninitialPairsAsync().ConfigureAwait(false);
@@ -258,7 +258,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
             Mediator.Publish(new DisconnectedMessage(ServerIndex));
             _sinusHub = null;
             ConnectionDto = null;
-            
+
             _sinusHub = null;
 
             Logger.LogDebug("Current HubConnection disposed");
@@ -306,10 +306,17 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
             transportType = HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling;
         }
 
+        var useAdvancedUris = ServerToUse.UseAdvancedUris;
+        var serverHubUri = ServerToUse.ServerHubUri;
+
+        var hubUrl = useAdvancedUris && !string.IsNullOrEmpty(serverHubUri) ?
+            serverHubUri :
+            ServerToUse.ServerUri + ISinusHub.Path;
+
         _logger.LogDebug("Building new HubConnection using transport {transport}", transportType);
 
         _sinusHub = new HubConnectionBuilder()
-            .WithUrl(ServerToUse.ServerUri + ISinusHub.Path, options =>
+            .WithUrl(hubUrl, options =>
             {
                 options.AccessTokenProvider = () => _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct);
                 options.Transports = transportType;
@@ -541,7 +548,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         await StopConnectionAsync(ServerState.Disconnected).ConfigureAwait(false);
         _connectionCancellationTokenSource?.Cancel();
     }
-    
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
