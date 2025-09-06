@@ -667,7 +667,9 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private static void DrawProgressBar(float value, string tooltipText, bool warning = false, bool alert = false)
     {
-        var progressBarSize = new Vector2(170, 20);
+        float width = Math.Max(170, ImGui.GetContentRegionAvail().X);
+        var progressBarSize = new Vector2(width, 20);
+
         if (warning)
             ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
         else if (alert)
