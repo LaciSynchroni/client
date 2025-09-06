@@ -866,8 +866,9 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
         if (showConnect)
         {
+            var serverState = _apiController.GetServerStateForServer(_serverSelectionIndex);
             bool isCurrentServer = _serverSelectionIndex == _serverConfigurationManager.CurrentServerIndex;
-            bool isConnectingOrConnected = isCurrentServer && _apiController.ServerState is ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting;
+            bool isConnectingOrConnected = isCurrentServer && serverState is ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting;
             ImGui.SameLine();
             if (showMinifiedConnect)
             {

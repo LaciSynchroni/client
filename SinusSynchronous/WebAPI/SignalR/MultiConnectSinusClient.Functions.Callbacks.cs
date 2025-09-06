@@ -9,7 +9,6 @@ using SinusSynchronous.Services.Mediator;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using SinusSynchronous.PlayerData.Pairs;
-using static FFXIVClientStructs.FFXIV.Client.Game.UI.MapMarkerData.Delegates;
 
 namespace SinusSynchronous.WebAPI;
 

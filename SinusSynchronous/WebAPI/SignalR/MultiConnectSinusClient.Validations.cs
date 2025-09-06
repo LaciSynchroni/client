@@ -1,8 +1,11 @@
 using Dalamud.Utility;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.API.Dto;
+using SinusSynchronous.API.SignalR;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.WebAPI.SignalR.Utils;
+using System.Reflection;
 
 namespace SinusSynchronous.WebAPI;
 
@@ -76,6 +79,69 @@ public partial class MultiConnectSinusClient
         }
 
         return true;
+    }
+
+    private async Task<bool> VerifyClientVersion(ConnectionDto connectionDto)
+    {
+        var currentClientVer = Assembly.GetExecutingAssembly().GetName().Version!;
+        if (connectionDto.ServerVersion != ISinusHub.ApiVersion)
+        {
+            if (connectionDto.CurrentClientVersion > currentClientVer)
+            {
+                Mediator.Publish(new NotificationMessage("Client incompatible",
+                    $"Your client is outdated ({currentClientVer.Major}.{currentClientVer.Minor}.{currentClientVer.Build}), current is: " +
+                    $"{connectionDto.CurrentClientVersion.Major}.{connectionDto.CurrentClientVersion.Minor}.{connectionDto.CurrentClientVersion.Build}. " +
+                    $"This client version is incompatible and will not be able to connect. Please update your Sinus Synchronous client.",
+                    NotificationType.Error));
+            }
+            return false;
+        }
+        return true;
+    }
+    
+    private void TriggerConnectionWarnings(ConnectionDto connectionDto)
+    {
+        var currentClientVer = Assembly.GetExecutingAssembly().GetName().Version!;
+
+        if (connectionDto.CurrentClientVersion > currentClientVer)
+        {
+            Mediator.Publish(new NotificationMessage("Client outdated",
+                $"Your client is outdated ({currentClientVer.Major}.{currentClientVer.Minor}.{currentClientVer.Build}), current is: " +
+                $"{connectionDto.CurrentClientVersion.Major}.{connectionDto.CurrentClientVersion.Minor}.{connectionDto.CurrentClientVersion.Build}. " +
+                $"Please keep your Sinus Synchronous client up-to-date.",
+                NotificationType.Warning));
+        }
+
+        if (_dalamudUtil.HasModifiedGameFiles)
+        {
+            Logger.LogError("Detected modified game files on connection");
+            if (!_sinusConfigService.Current.DebugStopWhining)
+                Mediator.Publish(new NotificationMessage("Modified Game Files detected",
+                    "Dalamud is reporting your FFXIV installation has modified game files. Any mods installed through TexTools will produce this message. " +
+                    "Sinus Synchronous, Penumbra, and some other plugins assume your FFXIV installation is unmodified in order to work. " +
+                    "Synchronization with pairs/shells can break because of this. Exit the game, open XIVLauncher, click the arrow next to Log In " +
+                    "and select 'repair game files' to resolve this issue. Afterwards, do not install any mods with TexTools. Your plugin configurations will remain, as will mods enabled in Penumbra.",
+                    NotificationType.Error, TimeSpan.FromSeconds(15)));
+        }
+
+        if (_dalamudUtil.IsLodEnabled && !_naggedAboutLod)
+        {
+            _naggedAboutLod = true;
+            Logger.LogWarning("Model LOD is enabled during connection");
+            if (!_sinusConfigService.Current.DebugStopWhining)
+            {
+                Mediator.Publish(new NotificationMessage("Model LOD is enabled",
+                    "You have \"Use low-detail models on distant objects (LOD)\" enabled. Having model LOD enabled is known to be a reason to cause " +
+                    "random crashes when loading in or rendering modded pairs. Disabling LOD has a very low performance impact. Disable LOD while using Sinus: " +
+                    "Go to XIV Menu -> System Configuration -> Graphics Settings and disable the model LOD option.",
+                    NotificationType.Warning, TimeSpan.FromSeconds(15)));
+            }
+        }
+
+        if (_naggedAboutLod && !_dalamudUtil.IsLodEnabled)
+        {
+            _naggedAboutLod = false;
+        }
     }
     
     private async Task<bool> VerifySecretKeyAuth()

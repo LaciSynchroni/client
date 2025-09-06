@@ -97,7 +97,6 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<ServerConfigurationManager>();
             collection.AddSingleton<ApiController>();
             collection.AddSingleton<PerformanceCollectorService>();
-            collection.AddSingleton<HubFactory>();
             collection.AddSingleton<FileUploadManager>();
             collection.AddSingleton<FileTransferOrchestrator>();
             collection.AddSingleton<SinusPlugin>();
@@ -108,7 +107,6 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<PairFactory>();
             collection.AddSingleton<XivDataAnalyzer>();
             collection.AddSingleton<CharacterAnalyzer>();
-            collection.AddSingleton<TokenProvider>();
             collection.AddSingleton<MultiConnectTokenService>();
             collection.AddSingleton<PluginWarningNotificationService>();
             collection.AddSingleton<FileCompactor>();
@@ -191,7 +189,6 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<ConfigurationMigrator>();
             collection.AddSingleton<ConfigurationSaveService>();
 
-            collection.AddSingleton<HubFactory>();
             collection.AddSingleton<ConcurrentPairLockService>();
 
             // add scoped services

@@ -14,6 +14,7 @@ using SinusSynchronous.Services;
 using SinusSynchronous.Services.Events;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.WebAPI.SignalR;
 using SinusSynchronous.WebAPI.SignalR.Utils;
@@ -34,7 +35,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     private readonly ILoggerProvider _loggerProvider;
     private readonly MultiConnectTokenService _multiConnectTokenService;
     private readonly PairManager _pairManager;
-
+    private readonly SinusConfigService _sinusConfigService;
     private readonly DalamudUtilService _dalamudUtil;
 
     // This is a bit unfortunate, but some of the code requires saving of the config. Potentially, we can refactor this late to be less cyclic
@@ -46,11 +47,12 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     private HubConnection? _sinusHub;
     private bool _isDisposed = false;
     private bool _initialized;
+    private bool _naggedAboutLod = false;
     public ServerState _serverState { get; private set; }
     private CancellationTokenSource? _healthCheckTokenSource = new();
-    private CancellationTokenSource _connectionCancellationTokenSource;
+    private CancellationTokenSource? _connectionCancellationTokenSource;
     private bool _doNotNotifyOnNextInfo = false;
-    public string AuthFailureMessage { get; private set; }
+    public string AuthFailureMessage { get; private set; } = string.Empty;
     private string? _lastUsedToken;
     private CensusUpdateMessage? _lastCensus;
 
@@ -65,7 +67,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
     public MultiConnectSinusClient(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
         DalamudUtilService dalamudUtilService,
-        ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SinusMediator mediator, MultiConnectTokenService multiConnectTokenService) : base(
+        ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SinusMediator mediator, MultiConnectTokenService multiConnectTokenService, SinusConfigService sinusConfigService) : base(
         loggerFactory.CreateLogger("MultiConnectSinusClient" + serverIndex + "Mediator"), mediator)
     {
         ServerIndex = serverIndex;
@@ -73,6 +75,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         _logger = loggerFactory.CreateLogger("MultiConnectSinusClient" + serverIndex);
         _loggerProvider = loggerProvider;
         _multiConnectTokenService = multiConnectTokenService;
+        _sinusConfigService = sinusConfigService;
         _pairManager = pairManager;
         _dalamudUtil = dalamudUtilService;
         _serverConfigurationManager = serverConfigurationManager;
@@ -200,6 +203,14 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
 
         await _sinusHub.StartAsync(cancellationToken).ConfigureAwait(false);
         ConnectionDto = await GetConnectionDto().ConfigureAwait(false);
+        if (!await VerifyClientVersion(ConnectionDto).ConfigureAwait(false))
+        {
+            await StopConnectionAsync(ServerState.VersionMisMatch).ConfigureAwait(false);
+            return;
+        }
+        // Also trigger some warnings
+        TriggerConnectionWarnings(ConnectionDto);
+        
         _serverState = ServerState.Connected;
 
         await LoadIninitialPairsAsync().ConfigureAwait(false);
