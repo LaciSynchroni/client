@@ -123,7 +123,6 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 var userNode = ImRaii.TreeNode("User List & Administration");
                 if (userNode)
                 {
-                    // TODO uses inefficient Where-op
                     var pairs = _pairManager.GroupPairs
                         .First(pair => pair.Key.ServerIndex == _serverIndex && string.Equals(pair.Key.GroupFullInfo.GID,
                             GroupFullInfo.GID, StringComparison.Ordinal))

@@ -80,7 +80,10 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         _dalamudUtil = dalamudUtilService;
         _serverConfigurationManager = serverConfigurationManager;
 
-        Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());
+        Mediator.Subscribe<DalamudLoginMessage>(this, msg =>
+        {
+            _ = Task.Run(DalamudUtilOnLogIn);
+        });
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) => DalamudUtilOnLogOut());
         Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePauseAsync(msg.ServerIndex, msg.UserData));
         Mediator.Subscribe<CensusUpdateMessage>(this, (msg) => _lastCensus = msg);
@@ -550,7 +553,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         return await _sinusHub!.InvokeAsync<bool>(nameof(CheckClientHealth)).ConfigureAwait(false);
     }
 
-    public void DalamudUtilOnLogIn()
+    public async Task DalamudUtilOnLogIn()
     {
         var charaName = _dalamudUtil.GetPlayerNameAsync().GetAwaiter().GetResult();
         var worldId = _dalamudUtil.GetHomeWorldIdAsync().GetAwaiter().GetResult();
@@ -559,12 +562,12 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         if (auth?.AutoLogin ?? false)
         {
             Logger.LogInformation("Logging into {chara}", charaName);
-            _ = Task.Run(CreateConnectionsAsync);
+            await CreateConnectionsAsync().ConfigureAwait(false);
         }
         else
         {
             Logger.LogInformation("Not logging into {chara}, auto login disabled", charaName);
-            _ = Task.Run(async () => await StopConnectionAsync(ServerState.NoAutoLogon).ConfigureAwait(false));
+            await StopConnectionAsync(ServerState.NoAutoLogon).ConfigureAwait(false);
         }
     }
 

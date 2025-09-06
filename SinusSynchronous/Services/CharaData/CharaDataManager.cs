@@ -427,7 +427,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         var result = await GetSharedWithYouTask.ConfigureAwait(false);
         foreach (var grouping in result.GroupBy(r => r.Uploader))
         {
-            var pair = _pairManager.GetPairByUID(grouping.Key.UID);
+            var pair = _pairManager.GetPairByUID(serverIndex, grouping.Key.UID);
             if (pair?.IsPaused ?? false) continue;
             List<CharaDataMetaInfoExtendedDto> newList = new();
             foreach (var item in grouping)

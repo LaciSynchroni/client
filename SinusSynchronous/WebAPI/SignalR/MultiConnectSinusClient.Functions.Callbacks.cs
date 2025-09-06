@@ -127,8 +127,7 @@ public partial class MultiConnectSinusClient
     public Task Client_UserAddClientPair(UserPairDto dto)
     {
         Logger.LogDebug("Client_UserAddClientPair: {dto}", dto);
-        ExecuteSafely(() =>
-e            _pairManager.AddUserPair(dto, ServerIndex, addToLastAddedUser: true));
+        ExecuteSafely(() => _pairManager.AddUserPair(dto, ServerIndex, addToLastAddedUser: true));
         return Task.CompletedTask;
     }
 

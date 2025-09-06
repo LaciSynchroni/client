@@ -70,11 +70,10 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         RecreateLazy();
     }
 
-    public Pair? GetPairByUID(string uid)
+    public Pair? GetPairByUID(int serverIndex, string uid)
     {
-        // TODO needs a server?
         var existingPair =
-            _allClientPairs.FirstOrDefault(f => string.Equals(f.Key.UserData.UID, uid, StringComparison.Ordinal));
+            _allClientPairs.FirstOrDefault(f => string.Equals(f.Key.UserData.UID, uid, StringComparison.Ordinal) && f.Key.ServerIndex == serverIndex);
         if (!Equals(existingPair, default(KeyValuePair<ServerBasedUserKey, Pair>)))
         {
             return existingPair.Value;

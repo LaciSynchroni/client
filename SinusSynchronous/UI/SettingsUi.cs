@@ -350,7 +350,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (_uiShared.IconTextButton(FontAwesomeIcon.GroupArrowsRotate, "Update Download Server List"))
                     {
                         // Speedtest is always done for current server
-                        // TODO change this?
                         _downloadServersTask = GetDownloadServerList(_serverConfigurationManager.CurrentServerIndex);
                     }
                 }
@@ -402,7 +401,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         if (ImGui.BeginTabBar("TransfersTabBar"))
         {
-eeeeeeeeeee            if (ApiController.AnyServerConnected && ImGui.BeginTabItem("Transfers"))
+            if (ApiController.AnyServerConnected && ImGui.BeginTabItem("Transfers"))
             {
                 ImGui.TextUnformatted("Uploads");
                 if (ImGui.BeginTable("UploadsTable", 3))
@@ -1358,7 +1357,6 @@ eeeeeeeeeee            if (ApiController.AnyServerConnected && ImGui.BeginTabIte
 
                 if (ImGui.Button("Delete account", new Vector2(buttonSize, 0)))
                 {
-                    // TODO for now, delete on selected server. Decide if we delete all or show a prompt
                     _ = Task.Run(() => ApiController.UserDelete(_serverConfigurationManager.CurrentServerIndex));
                     _deleteAccountPopupModalShown = false;
                     Mediator.Publish(new SwitchToIntroUiMessage());
@@ -1379,11 +1377,6 @@ eeeeeeeeeee            if (ApiController.AnyServerConnected && ImGui.BeginTabIte
 
         _uiShared.BigText("UI");
         ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
-        //var showServerPickerInMainMenu = _serverConfigurationManager.ShowServerPickerInMainMenu;
-        //if (ImGui.Checkbox("Show Server Picker in Main Menu", ref showServerPickerInMainMenu))
-        //{
-        //    _serverConfigurationManager.ShowServerPickerInMainMenu = showServerPickerInMainMenu;
-        //}
 
         _uiShared.BigText("Service & Character Settings");
         ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
