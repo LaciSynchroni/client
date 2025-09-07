@@ -910,7 +910,17 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
         }
 
-        if (!hideServiceCreation && ImGui.TreeNode("Add Custom Service"))
+        if (!hideServiceCreation)
+        {
+            DrawAddCustomService();
+        }
+
+        return _serverSelectionIndex;
+    }
+
+    public void DrawAddCustomService()
+    {
+        if (ImGui.TreeNode("Add New Service"))
         {
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service Name", ref _customServerName, 255);
@@ -942,9 +952,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             }
             ImGui.TreePop();
         }
-
-
-        return _serverSelectionIndex;
     }
 
     public void DrawUIDComboForAuthentication(int indexOffset, Authentication item, string serverUri, ILogger? logger = null)

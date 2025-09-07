@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Comparer;
 using SinusSynchronous.API.Routes;
+using SinusSynchronous.API.SignalR;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.PlayerData.Handlers;
@@ -31,6 +32,7 @@ using System.Net.Http.Json;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using static Dalamud.Interface.Utility.Raii.ImRaii;
 
 namespace SinusSynchronous.UI;
 
@@ -65,6 +67,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private CancellationTokenSource? _validationCts;
     private Task<List<FileCacheEntity>>? _validationTask;
     private bool _wasOpen = false;
+    private Task<List<string>?>? _downloadServersTask = null;
+    private Task<List<string>?>? _speedTestTask = null;
+    private CancellationTokenSource? _speedTestCts;
+    private int _lastSelectedServerIndex = -1;
+    private Task<(bool Success, bool PartialSuccess, string Result)>? _secretKeysConversionTask = null;
+    private CancellationTokenSource _secretKeysConversionCts = new CancellationTokenSource();
 
     public SettingsUi(ILogger<SettingsUi> logger,
         UiSharedService uiShared, SinusConfigService configService,
@@ -473,9 +481,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
     }
 
-    private Task<List<string>?>? _downloadServersTask = null;
-    private Task<List<string>?>? _speedTestTask = null;
-    private CancellationTokenSource? _speedTestCts;
+
 
     private async Task<List<string>?> RunSpeedTest(List<string> servers, CancellationToken token)
     {
@@ -1295,90 +1301,18 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private void DrawServerConfiguration()
     {
         _lastTab = "Service Settings";
-        if (ApiController.IsServerAlive(_serverConfigurationManager.CurrentServerIndex))
-        {
-            _uiShared.BigText("Service Actions");
-            ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
-            if (ImGui.Button("Delete all my files"))
-            {
-                _deleteFilesPopupModalShown = true;
-                ImGui.OpenPopup("Delete all your files?");
-            }
+        DrawMultiServerInterfaceTable();
+        ImGui.Separator();
+        _uiShared.DrawAddCustomService();
+        ImGui.Separator();
 
-            _uiShared.DrawHelpText("Completely deletes all your uploaded files on the service.");
+        ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
 
-            if (ImGui.BeginPopupModal("Delete all your files?", ref _deleteFilesPopupModalShown, UiSharedService.PopupWindowFlags))
-            {
-                UiSharedService.TextWrapped(
-                    "All your own uploaded files on the service will be deleted.\nThis operation cannot be undone.");
-                ImGui.TextUnformatted("Are you sure you want to continue?");
-                ImGui.Separator();
-                ImGui.Spacing();
+        var selectedServer = _serverConfigurationManager.GetServerByIndex(_lastSelectedServerIndex);
+        bool useOauth = selectedServer.UseOAuth2;
+        var selectedServerName = ApiController.GetServerNameByIndex(_serverConfigurationManager.CurrentServerIndex);
 
-                var buttonSize = (ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X -
-                                 ImGui.GetStyle().ItemSpacing.X) / 2;
-
-                if (ImGui.Button("Delete everything", new Vector2(buttonSize, 0)))
-                {
-                    _ = Task.Run(() => _fileTransferManager.DeleteAllFiles(_serverConfigurationManager.CurrentServerIndex));
-                    _deleteFilesPopupModalShown = false;
-                }
-
-                ImGui.SameLine();
-
-                if (ImGui.Button("Cancel##cancelDelete", new Vector2(buttonSize, 0)))
-                {
-                    _deleteFilesPopupModalShown = false;
-                }
-
-                UiSharedService.SetScaledWindowSize(325);
-                ImGui.EndPopup();
-            }
-            ImGui.SameLine();
-            if (ImGui.Button("Delete account"))
-            {
-                _deleteAccountPopupModalShown = true;
-                ImGui.OpenPopup("Delete your account?");
-            }
-
-            _uiShared.DrawHelpText("Completely deletes your account and all uploaded files to the service.");
-
-            if (ImGui.BeginPopupModal("Delete your account?", ref _deleteAccountPopupModalShown, UiSharedService.PopupWindowFlags))
-            {
-                UiSharedService.TextWrapped(
-                    "Your account and all associated files and data on the service will be deleted.");
-                UiSharedService.TextWrapped("Your UID will be removed from all pairing lists.");
-                ImGui.TextUnformatted("Are you sure you want to continue?");
-                ImGui.Separator();
-                ImGui.Spacing();
-
-                var buttonSize = (ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X -
-                                  ImGui.GetStyle().ItemSpacing.X) / 2;
-
-                if (ImGui.Button("Delete account", new Vector2(buttonSize, 0)))
-                {
-                    _ = Task.Run(() => ApiController.UserDelete(_serverConfigurationManager.CurrentServerIndex));
-                    _deleteAccountPopupModalShown = false;
-                    Mediator.Publish(new SwitchToIntroUiMessage());
-                }
-
-                ImGui.SameLine();
-
-                if (ImGui.Button("Cancel##cancelDelete", new Vector2(buttonSize, 0)))
-                {
-                    _deleteAccountPopupModalShown = false;
-                }
-
-                UiSharedService.SetScaledWindowSize(325);
-                ImGui.EndPopup();
-            }
-            ImGui.Separator();
-        }
-
-        _uiShared.BigText("UI");
-        ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
-
-        _uiShared.BigText("Service & Character Settings");
+        _uiShared.BigText($"Settings for {selectedServerName} service");
         ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
         var sendCensus = _serverConfigurationManager.SendCensusData;
         if (ImGui.Checkbox("Send Statistical Census Data", ref sendCensus))
@@ -1395,27 +1329,107 @@ public class SettingsUi : WindowMediatorSubscriberBase
             + "If you do not wish to participate in the statistical census, untick this box and reconnect to the server.");
         ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
 
-        var idx = _uiShared.DrawServiceSelection();
-        if (_lastSelectedServerIndex != idx)
-        {
-            _uiShared.ResetOAuthTasksState();
-            _secretKeysConversionCts = _secretKeysConversionCts.CancelRecreate();
-            _secretKeysConversionTask = null;
-            _lastSelectedServerIndex = idx;
-        }
-
-        ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
-
-        var selectedServer = _serverConfigurationManager.GetServerByIndex(idx);
-        if (selectedServer == _serverConfigurationManager.CurrentServer)
-        {
-            UiSharedService.ColorTextWrapped("For any changes to be applied to the current service you need to reconnect to the service.", ImGuiColors.DalamudYellow);
-        }
-
-        bool useOauth = selectedServer.UseOAuth2;
-
         if (ImGui.BeginTabBar("serverTabBar"))
         {
+            if (ImGui.BeginTabItem("Service Configuration"))
+            {
+                var serverName = selectedServer.ServerName;
+                var serverUri = selectedServer.ServerUri;
+                var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
+                var isMain = string.Equals(serverName, ApiController.MainServer, StringComparison.OrdinalIgnoreCase);
+                var flags = isMain ? ImGuiInputTextFlags.ReadOnly : ImGuiInputTextFlags.None;
+                var useAdvancedUris = selectedServer.UseAdvancedUris;
+
+                if (ImGui.InputText("Service Name", ref serverName, 255, flags))
+                {
+                    selectedServer.ServerName = serverName;
+                    _serverConfigurationManager.Save();
+                }
+
+                if (ImGui.InputText("Service URI", ref serverUri, 255, flags))
+                {
+                    selectedServer.ServerUri = serverUri;
+                    _serverConfigurationManager.Save();
+                }
+
+                if (ImGui.Checkbox("Advanced URIs", ref useAdvancedUris))
+                {
+                    selectedServer.UseAdvancedUris = useAdvancedUris;
+                    _serverConfigurationManager.Save();
+                }
+
+                _uiShared.DrawHelpText("Configure the API & Hub URI individually");
+                if (useAdvancedUris)
+                {
+                    if (ImGui.InputText("Service Hub URI", ref serverHubUri, 255, flags))
+                    {
+                        selectedServer.ServerHubUri = serverHubUri;
+                        _serverConfigurationManager.Save();
+                    }
+                }
+
+                ImGui.SetNextItemWidth(200);
+                var serverTransport = _serverConfigurationManager.GetTransport();
+                _uiShared.DrawCombo("Server Transport Type", Enum.GetValues<HttpTransportType>().Where(t => t != HttpTransportType.None),
+                    (v) => v.ToString(),
+                    onSelected: (t) => _serverConfigurationManager.SetTransportType(t),
+                    serverTransport);
+                _uiShared.DrawHelpText("You normally do not need to change this, if you don't know what this is or what it's for, keep it to WebSockets." + Environment.NewLine
+                    + "If you run into connection issues with e.g. VPNs, try ServerSentEvents first before trying out LongPolling." + UiSharedService.TooltipSeparator
+                    + "Note: if the server does not support a specific Transport Type it will fall through to the next automatically: WebSockets > ServerSentEvents > LongPolling");
+
+                if (_dalamudUtilService.IsWine)
+                {
+                    bool forceWebSockets = selectedServer.ForceWebSockets;
+                    if (ImGui.Checkbox("[wine only] Force WebSockets", ref forceWebSockets))
+                    {
+                        selectedServer.ForceWebSockets = forceWebSockets;
+                        _serverConfigurationManager.Save();
+                    }
+                    _uiShared.DrawHelpText("On wine, Sinus will automatically fall back to ServerSentEvents/LongPolling, even if WebSockets is selected. "
+                        + "WebSockets are known to crash XIV entirely on wine 8.5 shipped with Dalamud. "
+                        + "Only enable this if you are not running wine 8.5." + Environment.NewLine
+                        + "Note: If the issue gets resolved at some point this option will be removed.");
+                }
+
+                ImGuiHelpers.ScaledDummy(5);
+
+                if (ImGui.Checkbox("Use Discord OAuth2 Authentication", ref useOauth))
+                {
+                    selectedServer.UseOAuth2 = useOauth;
+                    _serverConfigurationManager.Save();
+                }
+                _uiShared.DrawHelpText("Use Discord OAuth2 Authentication to identify with this server instead of secret keys");
+                if (useOauth)
+                {
+                    _uiShared.DrawOAuth(_lastSelectedServerIndex, selectedServer);
+                    if (string.IsNullOrEmpty(_serverConfigurationManager.GetDiscordUserFromToken(selectedServer)))
+                    {
+                        ImGuiHelpers.ScaledDummy(10f);
+                        UiSharedService.ColorTextWrapped("You have enabled OAuth2 but it is not linked. Press the buttons Check, then Authenticate to link properly.", ImGuiColors.DalamudRed);
+                    }
+                    if (!string.IsNullOrEmpty(_serverConfigurationManager.GetDiscordUserFromToken(selectedServer))
+                        && selectedServer.Authentications.TrueForAll(u => string.IsNullOrEmpty(u.UID)))
+                    {
+                        ImGuiHelpers.ScaledDummy(10f);
+                        UiSharedService.ColorTextWrapped("You have enabled OAuth2 but no characters configured. Set the correct UIDs for your characters in \"Character Management\".",
+                            ImGuiColors.DalamudRed);
+                    }
+                }
+
+                if (selectedServer != _serverConfigurationManager.CurrentServer)
+                {
+                    ImGui.Separator();
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
+                    {
+                        _serverConfigurationManager.DeleteServer(selectedServer);
+                    }
+                    _uiShared.DrawHelpText("Hold CTRL to delete this service");
+                }
+
+                ImGui.EndTabItem();
+            }
+
             if (ImGui.BeginTabItem("Character Management"))
             {
                 if (selectedServer.SecretKeys.Any() || useOauth)
@@ -1600,7 +1614,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         }
                         _uiShared.DrawHelpText("When enabled and logging into this character in XIV, Sinus will automatically connect to the current service.");
                         if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Character") && UiSharedService.CtrlPressed())
-                            _serverConfigurationManager.RemoveCharacterFromServer(idx, item);
+                            _serverConfigurationManager.RemoveCharacterFromServer(_lastSelectedServerIndex, item);
                         UiSharedService.AttachToolTip("Hold CTRL to delete this entry.");
 
                         i++;
@@ -1620,14 +1634,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     {
                         if (_uiShared.IconTextButton(FontAwesomeIcon.User, "Add current character"))
                         {
-                            _serverConfigurationManager.AddCurrentCharacterToServer(idx);
+                            _serverConfigurationManager.AddCurrentCharacterToServer(_lastSelectedServerIndex);
                         }
                         ImGui.SameLine();
                     }
 
                     if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add new character"))
                     {
-                        _serverConfigurationManager.AddEmptyCharacterToServer(idx);
+                        _serverConfigurationManager.AddEmptyCharacterToServer(_lastSelectedServerIndex);
                     }
                 }
                 else
@@ -1681,125 +1695,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         FriendlyName = "New Secret Key",
                     });
                     _serverConfigurationManager.Save();
-                }
-
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Service Configuration"))
-            {
-                var serverName = selectedServer.ServerName;
-                var serverUri = selectedServer.ServerUri;
-                var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
-                var isMain = string.Equals(serverName, ApiController.MainServer, StringComparison.OrdinalIgnoreCase);
-                var flags = isMain ? ImGuiInputTextFlags.ReadOnly : ImGuiInputTextFlags.None;
-                var useAdvancedUris = selectedServer.UseAdvancedUris;
-
-                if (ImGui.InputText("Service Name", ref serverName, 255, flags))
-                {
-                    selectedServer.ServerName = serverName;
-                    _serverConfigurationManager.Save();
-                }
-                if (isMain)
-                {
-                    _uiShared.DrawHelpText("You cannot edit the name of the main service.");
-                }
-
-                if (ImGui.InputText("Service URI", ref serverUri, 255, flags))
-                {
-                    selectedServer.ServerUri = serverUri;
-                    _serverConfigurationManager.Save();
-                }
-                if (isMain)
-                {
-                    _uiShared.DrawHelpText("You cannot edit the URI of the main service.");
-                }
-
-                ImGui.SameLine();
-                if (isMain)
-                {
-                    ImGui.BeginDisabled();
-                }
-                if (ImGui.Checkbox("Advanced URIs", ref useAdvancedUris))
-                {
-                    selectedServer.UseAdvancedUris = useAdvancedUris;
-                    _serverConfigurationManager.Save();
-                }
-                if (isMain)
-                {
-                    ImGui.EndDisabled();
-                }
-                _uiShared.DrawHelpText("Configure the API & Hub URI individually");
-                if (useAdvancedUris)
-                {
-                    if (ImGui.InputText("Service Hub URI", ref serverHubUri, 255, flags))
-                    {
-                        selectedServer.ServerHubUri = serverHubUri;
-                        _serverConfigurationManager.Save();
-                    }
-                    if (isMain)
-                    {
-                        _uiShared.DrawHelpText("You cannot edit the URI of the main service.");
-                    }
-                }
-
-                ImGui.SetNextItemWidth(200);
-                var serverTransport = _serverConfigurationManager.GetTransport();
-                _uiShared.DrawCombo("Server Transport Type", Enum.GetValues<HttpTransportType>().Where(t => t != HttpTransportType.None),
-                    (v) => v.ToString(),
-                    onSelected: (t) => _serverConfigurationManager.SetTransportType(t),
-                    serverTransport);
-                _uiShared.DrawHelpText("You normally do not need to change this, if you don't know what this is or what it's for, keep it to WebSockets." + Environment.NewLine
-                    + "If you run into connection issues with e.g. VPNs, try ServerSentEvents first before trying out LongPolling." + UiSharedService.TooltipSeparator
-                    + "Note: if the server does not support a specific Transport Type it will fall through to the next automatically: WebSockets > ServerSentEvents > LongPolling");
-
-                if (_dalamudUtilService.IsWine)
-                {
-                    bool forceWebSockets = selectedServer.ForceWebSockets;
-                    if (ImGui.Checkbox("[wine only] Force WebSockets", ref forceWebSockets))
-                    {
-                        selectedServer.ForceWebSockets = forceWebSockets;
-                        _serverConfigurationManager.Save();
-                    }
-                    _uiShared.DrawHelpText("On wine, Sinus will automatically fall back to ServerSentEvents/LongPolling, even if WebSockets is selected. "
-                        + "WebSockets are known to crash XIV entirely on wine 8.5 shipped with Dalamud. "
-                        + "Only enable this if you are not running wine 8.5." + Environment.NewLine
-                        + "Note: If the issue gets resolved at some point this option will be removed.");
-                }
-
-                ImGuiHelpers.ScaledDummy(5);
-
-                if (ImGui.Checkbox("Use Discord OAuth2 Authentication", ref useOauth))
-                {
-                    selectedServer.UseOAuth2 = useOauth;
-                    _serverConfigurationManager.Save();
-                }
-                _uiShared.DrawHelpText("Use Discord OAuth2 Authentication to identify with this server instead of secret keys");
-                if (useOauth)
-                {
-                    _uiShared.DrawOAuth(idx, selectedServer);
-                    if (string.IsNullOrEmpty(_serverConfigurationManager.GetDiscordUserFromToken(selectedServer)))
-                    {
-                        ImGuiHelpers.ScaledDummy(10f);
-                        UiSharedService.ColorTextWrapped("You have enabled OAuth2 but it is not linked. Press the buttons Check, then Authenticate to link properly.", ImGuiColors.DalamudRed);
-                    }
-                    if (!string.IsNullOrEmpty(_serverConfigurationManager.GetDiscordUserFromToken(selectedServer))
-                        && selectedServer.Authentications.TrueForAll(u => string.IsNullOrEmpty(u.UID)))
-                    {
-                        ImGuiHelpers.ScaledDummy(10f);
-                        UiSharedService.ColorTextWrapped("You have enabled OAuth2 but no characters configured. Set the correct UIDs for your characters in \"Character Management\".",
-                            ImGuiColors.DalamudRed);
-                    }
-                }
-
-                if (!isMain && selectedServer != _serverConfigurationManager.CurrentServer)
-                {
-                    ImGui.Separator();
-                    if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
-                    {
-                        _serverConfigurationManager.DeleteServer(selectedServer);
-                    }
-                    _uiShared.DrawHelpText("Hold CTRL to delete this service");
                 }
 
                 ImGui.EndTabItem();
@@ -1882,13 +1777,198 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
                 ImGui.EndTabItem();
             }
+
+            if (ImGui.BeginTabItem("Account & Data"))
+            {
+                if (selectedServer == _serverConfigurationManager.CurrentServer)
+                {
+                    UiSharedService.ColorTextWrapped("For any changes to be applied to the current service you need to reconnect to the service.", ImGuiColors.DalamudYellow);
+                }
+
+                if (ApiController.IsServerAlive(_serverConfigurationManager.CurrentServerIndex))
+                {
+                    _uiShared.BigText($"Service Actions for {selectedServerName}");
+                    ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
+                    if (ImGui.Button("Delete all my files"))
+                    {
+                        _deleteFilesPopupModalShown = true;
+                        ImGui.OpenPopup("Delete all your files?");
+                    }
+
+                    _uiShared.DrawHelpText($"Completely deletes all your uploaded files on the {selectedServerName} service.");
+
+                    if (ImGui.BeginPopupModal("Delete all your files?", ref _deleteFilesPopupModalShown, UiSharedService.PopupWindowFlags))
+                    {
+                        UiSharedService.TextWrapped($"All your own uploaded files on the {selectedServerName} service will be deleted.\nThis operation cannot be undone.");
+                        ImGui.TextUnformatted("Are you sure you want to continue?");
+                        ImGui.Separator();
+                        ImGui.Spacing();
+
+                        var buttonSize = (ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X -
+                                         ImGui.GetStyle().ItemSpacing.X) / 2;
+
+                        if (ImGui.Button("Delete everything", new Vector2(buttonSize, 0)))
+                        {
+                            _ = Task.Run(() => _fileTransferManager.DeleteAllFiles(_serverConfigurationManager.CurrentServerIndex));
+                            _deleteFilesPopupModalShown = false;
+                        }
+
+                        ImGui.SameLine();
+
+                        if (ImGui.Button("Cancel##cancelDelete", new Vector2(buttonSize, 0)))
+                        {
+                            _deleteFilesPopupModalShown = false;
+                        }
+
+                        UiSharedService.SetScaledWindowSize(325);
+                        ImGui.EndPopup();
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Delete account"))
+                    {
+                        _deleteAccountPopupModalShown = true;
+                        ImGui.OpenPopup("Delete your account?");
+                    }
+
+                    _uiShared.DrawHelpText("Completely deletes your account and all uploaded files to the service.");
+
+                    if (ImGui.BeginPopupModal("Delete your account?", ref _deleteAccountPopupModalShown, UiSharedService.PopupWindowFlags))
+                    {
+                        UiSharedService.TextWrapped($"Your account and all associated files and data on the {selectedServerName} service will be deleted.");
+                        UiSharedService.TextWrapped("Your UID will be removed from all pairing lists.");
+                        ImGui.TextUnformatted("Are you sure you want to continue?");
+                        ImGui.Separator();
+                        ImGui.Spacing();
+
+                        var buttonSize = (ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X -
+                                          ImGui.GetStyle().ItemSpacing.X) / 2;
+
+                        if (ImGui.Button("Delete account", new Vector2(buttonSize, 0)))
+                        {
+                            _ = Task.Run(() => ApiController.UserDelete(_serverConfigurationManager.CurrentServerIndex));
+                            _deleteAccountPopupModalShown = false;
+                            Mediator.Publish(new SwitchToIntroUiMessage());
+                        }
+
+                        ImGui.SameLine();
+
+                        if (ImGui.Button("Cancel##cancelDelete", new Vector2(buttonSize, 0)))
+                        {
+                            _deleteAccountPopupModalShown = false;
+                        }
+
+                        UiSharedService.SetScaledWindowSize(325);
+                        ImGui.EndPopup();
+                    }
+                    ImGui.Separator();
+                }
+            }
+
             ImGui.EndTabBar();
         }
     }
 
-    private int _lastSelectedServerIndex = -1;
-    private Task<(bool Success, bool PartialSuccess, string Result)>? _secretKeysConversionTask = null;
-    private CancellationTokenSource _secretKeysConversionCts = new CancellationTokenSource();
+    private void DrawMultiServerInterfaceTable()
+    {
+        _uiShared.BigText($"Registered services");
+        ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
+
+        if (ImGui.BeginTable("MultiServerInterface", 6, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
+        {
+            ImGui.TableSetupColumn($"Server Name", ImGuiTableColumnFlags.None, 3);
+            ImGui.TableSetupColumn($"Status", ImGuiTableColumnFlags.None, 1);
+            ImGui.TableSetupColumn($"Uri", ImGuiTableColumnFlags.None, 2);
+            ImGui.TableSetupColumn($"Hub", ImGuiTableColumnFlags.None, 3);
+            ImGui.TableSetupColumn($"Connection", ImGuiTableColumnFlags.None, 1);
+            ImGui.TableHeadersRow();
+
+            var serverList = _serverConfigurationManager.GetServerInfo();
+            var rowHeight = ImGui.GetTextLineHeightWithSpacing();
+
+            foreach (var server in serverList)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
+
+                bool isSelected = (_serverConfigurationManager.CurrentServerIndex == server.Id);
+                ImRaii.PushId(server.Id);
+                if (ImGui.Selectable("##row", isSelected, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap,
+                    new Vector2(0, rowHeight)))
+                {
+                    _lastSelectedServerIndex = server.Id;
+                    _serverConfigurationManager.SelectServer(server.Id);
+
+                    if (_lastSelectedServerIndex != server.Id)
+                    {
+                        _uiShared.ResetOAuthTasksState();
+                        _secretKeysConversionCts = _secretKeysConversionCts.CancelRecreate();
+                        _secretKeysConversionTask = null;
+                        _lastSelectedServerIndex = server.Id;
+                    }
+                }
+                ImGui.PopID();
+
+                ImGui.SameLine();
+                ImGui.TextUnformatted(server.Name);
+
+                ImGui.TableNextColumn();
+                DrawServerStatus(server.Id);
+
+                ImGui.TableNextColumn();
+                ImGui.Text(server.Uri);
+
+                ImGui.TableNextColumn();
+                ImGui.Text(string.IsNullOrEmpty(server.HubUri) ? (server.Uri + ISinusHub.Path) : server.HubUri);
+
+                ImGui.TableNextColumn();
+                DrawMultiServerConnectButton(server.Id, server.Name);
+
+            }
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawServerStatus(int serverId)
+    {
+        if (_apiController.ConnectedServerIndexes.Any(p => p == serverId))
+        {
+            UiSharedService.ColorTextWrapped("Online", ImGuiColors.ParsedGreen);
+        }
+        else
+            UiSharedService.ColorTextWrapped("Offline", ImGuiColors.DalamudRed);
+    }
+
+    private void DrawMultiServerConnectButton(int serverId, string serverName)
+    {
+        bool isConnectingOrConnected = _apiController.IsServerConnected(serverId);
+        var color = UiSharedService.GetBoolColor(!isConnectingOrConnected);
+        var connectedIcon = isConnectingOrConnected ? FontAwesomeIcon.Unlink : FontAwesomeIcon.Link;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        {
+            if (_uiShared.IconButton(connectedIcon, serverId.ToString()))
+            {
+                if (_apiController.IsServerConnected(serverId))
+                {
+                    _serverConfigurationManager.CurrentServer.FullPause = true;
+                    _serverConfigurationManager.Save();
+                    _ = _apiController.PauseConnectionAsync(serverId);
+                }
+                else
+                {
+                    _serverConfigurationManager.SelectServer(serverId);
+                    _serverConfigurationManager.CurrentServer.FullPause = false;
+                    _serverConfigurationManager.Save();
+                    _ = _apiController.CreateConnectionsAsync(serverId);
+                }
+            }
+        }
+
+        UiSharedService.AttachToolTip(isConnectingOrConnected ?
+           "Disconnect from " + serverName :
+           "Connect to " + serverName);
+    }
 
     private async Task<(bool Success, bool partialSuccess, string Result)> ConvertSecretKeysToUIDs(ServerStorage serverStorage, CancellationToken token)
     {

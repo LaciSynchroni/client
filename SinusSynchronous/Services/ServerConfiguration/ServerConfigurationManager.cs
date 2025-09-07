@@ -252,7 +252,8 @@ public class ServerConfigurationManager
             {
                 Id = index,
                 Name = v.ServerName,
-                ServerUri = v.ServerUri,
+                Uri = v.ServerUri,
+                HubUri = v.ServerHubUri
             }).ToList();
         return items;
     }

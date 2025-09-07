@@ -465,7 +465,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             foreach (var server in serverList)
             {
                 ImGui.TableNextColumn();
-                DrawServerName(server.Id, server.Name, server.ServerUri);
+                DrawServerName(server.Id, server.Name, server.Uri);
 
                 ImGui.TableNextColumn();
                 DrawMultiServerUID(server.Id);
