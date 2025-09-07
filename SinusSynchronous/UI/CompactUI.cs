@@ -617,6 +617,9 @@ public class CompactUi : WindowMediatorSubscriberBase
         var playerLoadTriangles = _cachedAnalysis.Sum(c => c.Value.Sum(c => c.Value.Triangles));
 
         ImGui.TextUnformatted("Character Load Data");
+        _uiSharedService.DrawHelpText("This information uses your own settings for the warning and auto-pause threshold for comparison." + Environment.NewLine
+            + "This can be configured under Settings -> Performance.");
+
         ImGui.TextUnformatted("Mem.:");
         ImGui.SameLine();
         ImGui.TextUnformatted($"{UiSharedService.ByteToString(playerLoadMemory)}");
