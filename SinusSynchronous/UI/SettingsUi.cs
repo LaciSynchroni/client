@@ -1417,15 +1417,20 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     }
                 }
 
-                if (selectedServer != _serverConfigurationManager.CurrentServer)
+                var isServerConnected = _apiController.IsServerConnected(_serverConfigurationManager.CurrentServerIndex);
+                ImGui.BeginDisabled(isServerConnected);
+                ImGui.Separator();
+                if (isServerConnected)
                 {
-                    ImGui.Separator();
-                    if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
-                    {
-                        _serverConfigurationManager.DeleteServer(selectedServer);
-                    }
-                    _uiShared.DrawHelpText("Hold CTRL to delete this service");
+                    UiSharedService.ColorTextWrapped($"To delete the {serverName} service you need to disconnect from the service.", ImGuiColors.DalamudYellow);
                 }
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
+                {
+                    _serverConfigurationManager.DeleteServer(selectedServer);
+                }
+                
+                _uiShared.DrawHelpText("Hold CTRL to delete this service");
+                ImGui.EndDisabled();
 
                 ImGui.EndTabItem();
             }
