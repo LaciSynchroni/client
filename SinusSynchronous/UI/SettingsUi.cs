@@ -481,8 +481,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
     }
 
-
-
     private async Task<List<string>?> RunSpeedTest(List<string> servers, CancellationToken token)
     {
         List<string> speedTestResults = new();
@@ -631,24 +629,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     {
         _lastTab = "FileCache";
 
-        _uiShared.BigText("Export MCDF");
-
-        ImGuiHelpers.ScaledDummy(10);
-
-        UiSharedService.ColorTextWrapped("Exporting MCDF has moved.", ImGuiColors.DalamudYellow);
-        ImGuiHelpers.ScaledDummy(5);
-        UiSharedService.TextWrapped("It is now found in the Main UI under \"Your User Menu\" (");
-        ImGui.SameLine();
-        _uiShared.IconText(FontAwesomeIcon.UserCog);
-        ImGui.SameLine();
-        UiSharedService.TextWrapped(") -> \"Character Data Hub\".");
-        if (_uiShared.IconTextButton(FontAwesomeIcon.Running, "Open Sinus Character Data Hub"))
-        {
-            Mediator.Publish(new UiToggleMessage(typeof(CharaDataHubUi)));
-        }
-        UiSharedService.TextWrapped("Note: this entry will be removed in the near future. Please use the Main UI to open the Character Data Hub.");
-        ImGuiHelpers.ScaledDummy(5);
-        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
 
         _uiShared.BigText("Storage");
 
@@ -719,47 +700,49 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             UiSharedService.ColorTextWrapped("Hint: To free up space when using Sinus consider enabling the File Compactor", ImGuiColors.DalamudYellow);
         }
-        if (isLinux || !_cacheMonitor.StorageisNTFS) ImGui.BeginDisabled();
-        if (ImGui.Checkbox("Use file compactor", ref useFileCompactor))
+
+        using (ImRaii.Disabled(isLinux || !_cacheMonitor.StorageisNTFS))
         {
-            _configService.Current.UseCompactor = useFileCompactor;
-            _configService.Save();
-        }
-        _uiShared.DrawHelpText("The file compactor can massively reduce your saved files. It might incur a minor penalty on loading files on a slow CPU." + Environment.NewLine
-            + "It is recommended to leave it enabled to save on space.");
-        ImGui.SameLine();
-        if (!_fileCompactor.MassCompactRunning)
-        {
-            if (_uiShared.IconTextButton(FontAwesomeIcon.FileArchive, "Compact all files in storage"))
+            if (ImGui.Checkbox("Use file compactor", ref useFileCompactor))
             {
-                _ = Task.Run(() =>
-                {
-                    _fileCompactor.CompactStorage(compress: true);
-                    _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
-                });
+                _configService.Current.UseCompactor = useFileCompactor;
+                _configService.Save();
             }
-            UiSharedService.AttachToolTip("This will run compression on all files in your current Sinus Storage." + Environment.NewLine
-                + "You do not need to run this manually if you keep the file compactor enabled.");
+
+            _uiShared.DrawHelpText("The file compactor can massively reduce your saved files. It might incur a minor penalty on loading files on a slow CPU." + Environment.NewLine
+           + "It is recommended to leave it enabled to save on space.");
             ImGui.SameLine();
-            if (_uiShared.IconTextButton(FontAwesomeIcon.File, "Decompact all files in storage"))
+            if (!_fileCompactor.MassCompactRunning)
             {
-                _ = Task.Run(() =>
+                if (_uiShared.IconTextButton(FontAwesomeIcon.FileArchive, "Compact all files in storage"))
                 {
-                    _fileCompactor.CompactStorage(compress: false);
-                    _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
-                });
+                    _ = Task.Run(() =>
+                    {
+                        _fileCompactor.CompactStorage(compress: true);
+                        _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
+                    });
+                }
+                UiSharedService.AttachToolTip("This will run compression on all files in your current Sinus Storage." + Environment.NewLine
+                    + "You do not need to run this manually if you keep the file compactor enabled.");
+                ImGui.SameLine();
+                if (_uiShared.IconTextButton(FontAwesomeIcon.File, "Decompact all files in storage"))
+                {
+                    _ = Task.Run(() =>
+                    {
+                        _fileCompactor.CompactStorage(compress: false);
+                        _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
+                    });
+                }
+                UiSharedService.AttachToolTip("This will run decompression on all files in your current Sinus Storage.");
             }
-            UiSharedService.AttachToolTip("This will run decompression on all files in your current Sinus Storage.");
-        }
-        else
-        {
-            UiSharedService.ColorText($"File compactor currently running ({_fileCompactor.Progress})", ImGuiColors.DalamudYellow);
-        }
-        if (isLinux || !_cacheMonitor.StorageisNTFS)
-        {
-            ImGui.EndDisabled();
+            else
+            {
+                UiSharedService.ColorText($"File compactor currently running ({_fileCompactor.Progress})", ImGuiColors.DalamudYellow);
+            }
+
             ImGui.TextUnformatted("The file compactor is only available on Windows and NTFS drives.");
         }
+       
         ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
 
         ImGui.Separator();
@@ -812,24 +795,25 @@ public class SettingsUi : WindowMediatorSubscriberBase
         UiSharedService.TextWrapped("I understand that: " + Environment.NewLine + "- By clearing the local storage I put the file servers of my connected service under extra strain by having to redownload all data."
             + Environment.NewLine + "- This is not a step to try to fix sync issues."
             + Environment.NewLine + "- This can make the situation of not getting other players data worse in situations of heavy file server load.");
-        if (!_readClearCache)
-            ImGui.BeginDisabled();
-        if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Clear local storage") && UiSharedService.CtrlPressed() && _readClearCache)
+
+        using (ImRaii.Disabled(!_readClearCache))
         {
-            _ = Task.Run(() =>
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Clear local storage") && UiSharedService.CtrlPressed() && _readClearCache)
             {
-                foreach (var file in Directory.GetFiles(_configService.Current.CacheFolder))
+                _ = Task.Run(() =>
                 {
-                    File.Delete(file);
-                }
-            });
+                    foreach (var file in Directory.GetFiles(_configService.Current.CacheFolder))
+                    {
+                        File.Delete(file);
+                    }
+                });
+            }
+            UiSharedService.AttachToolTip("You normally do not need to do this. THIS IS NOT SOMETHING YOU SHOULD BE DOING TO TRY TO FIX SYNC ISSUES." + Environment.NewLine
+                + "This will solely remove all downloaded data from all players and will require you to re-download everything again." + Environment.NewLine
+                + "Sinus storage is self-clearing and will not surpass the limit you have set it to." + Environment.NewLine
+                + "If you still think you need to do this hold CTRL while pressing the button.");
         }
-        UiSharedService.AttachToolTip("You normally do not need to do this. THIS IS NOT SOMETHING YOU SHOULD BE DOING TO TRY TO FIX SYNC ISSUES." + Environment.NewLine
-            + "This will solely remove all downloaded data from all players and will require you to re-download everything again." + Environment.NewLine
-            + "Sinus storage is self-clearing and will not surpass the limit you have set it to." + Environment.NewLine
-            + "If you still think you need to do this hold CTRL while pressing the button.");
-        if (!_readClearCache)
-            ImGui.EndDisabled();
+
         ImGui.Unindent();
     }
 
@@ -1417,20 +1401,23 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     }
                 }
 
-                var isServerConnected = _apiController.IsServerConnected(_serverConfigurationManager.CurrentServerIndex);
-                ImGui.BeginDisabled(isServerConnected);
                 ImGui.Separator();
+
+                var isServerConnected = _apiController.IsServerConnected(_serverConfigurationManager.CurrentServerIndex);
                 if (isServerConnected)
                 {
                     UiSharedService.ColorTextWrapped($"To delete the {serverName} service you need to disconnect from the service.", ImGuiColors.DalamudYellow);
                 }
-                if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
+
+                using (ImRaii.Disabled(isServerConnected))
                 {
-                    _serverConfigurationManager.DeleteServer(selectedServer);
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
+                    {
+                        _serverConfigurationManager.DeleteServer(selectedServer);
+                    }
                 }
-                
+
                 _uiShared.DrawHelpText("Hold CTRL to delete this service");
-                ImGui.EndDisabled();
 
                 ImGui.EndTabItem();
             }
@@ -1865,8 +1852,9 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         UiSharedService.SetScaledWindowSize(325);
                         ImGui.EndPopup();
                     }
-                    ImGui.Separator();
                 }
+
+                ImGui.EndTabItem();
             }
 
             ImGui.EndTabBar();
