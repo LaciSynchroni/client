@@ -7,6 +7,8 @@ using SinusSynchronous.API.Data.Enum;
 using SinusSynchronous.API.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.UI.Components;
 using SinusSynchronous.WebAPI;
 using System.Numerics;
 
@@ -15,24 +17,30 @@ namespace SinusSynchronous.UI;
 public class TopTabMenu
 {
     private readonly ApiController _apiController;
-
     private readonly SinusMediator _sinusMediator;
-
     private readonly PairManager _pairManager;
     private readonly UiSharedService _uiSharedService;
+    private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly ServerSelectorSmall _pairTabServerSelector;
+    
     private string _filter = string.Empty;
     private int _globalControlCountdown = 0;
 
     private string _pairToAdd = string.Empty;
-
+    private int _pairTabSelectedServer = 0;
+        
     private SelectedTab _selectedTab = SelectedTab.None;
-    public TopTabMenu(SinusMediator sinusMediator, ApiController apiController, PairManager pairManager, UiSharedService uiSharedService)
+    public TopTabMenu(SinusMediator sinusMediator, ApiController apiController, PairManager pairManager, UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager)
     {
         _sinusMediator = sinusMediator;
         _apiController = apiController;
         _pairManager = pairManager;
         _uiSharedService = uiSharedService;
+        _serverConfigurationManager = serverConfigurationManager;
+        _pairTabServerSelector = new ServerSelectorSmall(index => _pairTabSelectedServer = index);
     }
+
+    public bool IsUserConfigTabSelected => TabSelection == SelectedTab.UserConfig;
 
     private enum SelectedTab
     {
@@ -83,6 +91,7 @@ public class TopTabMenu
 
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
+            ImGui.BeginDisabled(!_apiController.AnyServerConnected);
             var x = ImGui.GetCursorScreenPos();
             if (ImGui.Button(FontAwesomeIcon.User.ToIconString(), buttonSize))
             {
@@ -94,11 +103,13 @@ public class TopTabMenu
                 drawList.AddLine(x with { Y = x.Y + buttonSize.Y + spacing.Y },
                     xAfter with { Y = xAfter.Y + buttonSize.Y + spacing.Y, X = xAfter.X - spacing.X },
                     underlineColor, 2);
+            ImGui.EndDisabled();
         }
         UiSharedService.AttachToolTip("Individual Pair Menu");
 
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
+            ImGui.BeginDisabled(!_apiController.AnyServerConnected);
             var x = ImGui.GetCursorScreenPos();
             if (ImGui.Button(FontAwesomeIcon.Users.ToIconString(), buttonSize))
             {
@@ -110,12 +121,14 @@ public class TopTabMenu
                 drawList.AddLine(x with { Y = x.Y + buttonSize.Y + spacing.Y },
                     xAfter with { Y = xAfter.Y + buttonSize.Y + spacing.Y, X = xAfter.X - spacing.X },
                     underlineColor, 2);
+            ImGui.EndDisabled();
         }
         UiSharedService.AttachToolTip("Syncshell Menu");
 
         ImGui.SameLine();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
+            ImGui.BeginDisabled(!_apiController.AnyServerConnected);
             var x = ImGui.GetCursorScreenPos();
             if (ImGui.Button(FontAwesomeIcon.Filter.ToIconString(), buttonSize))
             {
@@ -128,6 +141,7 @@ public class TopTabMenu
                 drawList.AddLine(x with { Y = x.Y + buttonSize.Y + spacing.Y },
                     xAfter with { Y = xAfter.Y + buttonSize.Y + spacing.Y, X = xAfter.X - spacing.X },
                     underlineColor, 2);
+            ImGui.EndDisabled();
         }
         UiSharedService.AttachToolTip("Filter");
 
@@ -179,6 +193,9 @@ public class TopTabMenu
 
     private void DrawAddPair(float availableXWidth, float spacingX)
     {
+        _pairTabServerSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, availableXWidth);
+        UiSharedService.AttachToolTip("Server to use for pair actions");
+        
         var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.UserPlus, "Add");
         ImGui.SetNextItemWidth(availableXWidth - buttonSize - spacingX);
         ImGui.InputTextWithHint("##otheruid", "Other players UID/Alias", ref _pairToAdd, 20);
@@ -188,7 +205,8 @@ public class TopTabMenu
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserPlus, "Add"))
             {
-                _ = _apiController.UserAddPair(new(new(_pairToAdd)));
+                // Adds pair for the current 
+                _ = _apiController.UserAddPairToServer(_pairTabSelectedServer, _pairToAdd);
                 _pairToAdd = string.Empty;
             }
         }
@@ -439,17 +457,17 @@ public class TopTabMenu
             if (ImGui.Button(FontAwesomeIcon.Check.ToIconString(), buttonSize))
             {
                 _ = GlobalControlCountdown(10);
-                var bulkSyncshells = _pairManager.GroupPairs.Keys.OrderBy(g => g.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Group.GID, g =>
+                var bulkSyncshells = _pairManager.GroupPairs.Keys.OrderBy(g => g.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.GroupFullInfo.Group.GID, g =>
                     {
-                        var perm = g.GroupUserPermissions;
-                        perm.SetDisableSounds(g.GroupPermissions.IsPreferDisableSounds());
-                        perm.SetDisableAnimations(g.GroupPermissions.IsPreferDisableAnimations());
-                        perm.SetDisableVFX(g.GroupPermissions.IsPreferDisableVFX());
+                        var perm = g.GroupFullInfo.GroupUserPermissions;
+                        perm.SetDisableSounds(g.GroupFullInfo.GroupPermissions.IsPreferDisableSounds());
+                        perm.SetDisableAnimations(g.GroupFullInfo.GroupPermissions.IsPreferDisableAnimations());
+                        perm.SetDisableVFX(g.GroupFullInfo.GroupPermissions.IsPreferDisableVFX());
                         return perm;
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
             }
         }
         UiSharedService.AttachToolTip("Globally align syncshell permissions to suggested syncshell permissions." + UiSharedService.TooltipSeparator
@@ -464,43 +482,47 @@ public class TopTabMenu
     {
         var buttonX = (availableWidth - (spacingX)) / 2f;
 
-        using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct()
-            .Count(g => string.Equals(g.OwnerUID, _apiController.UID, StringComparison.Ordinal)) >= _apiController.ServerInfo.MaxGroupsCreatedByUser))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create new Syncshell", buttonX))
         {
-            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Create new Syncshell", buttonX))
-            {
-                _sinusMediator.Publish(new UiToggleMessage(typeof(CreateSyncshellUI)));
-            }
-            ImGui.SameLine();
+            _sinusMediator.Publish(new UiToggleMessage(typeof(CreateSyncshellUI)));
         }
-
-        using (ImRaii.Disabled(_pairManager.GroupPairs.Select(k => k.Key).Distinct().Count() >= _apiController.ServerInfo.MaxGroupsJoinedByUser))
+        ImGui.SameLine();
+       
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Users, "Join existing Syncshell", buttonX))
         {
-            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Users, "Join existing Syncshell", buttonX))
-            {
-                _sinusMediator.Publish(new UiToggleMessage(typeof(JoinSyncshellUI)));
-            }
+            _sinusMediator.Publish(new UiToggleMessage(typeof(JoinSyncshellUI)));
         }
     }
 
     private void DrawUserConfig(float availableWidth, float spacingX)
     {
         var buttonX = (availableWidth - spacingX) / 2f;
-        if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserCircle, "Edit Sinus Profile", buttonX))
-        {
-            _sinusMediator.Publish(new UiToggleMessage(typeof(EditProfileUi)));
-        }
-        UiSharedService.AttachToolTip("Edit your Sinus Profile");
-        ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Chara Data Analysis", buttonX))
         {
             _sinusMediator.Publish(new UiToggleMessage(typeof(DataAnalysisUi)));
         }
         UiSharedService.AttachToolTip("View and analyze your generated character data");
+
+        ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Running, "Character Data Hub", availableWidth))
         {
             _sinusMediator.Publish(new UiToggleMessage(typeof(CharaDataHubUi)));
         }
+
+        ImGui.BeginDisabled(!_apiController.AnyServerConnected);
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserCircle, "Edit Mare Profile", buttonX))
+        {
+            _sinusMediator.Publish(new UiToggleMessage(typeof(EditProfileUi)));
+        }
+        UiSharedService.AttachToolTip("Edit your Mare Profile");
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Satellite, "Connected Servers", availableWidth))
+        {
+            _sinusMediator.Publish(new ToggleServerSelectMessage());
+        }
+        UiSharedService.AttachToolTip("Toggle the server connections list");
     }
 
     private async Task GlobalControlCountdown(int countdown)
@@ -533,7 +555,7 @@ public class TopTabMenu
                         return actEnable(g.UserPair.OwnPermissions);
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
 
@@ -546,8 +568,7 @@ public class TopTabMenu
                     {
                         return actDisable(g.UserPair.OwnPermissions);
                     }, StringComparer.Ordinal);
-
-                _ = _apiController.SetBulkPermissions(new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(bulkIndividualPairs, new(StringComparer.Ordinal))).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();
@@ -565,13 +586,13 @@ public class TopTabMenu
             {
                 _ = GlobalControlCountdown(10);
                 var bulkSyncshells = _pairManager.GroupPairs.Keys
-                    .OrderBy(u => u.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Group.GID, g =>
+                    .OrderBy(u => u.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.GroupFullInfo.Group.GID, g =>
                     {
-                        return actEnable(g.GroupUserPermissions);
+                        return actEnable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
 
@@ -579,13 +600,13 @@ public class TopTabMenu
             {
                 _ = GlobalControlCountdown(10);
                 var bulkSyncshells = _pairManager.GroupPairs.Keys
-                    .OrderBy(u => u.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Group.GID, g =>
+                    .OrderBy(u => u.GroupFullInfo.GroupAliasOrGID, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.GroupFullInfo.Group.GID, g =>
                     {
-                        return actDisable(g.GroupUserPermissions);
+                        return actDisable(g.GroupFullInfo.GroupUserPermissions);
                     }, StringComparer.Ordinal);
 
-                _ = _apiController.SetBulkPermissions(new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
+                _ = _apiController.SetBulkPermissions(_pairTabSelectedServer, new(new(StringComparer.Ordinal), bulkSyncshells)).ConfigureAwait(false);
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();

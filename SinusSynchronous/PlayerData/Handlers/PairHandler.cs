@@ -30,6 +30,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private readonly PlayerPerformanceService _playerPerformanceService;
     private readonly ServerConfigurationManager _serverConfigManager;
     private readonly PluginWarningNotificationService _pluginWarningNotificationManager;
+    private readonly ConcurrentPairLockService _concurrentPairLockService;
     private CancellationTokenSource? _applicationCancellationTokenSource = new();
     private Guid _applicationId;
     private Task? _applicationTask;
@@ -50,7 +51,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         DalamudUtilService dalamudUtil, IHostApplicationLifetime lifetime,
         FileCacheManager fileDbManager, SinusMediator mediator,
         PlayerPerformanceService playerPerformanceService,
-        ServerConfigurationManager serverConfigManager) : base(logger, mediator)
+        ServerConfigurationManager serverConfigManager, ConcurrentPairLockService concurrentPairLockService) : base(logger, mediator)
     {
         Pair = pair;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -62,6 +63,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _fileDbManager = fileDbManager;
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
+        _concurrentPairLockService = concurrentPairLockService;
         _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, Pair.UserData.UID).ConfigureAwait(false).GetAwaiter().GetResult();
 
         Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
@@ -174,6 +176,12 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             return;
         }
 
+        if (!_concurrentPairLockService.TryAcquireLock(PlayerName))
+        {
+            Logger.LogInformation("Cannot apply character data to {player}: Another server you are connected to already syncs this target", PlayerName);
+            return;
+        }
+
         Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Informational,
             "Applying Character Data")));
 
@@ -228,6 +236,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         try
         {
             Guid applicationId = Guid.NewGuid();
+            _concurrentPairLockService.ReleaseLock(name);
             _applicationCancellationTokenSource?.CancelDispose();
             _applicationCancellationTokenSource = null;
             _downloadCancellationTokenSource?.CancelDispose();
@@ -408,7 +417,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
                 Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Informational,
                     $"Starting download for {toDownloadReplacements.Count} files")));
-                var toDownloadFiles = await _downloadManager.InitiateDownloadList(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false);
+                var toDownloadFiles = await _downloadManager.InitiateDownloadList(Pair.ServerIndex, _charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false);
 
                 if (!_playerPerformanceService.ComputeAndAutoPauseOnVRAMUsageThresholds(this, charaData, toDownloadFiles))
                 {
@@ -416,7 +425,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     return;
                 }
 
-                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false));
+                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(Pair.ServerIndex, _charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false));
 
                 await _pairDownloadTask.ConfigureAwait(false);
 
@@ -569,7 +578,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         PlayerName = name;
         _charaHandler = _gameObjectHandlerFactory.Create(ObjectKind.Player, () => _dalamudUtil.GetPlayerCharacterFromCachedTableByIdent(Pair.Ident), isWatched: false).GetAwaiter().GetResult();
 
-        _serverConfigManager.AutoPopulateNoteForUid(Pair.UserData.UID, name);
+        _serverConfigManager.AutoPopulateNoteForUid(Pair.ServerIndex, Pair.UserData.UID, name);
 
         Mediator.Subscribe<HonorificReadyMessage>(this, async (_) =>
         {

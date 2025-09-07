@@ -108,7 +108,7 @@ public abstract class DrawFolderBase : IDrawFolder
         if (RenderMenu)
         {
             ImGui.SameLine(windowEndX - barButtonSize.X);
-            if (_uiSharedService.IconButton(FontAwesomeIcon.EllipsisV))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.EllipsisV, _id))
             {
                 ImGui.OpenPopup("User Flyout Menu");
             }

@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Data;
+using SinusSynchronous.API.Data;
 using SinusSynchronous.API.Data.Enum;
 using SinusSynchronous.API.Dto;
 using SinusSynchronous.API.Dto.CharaData;
@@ -8,11 +8,11 @@ using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
-using static FFXIVClientStructs.FFXIV.Client.Game.UI.MapMarkerData.Delegates;
+using SinusSynchronous.PlayerData.Pairs;
 
 namespace SinusSynchronous.WebAPI;
 
-public partial class ApiController
+public partial class MultiConnectSinusClient
 {
     public Task Client_DownloadReady(Guid requestId)
     {
@@ -24,21 +24,21 @@ public partial class ApiController
     public Task Client_GroupChangePermissions(GroupPermissionDto groupPermission)
     {
         Logger.LogTrace("Client_GroupChangePermissions: {perm}", groupPermission);
-        ExecuteSafely(() => _pairManager.SetGroupPermissions(groupPermission));
+        ExecuteSafely(() => _pairManager.SetGroupPermissions(groupPermission, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_GroupChangeUserPairPermissions(GroupPairUserPermissionDto dto)
     {
         Logger.LogDebug("Client_GroupChangeUserPairPermissions: {dto}", dto);
-        ExecuteSafely(() => _pairManager.UpdateGroupPairPermissions(dto));
+        ExecuteSafely(() => _pairManager.UpdateGroupPairPermissions(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_GroupDelete(GroupDto groupDto)
     {
         Logger.LogTrace("Client_GroupDelete: {dto}", groupDto);
-        ExecuteSafely(() => _pairManager.RemoveGroup(groupDto.Group));
+        ExecuteSafely(() => _pairManager.RemoveGroup(groupDto.Group, ServerIndex));
         return Task.CompletedTask;
     }
 
@@ -47,8 +47,9 @@ public partial class ApiController
         Logger.LogTrace("Client_GroupPairChangeUserInfo: {dto}", userInfo);
         ExecuteSafely(() =>
         {
-            if (string.Equals(userInfo.UID, UID, StringComparison.Ordinal)) _pairManager.SetGroupStatusInfo(userInfo);
-            else _pairManager.SetGroupPairStatusInfo(userInfo);
+            if (string.Equals(userInfo.UID, UID, StringComparison.Ordinal))
+                _pairManager.SetGroupStatusInfo(userInfo, ServerIndex);
+            else _pairManager.SetGroupPairStatusInfo(userInfo, ServerIndex);
         });
         return Task.CompletedTask;
     }
@@ -56,28 +57,28 @@ public partial class ApiController
     public Task Client_GroupPairJoined(GroupPairFullInfoDto groupPairInfoDto)
     {
         Logger.LogTrace("Client_GroupPairJoined: {dto}", groupPairInfoDto);
-        ExecuteSafely(() => _pairManager.AddGroupPair(groupPairInfoDto));
+        ExecuteSafely(() => _pairManager.AddGroupPair(groupPairInfoDto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_GroupPairLeft(GroupPairDto groupPairDto)
     {
         Logger.LogTrace("Client_GroupPairLeft: {dto}", groupPairDto);
-        ExecuteSafely(() => _pairManager.RemoveGroupPair(groupPairDto));
+        ExecuteSafely(() => _pairManager.RemoveGroupPair(groupPairDto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_GroupSendFullInfo(GroupFullInfoDto groupInfo)
     {
         Logger.LogTrace("Client_GroupSendFullInfo: {dto}", groupInfo);
-        ExecuteSafely(() => _pairManager.AddGroup(groupInfo));
+        ExecuteSafely(() => _pairManager.AddGroup(groupInfo, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_GroupSendInfo(GroupInfoDto groupInfo)
     {
         Logger.LogTrace("Client_GroupSendInfo: {dto}", groupInfo);
-        ExecuteSafely(() => _pairManager.SetGroupInfo(groupInfo));
+        ExecuteSafely(() => _pairManager.SetGroupInfo(groupInfo, ServerIndex));
         return Task.CompletedTask;
     }
 
@@ -86,11 +87,13 @@ public partial class ApiController
         switch (messageSeverity)
         {
             case MessageSeverity.Error:
-                Mediator.Publish(new NotificationMessage("Warning from " + _serverManager.CurrentServer!.ServerName, message, NotificationType.Error, TimeSpan.FromSeconds(7.5)));
+                Mediator.Publish(new NotificationMessage("Warning from " + ServerToUse.ServerName, message,
+                    NotificationType.Error, TimeSpan.FromSeconds(7.5)));
                 break;
 
             case MessageSeverity.Warning:
-                Mediator.Publish(new NotificationMessage("Warning from " + _serverManager.CurrentServer!.ServerName, message, NotificationType.Warning, TimeSpan.FromSeconds(7.5)));
+                Mediator.Publish(new NotificationMessage("Warning from " + ServerToUse.ServerName, message,
+                    NotificationType.Warning, TimeSpan.FromSeconds(7.5)));
                 break;
 
             case MessageSeverity.Information:
@@ -99,7 +102,9 @@ public partial class ApiController
                     _doNotNotifyOnNextInfo = false;
                     break;
                 }
-                Mediator.Publish(new NotificationMessage("Info from " + _serverManager.CurrentServer!.ServerName, message, NotificationType.Info, TimeSpan.FromSeconds(5)));
+
+                Mediator.Publish(new NotificationMessage("Info from " + ServerToUse.ServerName, message,
+                    NotificationType.Info, TimeSpan.FromSeconds(5)));
                 break;
         }
 
@@ -115,84 +120,85 @@ public partial class ApiController
     public Task Client_UpdateUserIndividualPairStatusDto(UserIndividualPairStatusDto dto)
     {
         Logger.LogDebug("Client_UpdateUserIndividualPairStatusDto: {dto}", dto);
-        ExecuteSafely(() => _pairManager.UpdateIndividualPairStatus(dto));
+        ExecuteSafely(() => _pairManager.UpdateIndividualPairStatus(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserAddClientPair(UserPairDto dto)
     {
         Logger.LogDebug("Client_UserAddClientPair: {dto}", dto);
-        ExecuteSafely(() => _pairManager.AddUserPair(dto, addToLastAddedUser: true));
+        ExecuteSafely(() => _pairManager.AddUserPair(dto, ServerIndex, addToLastAddedUser: true));
         return Task.CompletedTask;
     }
 
     public Task Client_UserReceiveCharacterData(OnlineUserCharaDataDto dataDto)
     {
         Logger.LogTrace("Client_UserReceiveCharacterData: {user}", dataDto.User);
-        ExecuteSafely(() => _pairManager.ReceiveCharaData(dataDto));
+        ExecuteSafely(() => _pairManager.ReceiveCharaData(dataDto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserReceiveUploadStatus(UserDto dto)
     {
         Logger.LogTrace("Client_UserReceiveUploadStatus: {dto}", dto);
-        ExecuteSafely(() => _pairManager.ReceiveUploadStatus(dto));
+        ExecuteSafely(() => _pairManager.ReceiveUploadStatus(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserRemoveClientPair(UserDto dto)
     {
         Logger.LogDebug("Client_UserRemoveClientPair: {dto}", dto);
-        ExecuteSafely(() => _pairManager.RemoveUserPair(dto));
+        ExecuteSafely(() => _pairManager.RemoveUserPair(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserSendOffline(UserDto dto)
     {
         Logger.LogDebug("Client_UserSendOffline: {dto}", dto);
-        ExecuteSafely(() => _pairManager.MarkPairOffline(dto.User));
+        ExecuteSafely(() => _pairManager.MarkPairOffline(dto.User, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserSendOnline(OnlineUserIdentDto dto)
     {
         Logger.LogDebug("Client_UserSendOnline: {dto}", dto);
-        ExecuteSafely(() => _pairManager.MarkPairOnline(dto));
+        ExecuteSafely(() => _pairManager.MarkPairOnline(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserUpdateDefaultPermissions(DefaultPermissionsDto dto)
     {
         Logger.LogDebug("Client_UserUpdateDefaultPermissions: {dto}", dto);
-        _connectionDto!.DefaultPreferredPermissions = dto;
+        ConnectionDto!.DefaultPreferredPermissions = dto;
         return Task.CompletedTask;
     }
 
     public Task Client_UserUpdateOtherPairPermissions(UserPermissionsDto dto)
     {
         Logger.LogDebug("Client_UserUpdateOtherPairPermissions: {dto}", dto);
-        ExecuteSafely(() => _pairManager.UpdatePairPermissions(dto));
+        ExecuteSafely(() => _pairManager.UpdatePairPermissions(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_UserUpdateProfile(UserDto dto)
     {
         Logger.LogDebug("Client_UserUpdateProfile: {dto}", dto);
-        ExecuteSafely(() => Mediator.Publish(new ClearProfileDataMessage(dto.User)));
+        var messageContent = new ServerBasedUserKey(dto.User, ServerIndex);
+        ExecuteSafely(() => Mediator.Publish(new ClearProfileDataMessage(messageContent)));
         return Task.CompletedTask;
     }
 
     public Task Client_UserUpdateSelfPairPermissions(UserPermissionsDto dto)
     {
         Logger.LogDebug("Client_UserUpdateSelfPairPermissions: {dto}", dto);
-        ExecuteSafely(() => _pairManager.UpdateSelfPairPermissions(dto));
+        ExecuteSafely(() => _pairManager.UpdateSelfPairPermissions(dto, ServerIndex));
         return Task.CompletedTask;
     }
 
     public Task Client_GposeLobbyJoin(UserData userData)
     {
         Logger.LogDebug("Client_GposeLobbyJoin: {dto}", userData);
-        ExecuteSafely(() => Mediator.Publish(new GposeLobbyUserJoin(userData)));
+        ExecuteSafely(() => Mediator.Publish(new GposeLobbyUserJoin(ServerIndex, userData)));
         return Task.CompletedTask;
     }
 
@@ -206,7 +212,7 @@ public partial class ApiController
     public Task Client_GposeLobbyPushCharacterData(CharaDataDownloadDto charaDownloadDto)
     {
         Logger.LogDebug("Client_GposeLobbyPushCharacterData: {dto}", charaDownloadDto.Uploader);
-        ExecuteSafely(() => Mediator.Publish(new GPoseLobbyReceiveCharaData(charaDownloadDto)));
+        ExecuteSafely(() => Mediator.Publish(new GPoseLobbyReceiveCharaData(ServerIndex, charaDownloadDto)));
         return Task.CompletedTask;
     }
 

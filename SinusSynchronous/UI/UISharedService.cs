@@ -22,7 +22,6 @@ using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
-using SinusSynchronous.WebAPI.SignalR;
 using SinusSynchronous.WebAPI.SignalR.Utils;
 using System.IdentityModel.Tokens.Jwt;
 using System.Numerics;
@@ -52,7 +51,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private readonly Dictionary<string, object?> _selectedComboItems = new(StringComparer.Ordinal);
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly ITextureProvider _textureProvider;
-    private readonly TokenProvider _tokenProvider;
+    private readonly MultiConnectTokenService _multiConnectTokenService;
     private bool _brioExists = false;
     private bool _cacheDirectoryHasOtherFilesThanCache = false;
     private bool _cacheDirectoryIsValidPath = true;
@@ -81,7 +80,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         SinusConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
         ITextureProvider textureProvider,
         Dalamud.Localization localization,
-        ServerConfigurationManager serverManager, TokenProvider tokenProvider, SinusMediator mediator) : base(logger, mediator)
+        ServerConfigurationManager serverManager, MultiConnectTokenService multiConnectTokenService, SinusMediator mediator) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
         _apiController = apiController;
@@ -93,7 +92,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         _textureProvider = textureProvider;
         _localization = localization;
         _serverConfigurationManager = serverManager;
-        _tokenProvider = tokenProvider;
+        _multiConnectTokenService = multiConnectTokenService;
         _localization.SetupWithLangCode("en");
 
         _isDirectoryWritable = IsDirectoryWritable(_configService.Current.CacheFolder);
@@ -399,7 +398,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public static Vector4 UploadColor((long, long) data) => data.Item1 == 0 ? ImGuiColors.DalamudGrey :
         data.Item1 == data.Item2 ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudYellow;
 
-    public bool ApplyNotesFromClipboard(string notes, bool overwrite)
+    public bool ApplyNotesFromClipboard(int serverIndex, string notes, bool overwrite)
     {
         var splitNotes = notes.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
         var splitNotesStart = splitNotes.FirstOrDefault();
@@ -418,16 +417,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 var splittedEntry = note.Split(":", 2, StringSplitOptions.RemoveEmptyEntries);
                 var uid = splittedEntry[0];
                 var comment = splittedEntry[1].Trim('"');
-                if (_serverConfigurationManager.GetNoteForUid(uid) != null && !overwrite) continue;
-                _serverConfigurationManager.SetNoteForUid(uid, comment);
+                if (_serverConfigurationManager.GetNoteForUid(serverIndex, uid) != null && !overwrite) continue;
+                _serverConfigurationManager.SetNoteForUid(serverIndex, uid, comment);
             }
             catch
             {
                 Logger.LogWarning("Could not parse {note}", note);
             }
         }
-
-        _serverConfigurationManager.SaveNotes();
 
         return true;
     }
@@ -625,7 +622,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         AttachToolTip(helpText);
     }
 
-    public void DrawOAuth(ServerStorage selectedServer)
+    public void DrawOAuth(int serverIndex, ServerStorage selectedServer)
     {
         var oauthToken = selectedServer.OAuthToken;
         _ = ImRaii.PushIndent(10f);
@@ -717,8 +714,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 {
                     if (IconTextButton(FontAwesomeIcon.Exclamation, "Renew OAuth2 token manually") && CtrlPressed())
                     {
-                        _ = _tokenProvider.TryUpdateOAuth2LoginTokenAsync(selectedServer, forced: true)
-                            .ContinueWith((_) => _apiController.CreateConnectionsAsync());
+                        _ = _multiConnectTokenService.TryUpdateOAuth2LoginTokenAsync(serverIndex, selectedServer, forced: true)
+                            .ContinueWith((_) => _apiController.CreateConnectionsAsync(serverIndex));
                     }
                 }
                 DrawHelpText("Hold CTRL to manually refresh your OAuth2 token. Normally you do not need to do this.");
@@ -766,7 +763,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                             var token = await _serverConfigurationManager.GetDiscordOAuthToken(url!, selectedServer.ServerUri, CancellationToken.None).ConfigureAwait(false);
                             selectedServer.OAuthToken = token;
                             _serverConfigurationManager.Save();
-                            await _apiController.CreateConnectionsAsync().ConfigureAwait(false);
+                            await _apiController.CreateConnectionsAsync(serverIndex).ConfigureAwait(false);
                         });
                 }
             }
@@ -867,8 +864,9 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
         if (showConnect)
         {
+            var serverState = _apiController.GetServerStateForServer(_serverSelectionIndex);
             bool isCurrentServer = _serverSelectionIndex == _serverConfigurationManager.CurrentServerIndex;
-            bool isConnectingOrConnected = isCurrentServer && _apiController.ServerState is ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting;
+            bool isConnectingOrConnected = isCurrentServer && serverState is ServerState.Connected or ServerState.Connecting or ServerState.Reconnecting;
             ImGui.SameLine();
             if (showMinifiedConnect)
             {
@@ -895,7 +893,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                             _serverConfigurationManager.Save();
                         }
 
-                        _ = _apiController.CreateConnectionsAsync();
+                        _ = _apiController.CreateConnectionsAsync(_serverSelectionIndex);
                     }
                 }
             }
@@ -906,13 +904,23 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 if (IconTextButton(FontAwesomeIcon.Link, text))
                 {
                     _serverConfigurationManager.SelectServer(_serverSelectionIndex);
-                    _ = _apiController.CreateConnectionsAsync();
+                    _ = _apiController.CreateConnectionsAsync(_serverSelectionIndex);
                 }
             }
 
         }
 
-        if (!hideServiceCreation && ImGui.TreeNode("Add Custom Service"))
+        if (!hideServiceCreation)
+        {
+            DrawAddCustomService();
+        }
+
+        return _serverSelectionIndex;
+    }
+
+    public void DrawAddCustomService()
+    {
+        if (ImGui.TreeNode("Add New Service"))
         {
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service Name", ref _customServerName, 255);
@@ -944,9 +952,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             }
             ImGui.TreePop();
         }
-
-
-        return _serverSelectionIndex;
     }
 
     public void DrawUIDComboForAuthentication(int indexOffset, Authentication item, string serverUri, ILogger? logger = null)
@@ -1062,9 +1067,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         return vector.X + vector2.X + ImGui.GetStyle().FramePadding.X * 2f + num;
     }
 
-    public bool IconButton(FontAwesomeIcon icon, float? height = null)
+    public bool IconButton(FontAwesomeIcon icon, string? uniqueId = null, float? height = null)
     {
         string text = icon.ToIconString();
+
+        if (!string.IsNullOrEmpty(uniqueId))
+            ImGui.PushID($"{text}-{uniqueId}");
+        else
+            ImGui.PushID(text);
 
         ImGui.PushID(text);
         Vector2 vector;

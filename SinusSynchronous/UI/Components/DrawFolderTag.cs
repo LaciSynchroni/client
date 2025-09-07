@@ -84,13 +84,13 @@ public class DrawFolderTag : DrawFolderBase
 
         if (RenderCount)
         {
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
-            {
-                ImGui.SameLine();
-                ImGui.AlignTextToFramePadding();
+            //using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, ImGui.GetStyle().ItemSpacing with { X = ImGui.GetStyle().ItemSpacing.X / 2f }))
+            //{
+            //    ImGui.SameLine();
+            //    ImGui.AlignTextToFramePadding();
 
-                ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
-            }
+            //    ImGui.TextUnformatted("[" + OnlinePairs.ToString() + "]");
+            //}
             UiSharedService.AttachToolTip(OnlinePairs + " online" + Environment.NewLine + TotalPairs + " total");
         }
         ImGui.SameLine();
@@ -166,25 +166,31 @@ public class DrawFolderTag : DrawFolderBase
 
     private void PauseRemainingPairs(IEnumerable<Pair> availablePairs)
     {
-        _ = _apiController.SetBulkPermissions(new(availablePairs
-            .ToDictionary(g => g.UserData.UID, g =>
+        foreach (IGrouping<int, Pair> grouping in availablePairs.GroupBy(pair => pair.ServerIndex, pair => pair))
         {
-            var perm = g.UserPair.OwnPermissions;
-            perm.SetPaused(paused: true);
-            return perm;
-        }, StringComparer.Ordinal), new(StringComparer.Ordinal)))
-            .ConfigureAwait(false);
+            _ = _apiController.SetBulkPermissions(grouping.Key, new(grouping
+                    .ToDictionary(g => g.UserData.UID, g =>
+                    {
+                        var perm = g.UserPair.OwnPermissions;
+                        perm.SetPaused(paused: true);
+                        return perm;
+                    }, StringComparer.Ordinal), new(StringComparer.Ordinal)))
+                .ConfigureAwait(false);
+        }
     }
 
     private void ResumeAllPairs(IEnumerable<Pair> availablePairs)
     {
-        _ = _apiController.SetBulkPermissions(new(availablePairs
-            .ToDictionary(g => g.UserData.UID, g =>
-            {
-                var perm = g.UserPair.OwnPermissions;
-                perm.SetPaused(paused: false);
-                return perm;
-            }, StringComparer.Ordinal), new(StringComparer.Ordinal)))
-            .ConfigureAwait(false);
+        foreach (IGrouping<int, Pair> grouping in availablePairs.GroupBy(pair => pair.ServerIndex, pair => pair))
+        {
+            _ = _apiController.SetBulkPermissions(grouping.Key, new(grouping
+                    .ToDictionary(g => g.UserData.UID, g =>
+                    {
+                        var perm = g.UserPair.OwnPermissions;
+                        perm.SetPaused(paused: false);
+                        return perm;
+                    }, StringComparer.Ordinal), new(StringComparer.Ordinal)))
+                .ConfigureAwait(false);
+        }
     }
 }

@@ -7,11 +7,13 @@ namespace SinusSynchronous.WebAPI.SignalR.Utils;
 public class ForeverRetryPolicy : IRetryPolicy
 {
     private readonly SinusMediator _mediator;
+    private readonly int _serverIndex;
     private bool _sentDisconnected = false;
 
-    public ForeverRetryPolicy(SinusMediator mediator)
+    public ForeverRetryPolicy(SinusMediator mediator, int serverIndex)
     {
         _mediator = mediator;
+        _serverIndex = serverIndex;
     }
 
     public TimeSpan? NextRetryDelay(RetryContext retryContext)
@@ -29,7 +31,7 @@ public class ForeverRetryPolicy : IRetryPolicy
             if (!_sentDisconnected)
             {
                 _mediator.Publish(new NotificationMessage("Connection lost", "Connection lost to server", NotificationType.Warning, TimeSpan.FromSeconds(10)));
-                _mediator.Publish(new DisconnectedMessage());
+                _mediator.Publish(new DisconnectedMessage(_serverIndex));
             }
             _sentDisconnected = true;
         }

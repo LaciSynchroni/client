@@ -20,17 +20,22 @@ public class Pair
     private readonly ILogger<Pair> _logger;
     private readonly SinusMediator _mediator;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    /// <summary>
+    /// The server from which this pair originates
+    /// </summary>
+    public readonly int ServerIndex;
     private CancellationTokenSource _applicationCts = new();
     private OnlineUserIdentDto? _onlineUserIdentDto = null;
 
     public Pair(ILogger<Pair> logger, UserFullPairDto userPair, PairHandlerFactory cachedPlayerFactory,
-        SinusMediator mediator, ServerConfigurationManager serverConfigurationManager)
+        SinusMediator mediator, ServerConfigurationManager serverConfigurationManager, int serverIndex)
     {
         _logger = logger;
         UserPair = userPair;
         _cachedPlayerFactory = cachedPlayerFactory;
         _mediator = mediator;
         _serverConfigurationManager = serverConfigurationManager;
+        ServerIndex = serverIndex;
     }
 
     public bool HasCachedPlayer => CachedPlayer != null && !string.IsNullOrEmpty(CachedPlayer.PlayerName) && _onlineUserIdentDto != null;
@@ -96,7 +101,7 @@ public class Pair
         args.AddMenuItem(new MenuItem()
         {
             Name = cyclePauseState,
-            OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(UserData)),
+            OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(ServerIndex, UserData)),
             UseDefaultPrefix = false,
             PrefixChar = 'M',
             PrefixColor = 526
@@ -172,7 +177,7 @@ public class Pair
 
     public string? GetNote()
     {
-        return _serverConfigurationManager.GetNoteForUid(UserData.UID);
+        return _serverConfigurationManager.GetNoteForUid(ServerIndex, UserData.UID);
     }
 
     public string GetPlayerNameHash()
@@ -206,7 +211,7 @@ public class Pair
 
     public void SetNote(string note)
     {
-        _serverConfigurationManager.SetNoteForUid(UserData.UID, note);
+        _serverConfigurationManager.SetNoteForUid(ServerIndex, UserData.UID, note);
     }
 
     internal void SetIsUploading()

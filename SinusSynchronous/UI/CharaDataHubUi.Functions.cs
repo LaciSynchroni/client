@@ -148,7 +148,7 @@ internal sealed partial class CharaDataHubUi
 			foreach (var favorite in _configService.Current.FavoriteCodes)
 			{
 				var uid = favorite.Key.Split(":")[0];
-				var note = _serverConfigurationManager.GetNoteForUid(uid) ?? string.Empty;
+				var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, uid) ?? string.Empty;
 				bool hasMetaInfo = _charaDataManager.TryGetMetaInfo(favorite.Key, out var metaInfo);
 				bool addFavorite =
 					(string.IsNullOrEmpty(_filterCodeNote)
@@ -183,7 +183,7 @@ internal sealed partial class CharaDataHubUi
 				.GroupBy(k => k.Uploader)
 				.ToDictionary(k =>
 				{
-					var note = _serverConfigurationManager.GetNoteForUid(k.Key.UID);
+					var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, k.Key.UID);
 					if (note == null) return k.Key.AliasOrUID;
 					return $"{note} ({k.Key.AliasOrUID})";
 				}, k => k.ToList(), StringComparer.OrdinalIgnoreCase)

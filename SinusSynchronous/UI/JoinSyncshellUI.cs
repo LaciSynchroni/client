@@ -11,6 +11,8 @@ using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI;
 using Microsoft.Extensions.Logging;
+using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.UI.Components;
 
 namespace SinusSynchronous.UI;
 
@@ -18,25 +20,45 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly UiSharedService _uiSharedService;
+    private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly ServerSelectorSmall _serverSelector;
+    
     private string _desiredSyncshellToJoin = string.Empty;
+    private int _desiredServerForSyncshell = 0;
+    
     private GroupJoinInfoDto? _groupJoinInfo = null;
     private DefaultPermissionsDto _ownPermissions = null!;
     private string _previousPassword = string.Empty;
     private string _syncshellPassword = string.Empty;
 
     public JoinSyncshellUI(ILogger<JoinSyncshellUI> logger, SinusMediator mediator,
-        UiSharedService uiSharedService, ApiController apiController, PerformanceCollectorService performanceCollectorService) 
+        UiSharedService uiSharedService, ApiController apiController, PerformanceCollectorService performanceCollectorService, ServerConfigurationManager serverConfigurationManager) 
         : base(logger, mediator, "Join existing Syncshell###SinusSynchronousJoinSyncshell", performanceCollectorService)
     {
         _uiSharedService = uiSharedService;
         _apiController = apiController;
+        _serverConfigurationManager = serverConfigurationManager;
+        _serverSelector = new ServerSelectorSmall(index =>
+        {
+            _desiredServerForSyncshell = index;
+            // Also update default permissions
+            // They must not be null because only connected servers can be connected
+            _ownPermissions = _apiController.GetDefaultPermissionsForServer(index)!.DeepClone();
+        });
         SizeConstraints = new()
         {
             MinimumSize = new(700, 400),
             MaximumSize = new(700, 400)
         };
-
-        Mediator.Subscribe<DisconnectedMessage>(this, (_) => IsOpen = false);
+        
+        Mediator.Subscribe<DisconnectedMessage>(this, (_) =>
+        {
+            // Only disconnect if we have no server left to join to. The selector will auto-swap to the next available server.
+            if (_apiController.ConnectedServerIndexes.Length <= 0)
+            {
+                IsOpen = false;
+            }
+        });
 
         Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize;
     }
@@ -47,7 +69,11 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
         _syncshellPassword = string.Empty;
         _previousPassword = string.Empty;
         _groupJoinInfo = null;
-        _ownPermissions = _apiController.DefaultPermissions.DeepClone()!;
+        var defaultPermissionsForServer = _apiController.GetDefaultPermissionsForServer(_desiredServerForSyncshell);
+        if (defaultPermissionsForServer != null)
+        {
+            _ownPermissions = defaultPermissionsForServer.DeepClone();
+        }
     }
 
     protected override void DrawInternal()
@@ -59,12 +85,17 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
         if (_groupJoinInfo == null || !_groupJoinInfo.Success)
         {
             UiSharedService.TextWrapped("Here you can join existing Syncshells. " +
-                "Please keep in mind that you cannot join more than " + _apiController.ServerInfo.MaxGroupsJoinedByUser + " syncshells on this server." + Environment.NewLine +
+                "Please keep in mind that you cannot join more than " + _apiController.GetMaxGroupsJoinedByUser(_desiredServerForSyncshell) + " syncshells on this server." + Environment.NewLine +
                 "Joining a Syncshell will pair you implicitly with all existing users in the Syncshell." + Environment.NewLine +
                 "All permissions to all users in the Syncshell will be set to the preferred Syncshell permissions on joining, excluding prior set preferred permissions.");
             ImGui.Separator();
             ImGui.TextUnformatted("Note: Syncshell ID and Password are case sensitive. MSS- is part of Syncshell IDs, unless using Vanity IDs.");
 
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted("Syncshell Server");
+            ImGui.SameLine(200);
+            _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 400);
+            
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("Syncshell ID");
             ImGui.SameLine(200);
@@ -74,11 +105,13 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             ImGui.TextUnformatted("Syncshell Password");
             ImGui.SameLine(200);
             ImGui.InputTextWithHint("##syncshellpw", "Password", ref _syncshellPassword, 50, ImGuiInputTextFlags.Password);
+            
+            // TODO disable when there is no more joins left
             using (ImRaii.Disabled(string.IsNullOrEmpty(_desiredSyncshellToJoin) || string.IsNullOrEmpty(_syncshellPassword)))
             {
                 if (_uiSharedService.IconTextButton(Dalamud.Interface.FontAwesomeIcon.Plus, "Join Syncshell"))
                 {
-                    _groupJoinInfo = _apiController.GroupJoin(new GroupPasswordDto(new API.Data.GroupData(_desiredSyncshellToJoin), _syncshellPassword)).Result;
+                    _groupJoinInfo = _apiController.GroupJoinForServer(_desiredServerForSyncshell, new GroupPasswordDto(new API.Data.GroupData(_desiredSyncshellToJoin), _syncshellPassword)).Result;
                     _previousPassword = _syncshellPassword;
                     _syncshellPassword = string.Empty;
                 }
@@ -173,7 +206,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
                 joinPermissions.SetDisableSounds(_ownPermissions.DisableGroupSounds);
                 joinPermissions.SetDisableAnimations(_ownPermissions.DisableGroupAnimations);
                 joinPermissions.SetDisableVFX(_ownPermissions.DisableGroupVFX);
-                _ = _apiController.GroupJoinFinalize(new GroupJoinDto(_groupJoinInfo.Group, _previousPassword, joinPermissions));
+                _ = _apiController.GroupJoinForServer(_desiredServerForSyncshell, new GroupJoinDto(_groupJoinInfo.Group, _previousPassword, joinPermissions));
                 IsOpen = false;
             }
         }

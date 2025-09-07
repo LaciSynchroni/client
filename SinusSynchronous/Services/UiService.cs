@@ -59,7 +59,7 @@ public sealed class UiService : DisposableMediatorSubscriberBase
             if (!_createdWindows.Exists(p => p is SyncshellAdminUI ui
                 && string.Equals(ui.GroupFullInfo.GID, msg.GroupInfo.GID, StringComparison.Ordinal)))
             {
-                var window = _uiFactory.CreateSyncshellAdminUi(msg.GroupInfo);
+                var window = _uiFactory.CreateSyncshellAdminUi(msg.GroupInfo, msg.ServerIndex);
                 _createdWindows.Add(window);
                 _windowSystem.AddWindow(window);
             }

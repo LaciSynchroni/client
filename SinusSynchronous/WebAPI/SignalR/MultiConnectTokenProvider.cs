@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.API.Routes;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
@@ -12,20 +12,25 @@ using System.Reflection;
 
 namespace SinusSynchronous.WebAPI.SignalR;
 
-public sealed class TokenProvider : IDisposable, IMediatorSubscriber
+public sealed class MultiConnectTokenProvider : IDisposable, IMediatorSubscriber
 {
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<TokenProvider> _logger;
     private readonly ServerConfigurationManager _serverManager;
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<MultiConnectTokenProvider> _logger;
+    private readonly int _serverIndex;
     private readonly ConcurrentDictionary<JwtIdentifier, string> _tokenCache = new();
 
-    public TokenProvider(ILogger<TokenProvider> logger, ServerConfigurationManager serverManager, DalamudUtilService dalamudUtil, SinusMediator sinusMediator, HttpClient httpClient)
+    private ServerStorage ServerToUse => _serverManager.GetServerByIndex(_serverIndex);
+
+    public MultiConnectTokenProvider(ILogger<MultiConnectTokenProvider> logger, int serverIndex,
+        ServerConfigurationManager serverManager, DalamudUtilService dalamudUtil, SinusMediator sinusMediator,
+        HttpClient httpClient)
     {
         _logger = logger;
-        _serverManager = serverManager;
         _dalamudUtil = dalamudUtil;
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        _serverManager = serverManager;
+        _serverIndex = serverIndex;
         Mediator = sinusMediator;
         _httpClient = httpClient;
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) =>
@@ -61,32 +66,36 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             {
                 _logger.LogDebug("GetNewToken: Requesting");
 
-                if (!_serverManager.CurrentServer.UseOAuth2)
+                if (!ServerToUse.UseOAuth2)
                 {
-                    tokenUri = SinusAuth.AuthFullPath(new Uri(_serverManager.CurrentApiUrl
+                    tokenUri = SinusAuth.AuthFullPath(new Uri(ServerToUse.ServerUri
                         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                    var secretKey = _serverManager.GetSecretKey(out _)!;
+                    var secretKey = _serverManager.GetSecretKey(out _, _serverIndex)!;
                     var auth = secretKey.GetHash256();
-                    _logger.LogInformation("Sending SecretKey Request to server with auth {auth}", string.Join("", identifier.SecretKeyOrOAuth.Take(10)));
+                    _logger.LogInformation("Sending SecretKey Request to server with auth {auth}",
+                        string.Join("", identifier.SecretKeyOrOAuth.Take(10)));
                     result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent(
                     [
-                            new KeyValuePair<string, string>("auth", auth),
-                            new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
+                        new KeyValuePair<string, string>("auth", auth),
+                        new KeyValuePair<string, string>("charaIdent",
+                            await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
                     ]), ct).ConfigureAwait(false);
                 }
                 else
                 {
-                    tokenUri = SinusAuth.AuthWithOauthFullPath(new Uri(_serverManager.CurrentApiUrl
+                    tokenUri = SinusAuth.AuthWithOauthFullPath(new Uri(ServerToUse.ServerUri
                         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenUri.ToString());
                     request.Content = new FormUrlEncodedContent([
                         new KeyValuePair<string, string>("uid", identifier.UID),
                         new KeyValuePair<string, string>("charaIdent", identifier.CharaHash)
-                        ]);
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", identifier.SecretKeyOrOAuth);
-                    _logger.LogInformation("Sending OAuth Request to server with auth {auth}", string.Join("", identifier.SecretKeyOrOAuth.Take(10)));
+                    ]);
+                    request.Headers.Authorization =
+                        new AuthenticationHeaderValue("Bearer", identifier.SecretKeyOrOAuth);
+                    _logger.LogInformation("Sending OAuth Request to server with auth {auth}",
+                        string.Join("", identifier.SecretKeyOrOAuth.Take(10)));
                     result = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
                 }
             }
@@ -94,7 +103,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             {
                 _logger.LogDebug("GetNewToken: Renewal");
 
-                tokenUri = SinusAuth.RenewTokenFullPath(new Uri(_serverManager.CurrentApiUrl
+                tokenUri = SinusAuth.RenewTokenFullPath(new Uri(ServerToUse.ServerUri
                     .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                     .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                 HttpRequestMessage request = new(HttpMethod.Get, tokenUri.ToString());
@@ -115,12 +124,14 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
                 if (isRenewal)
-                    Mediator.Publish(new NotificationMessage("Error refreshing token", "Your authentication token could not be renewed. Try reconnecting to Sinus manually.",
-                    NotificationType.Error));
+                    Mediator.Publish(new NotificationMessage("Error refreshing token",
+                        "Your authentication token could not be renewed. Try reconnecting to Sinus manually.",
+                        NotificationType.Error));
                 else
-                    Mediator.Publish(new NotificationMessage("Error generating token", "Your authentication token could not be generated. Check Sinus Main UI (/sinus in chat) to see the error message.",
-                    NotificationType.Error));
-                Mediator.Publish(new DisconnectedMessage());
+                    Mediator.Publish(new NotificationMessage("Error generating token",
+                        "Your authentication token could not be generated. Check Sinus Main UI (/sinus in chat) to see the error message.",
+                        NotificationType.Error));
+                Mediator.Publish(new DisconnectedMessage(_serverIndex));
                 throw new SinusAuthFailureException(response);
             }
 
@@ -131,7 +142,10 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
         var jwtToken = handler.ReadJwtToken(response);
         _logger.LogTrace("GetNewToken: JWT {token}", response);
         _logger.LogDebug("GetNewToken: Valid until {date}, ValidClaim until {date}", jwtToken.ValidTo,
-                new DateTime(long.Parse(jwtToken.Claims.Single(c => string.Equals(c.Type, "expiration_date", StringComparison.Ordinal)).Value), DateTimeKind.Utc));
+            new DateTime(
+                long.Parse(jwtToken.Claims
+                    .Single(c => string.Equals(c.Type, "expiration_date", StringComparison.Ordinal)).Value),
+                DateTimeKind.Utc));
         var dateTimeMinus10 = DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(10));
         var dateTimePlus10 = DateTime.UtcNow.Add(TimeSpan.FromMinutes(10));
         var tokenTime = jwtToken.ValidTo.Subtract(TimeSpan.FromHours(6));
@@ -139,11 +153,13 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
         {
             _tokenCache.TryRemove(identifier, out _);
             Mediator.Publish(new NotificationMessage("Invalid system clock", "The clock of your computer is invalid. " +
-                "Sinus will not function properly if the time zone is not set correctly. " +
-                "Please set your computers time zone correctly and keep your clock synchronized with the internet.",
+                                                                             "Sinus will not function properly if the time zone is not set correctly. " +
+                                                                             "Please set your computers time zone correctly and keep your clock synchronized with the internet.",
                 NotificationType.Error));
-            throw new InvalidOperationException($"JwtToken is behind DateTime.UtcNow, DateTime.UtcNow is possibly wrong. DateTime.UtcNow is {DateTime.UtcNow}, JwtToken.ValidTo is {jwtToken.ValidTo}");
+            throw new InvalidOperationException(
+                $"JwtToken is behind DateTime.UtcNow, DateTime.UtcNow is possibly wrong. DateTime.UtcNow is {DateTime.UtcNow}, JwtToken.ValidTo is {jwtToken.ValidTo}");
         }
+
         return response;
     }
 
@@ -156,29 +172,31 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
 
             if (string.IsNullOrEmpty(playerIdentifier))
             {
-                _logger.LogTrace("GetIdentifier: PlayerIdentifier was null, returning last identifier {identifier}", _lastJwtIdentifier);
+                _logger.LogTrace("GetIdentifier: PlayerIdentifier was null, returning last identifier {identifier}",
+                    _lastJwtIdentifier);
                 return _lastJwtIdentifier;
             }
 
-            if (_serverManager.CurrentServer.UseOAuth2)
+            if (ServerToUse.UseOAuth2)
             {
-                var (OAuthToken, UID) = _serverManager.GetOAuth2(out _)
-                    ?? throw new InvalidOperationException("Requested OAuth2 but received null");
+                var (OAuthToken, UID) = _serverManager.GetOAuth2(out _, _serverIndex)
+                                        ?? throw new InvalidOperationException("Requested OAuth2 but received null");
 
-                jwtIdentifier = new(_serverManager.CurrentApiUrl,
+                jwtIdentifier = new(ServerToUse.ServerUri,
                     playerIdentifier,
                     UID, OAuthToken);
             }
             else
             {
-                var secretKey = _serverManager.GetSecretKey(out _)
-                    ?? throw new InvalidOperationException("Requested SecretKey but received null");
+                var secretKey = _serverManager.GetSecretKey(out _, _serverIndex) ??
+                                throw new InvalidOperationException("Requested SecretKey but received null");
 
-                jwtIdentifier = new(_serverManager.CurrentApiUrl,
-                                    playerIdentifier,
-                                    string.Empty,
-                                    secretKey);
+                jwtIdentifier = new(ServerToUse.ServerUri,
+                    playerIdentifier,
+                    string.Empty,
+                    secretKey);
             }
+
             _lastJwtIdentifier = jwtIdentifier;
         }
         catch (Exception ex)
@@ -189,7 +207,9 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                 return null;
             }
 
-            _logger.LogWarning(ex, "GetIdentifier: Could not get JwtIdentifier for some reason or another, reusing last identifier {identifier}", _lastJwtIdentifier);
+            _logger.LogWarning(ex,
+                "GetIdentifier: Could not get JwtIdentifier for some reason or another, reusing last identifier {identifier}",
+                _lastJwtIdentifier);
             jwtIdentifier = _lastJwtIdentifier;
         }
 
@@ -225,7 +245,9 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                 return token;
             }
 
-            _logger.LogDebug("GetOrUpdate: Cached token requires renewal, token valid to: {valid}, UtcTime is {utcTime}", jwt.ValidTo, DateTime.UtcNow);
+            _logger.LogDebug(
+                "GetOrUpdate: Cached token requires renewal, token valid to: {valid}, UtcTime is {utcTime}",
+                jwt.ValidTo, DateTime.UtcNow);
             renewal = true;
         }
         else
@@ -239,7 +261,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
 
     public async Task<bool> TryUpdateOAuth2LoginTokenAsync(ServerStorage currentServer, bool forced = false)
     {
-        var oauth2 = _serverManager.GetOAuth2(out _);
+        var oauth2 = _serverManager.GetOAuth2(out _, _serverIndex);
         if (oauth2 == null) return false;
 
         var handler = new JwtSecurityTokenHandler();
@@ -258,7 +280,8 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenUri.ToString());
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", oauth2.Value.OAuthToken);
-        _logger.LogInformation("Sending Request to server with auth {auth}", string.Join("", oauth2.Value.OAuthToken.Take(10)));
+        _logger.LogInformation("Sending Request to server with auth {auth}",
+            string.Join("", oauth2.Value.OAuthToken.Take(10)));
         var result = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
         if (!result.IsSuccessStatusCode)

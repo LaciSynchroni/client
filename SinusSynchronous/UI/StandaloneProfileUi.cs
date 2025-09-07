@@ -51,7 +51,8 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
         {
             var spacing = ImGui.GetStyle().ItemSpacing;
 
-            var sinusProfile = _sinusProfileManager.GetSinusProfile(Pair.UserData);
+            var msg = new ServerBasedUserKey(Pair.UserData, Pair.ServerIndex);
+            var sinusProfile = _sinusProfileManager.GetSinusProfile(msg);
 
             if (_textureWrap == null || !sinusProfile.ImageData.Value.SequenceEqual(_lastProfilePicture))
             {
@@ -112,7 +113,7 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             ImGui.EndChildFrame();
 
             ImGui.SetCursorPosY(postDummy);
-            var note = _serverManager.GetNoteForUid(Pair.UserData.UID);
+            var note = _serverManager.GetNoteForUid(Pair.ServerIndex, Pair.UserData.UID);
             if (!string.IsNullOrEmpty(note))
             {
                 UiSharedService.ColorText(note, ImGuiColors.DalamudGrey);
@@ -139,13 +140,13 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
                 }
             }
 
-            if (Pair.UserPair.Groups.Any())
+            if (Pair.UserPair?.Groups.Count > 0)
             {
                 ImGui.TextUnformatted("Paired through Syncshells:");
                 foreach (var group in Pair.UserPair.Groups)
                 {
-                    var groupNote = _serverManager.GetNoteForGid(group);
-                    var groupName = _pairManager.GroupPairs.First(f => string.Equals(f.Key.GID, group, StringComparison.Ordinal)).Key.GroupAliasOrGID;
+                    var groupNote = _serverManager.GetNoteForGid(Pair.ServerIndex, group);
+                    var groupName = _pairManager.GroupPairs.First(f => string.Equals(f.Key.GroupFullInfo.GID, group, StringComparison.Ordinal)).Key.GroupFullInfo.GroupAliasOrGID;
                     var groupString = string.IsNullOrEmpty(groupNote) ? groupName : $"{groupNote} ({groupName})";
                     ImGui.TextUnformatted("- " + groupString);
                 }

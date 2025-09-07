@@ -126,22 +126,22 @@ public sealed class DtrEntry : IDisposable, IHostedService
         string text;
         string tooltip;
         Colors colors;
-        if (_apiController.IsConnected)
+        if (_apiController.AnyServerConnected)
         {
-            var pairCount = _pairManager.GetVisibleUserCount();
+            var pairCount = _pairManager.GetVisibleUserCountAcrossAllServers();
             text = $"\uE044 {pairCount}";
             if (pairCount > 0)
             {
                 IEnumerable<string> visiblePairs;
                 if (_configService.Current.ShowUidInDtrTooltip)
                 {
-                    visiblePairs = _pairManager.GetOnlineUserPairs()
+                    visiblePairs = _pairManager.GetOnlineUserPairsAcrossAllServers()
                         .Where(x => x.IsVisible)
                         .Select(x => string.Format("{0} ({1})", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName, x.UserData.AliasOrUID));
                 }
                 else
                 {
-                    visiblePairs = _pairManager.GetOnlineUserPairs()
+                    visiblePairs = _pairManager.GetOnlineUserPairsAcrossAllServers()
                         .Where(x => x.IsVisible)
                         .Select(x => string.Format("{0}", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName));
                 }

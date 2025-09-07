@@ -70,7 +70,7 @@ public sealed class CommandManagerService : IDisposable
 
         if (string.Equals(splitArgs[0], "toggle", StringComparison.OrdinalIgnoreCase))
         {
-            if (_apiController.ServerState == WebAPI.SignalR.Utils.ServerState.Disconnecting)
+            if (_apiController.AnyServerDisconnecting)
             {
                 _mediator.Publish(new NotificationMessage("Sinus disconnecting", "Cannot use /toggle while Sinus Synchronous is still disconnecting",
                     NotificationType.Error));
@@ -88,7 +88,7 @@ public sealed class CommandManagerService : IDisposable
             {
                 _serverConfigurationManager.CurrentServer.FullPause = fullPause;
                 _serverConfigurationManager.Save();
-                _ = _apiController.CreateConnectionsAsync();
+                _ = _apiController.CreateConnectionsAsync(_serverConfigurationManager.CurrentServerIndex);
             }
         }
         else if (string.Equals(splitArgs[0], "gpose", StringComparison.OrdinalIgnoreCase))

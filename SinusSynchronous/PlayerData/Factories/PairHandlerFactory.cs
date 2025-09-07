@@ -23,12 +23,13 @@ public class PairHandlerFactory
     private readonly PlayerPerformanceService _playerPerformanceService;
     private readonly ServerConfigurationManager _serverConfigManager;
     private readonly PluginWarningNotificationService _pluginWarningNotificationManager;
+    private readonly ConcurrentPairLockService _concurrentPairLockService;
 
     public PairHandlerFactory(ILoggerFactory loggerFactory, GameObjectHandlerFactory gameObjectHandlerFactory, IpcManager ipcManager,
         FileDownloadManagerFactory fileDownloadManagerFactory, DalamudUtilService dalamudUtilService,
         PluginWarningNotificationService pluginWarningNotificationManager, IHostApplicationLifetime hostApplicationLifetime,
         FileCacheManager fileCacheManager, SinusMediator sinusMediator, PlayerPerformanceService playerPerformanceService,
-        ServerConfigurationManager serverConfigManager)
+        ServerConfigurationManager serverConfigManager, ConcurrentPairLockService concurrentPairLockService)
     {
         _loggerFactory = loggerFactory;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -41,12 +42,13 @@ public class PairHandlerFactory
         _sinusMediator = sinusMediator;
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
+        _concurrentPairLockService = concurrentPairLockService;
     }
 
     public PairHandler Create(Pair pair)
     {
         return new PairHandler(_loggerFactory.CreateLogger<PairHandler>(), pair, _gameObjectHandlerFactory,
             _ipcManager, _fileDownloadManagerFactory.Create(), _pluginWarningNotificationManager, _dalamudUtilService, _hostApplicationLifetime,
-            _fileCacheManager, _sinusMediator, _playerPerformanceService, _serverConfigManager);
+            _fileCacheManager, _sinusMediator, _playerPerformanceService, _serverConfigManager, _concurrentPairLockService);
     }
 }

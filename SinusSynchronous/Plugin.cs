@@ -97,7 +97,6 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<ServerConfigurationManager>();
             collection.AddSingleton<ApiController>();
             collection.AddSingleton<PerformanceCollectorService>();
-            collection.AddSingleton<HubFactory>();
             collection.AddSingleton<FileUploadManager>();
             collection.AddSingleton<FileTransferOrchestrator>();
             collection.AddSingleton<SinusPlugin>();
@@ -108,7 +107,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<PairFactory>();
             collection.AddSingleton<XivDataAnalyzer>();
             collection.AddSingleton<CharacterAnalyzer>();
-            collection.AddSingleton<TokenProvider>();
+            collection.AddSingleton<MultiConnectTokenService>();
             collection.AddSingleton<PluginWarningNotificationService>();
             collection.AddSingleton<FileCompactor>();
             collection.AddSingleton<TagHandler>();
@@ -190,7 +189,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<ConfigurationMigrator>();
             collection.AddSingleton<ConfigurationSaveService>();
 
-            collection.AddSingleton<HubFactory>();
+            collection.AddSingleton<ConcurrentPairLockService>();
 
             // add scoped services
             collection.AddScoped<DrawEntityFactory>();
@@ -210,7 +209,7 @@ public sealed class Plugin : IDalamudPlugin
 
             collection.AddScoped<WindowMediatorSubscriberBase, EditProfileUi>((s) => new EditProfileUi(s.GetRequiredService<ILogger<EditProfileUi>>(),
                 s.GetRequiredService<SinusMediator>(), s.GetRequiredService<ApiController>(), s.GetRequiredService<UiSharedService>(), s.GetRequiredService<FileDialogManager>(),
-                s.GetRequiredService<SinusProfileManager>(), s.GetRequiredService<PerformanceCollectorService>()));
+                s.GetRequiredService<SinusProfileManager>(), s.GetRequiredService<PerformanceCollectorService>(), s.GetRequiredService<ServerConfigurationManager>()));
             collection.AddScoped<WindowMediatorSubscriberBase, PopupHandler>();
             collection.AddScoped<IPopupHandler, BanUserPopupHandler>();
             collection.AddScoped<IPopupHandler, CensusPopupHandler>();
@@ -226,7 +225,7 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<SinusMediator>(), s.GetRequiredService<SinusConfigService>()));
             collection.AddScoped((s) => new UiSharedService(s.GetRequiredService<ILogger<UiSharedService>>(), s.GetRequiredService<IpcManager>(), s.GetRequiredService<ApiController>(),
                 s.GetRequiredService<CacheMonitor>(), s.GetRequiredService<FileDialogManager>(), s.GetRequiredService<SinusConfigService>(), s.GetRequiredService<DalamudUtilService>(),
-                pluginInterface, textureProvider, s.GetRequiredService<Dalamud.Localization>(), s.GetRequiredService<ServerConfigurationManager>(), s.GetRequiredService<TokenProvider>(),
+                pluginInterface, textureProvider, s.GetRequiredService<Dalamud.Localization>(), s.GetRequiredService<ServerConfigurationManager>(), s.GetRequiredService<MultiConnectTokenService>(),
                 s.GetRequiredService<SinusMediator>()));
 
             collection.AddHostedService(p => p.GetRequiredService<ConfigurationSaveService>());

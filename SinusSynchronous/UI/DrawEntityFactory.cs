@@ -1,13 +1,13 @@
-﻿using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.SinusConfiguration;
+﻿using Microsoft.Extensions.Logging;
+using SinusSynchronous.API.Dto.Group;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.UI.Components;
 using SinusSynchronous.UI.Handlers;
 using SinusSynchronous.WebAPI;
-using Microsoft.Extensions.Logging;
 using System.Collections.Immutable;
 
 namespace SinusSynchronous.UI;
@@ -45,12 +45,14 @@ public class DrawEntityFactory
         _charaDataManager = charaDataManager;
     }
 
-    public DrawFolderGroup CreateDrawGroupFolder(GroupFullInfoDto groupFullInfoDto,
+    public DrawFolderGroup CreateDrawGroupFolder(GroupFullInfoWithServer groupFullInfoDto,
         Dictionary<Pair, List<GroupFullInfoDto>> filteredPairs,
         IImmutableList<Pair> allPairs)
     {
-        return new DrawFolderGroup(groupFullInfoDto.Group.GID, groupFullInfoDto, _apiController,
-            filteredPairs.Select(p => CreateDrawPair(groupFullInfoDto.Group.GID + p.Key.UserData.UID, p.Key, p.Value, groupFullInfoDto)).ToImmutableList(),
+        var imguiId = groupFullInfoDto.GroupFullInfo.GID + groupFullInfoDto.ServerIndex;
+        var pairsToRender = filteredPairs.Select(p => CreateDrawPair(groupFullInfoDto, p)).ToImmutableList();
+        return new DrawFolderGroup(imguiId, groupFullInfoDto.ServerIndex, groupFullInfoDto.GroupFullInfo, _apiController,
+            pairsToRender,
             allPairs, _tagHandler, _uidDisplayHandler, _mediator, _uiSharedService);
     }
 
@@ -61,11 +63,20 @@ public class DrawEntityFactory
         return new(tag, filteredPairs.Select(u => CreateDrawPair(tag, u.Key, u.Value, null)).ToImmutableList(),
             allPairs, _tagHandler, _apiController, _selectPairForTagUi, _uiSharedService);
     }
-
+    
     public DrawUserPair CreateDrawPair(string id, Pair user, List<GroupFullInfoDto> groups, GroupFullInfoDto? currentGroup)
     {
         return new DrawUserPair(id + user.UserData.UID, user, groups, currentGroup, _apiController, _uidDisplayHandler,
             _mediator, _selectTagForPairUi, _serverConfigurationManager, _uiSharedService, _playerPerformanceConfigService,
             _charaDataManager);
     }
+
+    private DrawUserPair CreateDrawPair(GroupFullInfoWithServer groupFullInfoWithServer, KeyValuePair<Pair, List<GroupFullInfoDto>> filteredPairs)
+    {
+        var pair = filteredPairs.Key;
+        var groups = filteredPairs.Value;
+        var id = groupFullInfoWithServer.GroupFullInfo.Group.GID + pair.UserData.UID;
+        return CreateDrawPair(id, pair, groups, groupFullInfoWithServer.GroupFullInfo);
+    }
+    
 }

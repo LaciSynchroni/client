@@ -14,7 +14,9 @@ using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
+using SinusSynchronous.UI.Components;
 using SinusSynchronous.Utils;
+using SinusSynchronous.WebAPI;
 
 namespace SinusSynchronous.UI;
 
@@ -30,6 +32,8 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     private readonly CharaDataGposeTogetherManager _charaDataGposeTogetherManager;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiSharedService;
+    private readonly ServerSelectorSmall _serverSelector;
+    private readonly ApiController _apiController;
     private CancellationTokenSource _closalCts = new();
     private bool _disableUI = false;
     private CancellationTokenSource _disposalCts = new();
@@ -49,6 +53,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     private bool _openMcdOnlineOnNextRun = false;
     private bool _readExport;
     private string _selectedDtoId = string.Empty;
+    private int _selectedServerIndex = 0;
     private string SelectedDtoId
     {
         get => _selectedDtoId;
@@ -78,7 +83,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                          CharaDataManager charaDataManager, CharaDataNearbyManager charaDataNearbyManager, CharaDataConfigService configService,
                          UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager,
                          DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager, PairManager pairManager,
-                         CharaDataGposeTogetherManager charaDataGposeTogetherManager)
+                         CharaDataGposeTogetherManager charaDataGposeTogetherManager, ApiController apiController)
         : base(logger, mediator, "Sinus Synchronous Character Data Hub###SinusSynchronousCharaDataUI", performanceCollectorService)
     {
         SetWindowSizeConstraints();
@@ -92,6 +97,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _fileDialogManager = fileDialogManager;
         _pairManager = pairManager;
         _charaDataGposeTogetherManager = charaDataGposeTogetherManager;
+        _apiController = apiController;
         Mediator.Subscribe<GposeStartMessage>(this, (_) => IsOpen |= _configService.Current.OpenSinusHubOnGposeStart);
         Mediator.Subscribe<OpenCharaDataHubWithFilterMessage>(this, (msg) =>
         {
@@ -100,6 +106,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
             _sharedWithYouOwnerFilter = msg.UserData.AliasOrUID;
             UpdateFilteredItems();
         });
+        _serverSelector = new ServerSelectorSmall(index => _selectedServerIndex = index);
     }
 
     private bool _openDataApplicationShared = false;
@@ -174,6 +181,9 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
             UiSharedService.DistanceSeparator();
         }
 
+        var availableWidth = ImGui.GetWindowContentRegionMax().X;
+        _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, availableWidth);
+        
         using var disabled = ImRaii.Disabled(_disableUI);
 
         DisableDisabled(() =>
@@ -533,7 +543,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                         {
                             if (_uiSharedService.IconButton(FontAwesomeIcon.ArrowsSpin))
                             {
-                                _charaDataManager.DownloadMetaInfo(favorite.Key, false);
+                                _charaDataManager.DownloadMetaInfo(_selectedServerIndex, favorite.Key, false);
                                 UpdateFilteredItems();
                             }
                         }
@@ -545,7 +555,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                         {
                             if (_uiSharedService.IconButton(FontAwesomeIcon.ArrowRight))
                             {
-                                _ = _charaDataManager.ApplyCharaDataToGposeTarget(metaInfo!);
+                                _ = _charaDataManager.ApplyCharaDataToGposeTarget(_selectedServerIndex, metaInfo!);
                             }
                         }, "Apply Character Data to GPose Target", metaInfo, _hasValidGposeTarget, false);
                         ImGui.SameLine();
@@ -553,7 +563,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                         {
                             if (_uiSharedService.IconButton(FontAwesomeIcon.Plus))
                             {
-                                _ = _charaDataManager.SpawnAndApplyData(meta!);
+                                _ = _charaDataManager.SpawnAndApplyData(_selectedServerIndex, meta!);
                             }
                         }, "Spawn Actor with Brio and apply Character Data", metaInfo, _hasValidGposeTarget, true);
 
@@ -568,7 +578,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                             uidText = uid;
                         }
 
-                        var note = _serverConfigurationManager.GetNoteForUid(uid);
+                        var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, uid);
                         if (note != null)
                         {
                             uidText = $"{note} ({uidText})";
@@ -619,14 +629,14 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                 {
                     if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Get Info from Code"))
                     {
-                        _charaDataManager.DownloadMetaInfo(_importCode);
+                        _charaDataManager.DownloadMetaInfo(_selectedServerIndex, _importCode);
                     }
                 }
                 GposeMetaInfoAction((meta) =>
                 {
                     if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowRight, $"Download and Apply"))
                     {
-                        _ = _charaDataManager.ApplyCharaDataToGposeTarget(meta!);
+                        _ = _charaDataManager.ApplyCharaDataToGposeTarget(_selectedServerIndex, meta!);
                     }
                 }, "Apply this Character Data to the current GPose actor", _charaDataManager.LastDownloadedMetaInfo, _hasValidGposeTarget, false);
                 ImGui.SameLine();
@@ -634,7 +644,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                 {
                     if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, $"Download and Spawn"))
                     {
-                        _ = _charaDataManager.SpawnAndApplyData(meta!);
+                        _ = _charaDataManager.SpawnAndApplyData(_selectedServerIndex, meta!);
                     }
                 }, "Spawn a new Brio actor and apply this Character Data", _charaDataManager.LastDownloadedMetaInfo, _hasValidGposeTarget, true);
                 ImGui.SameLine();
@@ -689,7 +699,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                 {
                     if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Download your Character Data"))
                     {
-                        _ = _charaDataManager.GetAllData(_disposalCts.Token);
+                        _ = _charaDataManager.GetAllData(_selectedServerIndex, _disposalCts.Token);
                     }
                 }
                 if (_charaDataManager.DataGetTimeoutTask != null && !_charaDataManager.DataGetTimeoutTask.IsCompleted)
@@ -756,7 +766,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                     _filteredDict = _charaDataManager.SharedWithYouData
                         .ToDictionary(k =>
                         {
-                            var note = _serverConfigurationManager.GetNoteForUid(k.Key.UID);
+                            var note = _serverConfigurationManager.GetNoteForUid(_selectedServerIndex, k.Key.UID);
                             if (note == null) return k.Key.AliasOrUID;
                             return $"{note} ({k.Key.AliasOrUID})";
                         }, k => k.Value, StringComparer.OrdinalIgnoreCase)
@@ -937,7 +947,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
             {
                 if (_uiSharedService.IconButton(FontAwesomeIcon.ArrowRight))
                 {
-                    _ = _charaDataManager.ApplyCharaDataToGposeTarget(meta!);
+                    _ = _charaDataManager.ApplyCharaDataToGposeTarget(_selectedServerIndex, meta!);
                 }
             }, $"Apply Character data to {CharaName(selectedGposeActor)}", data, hasValidGposeTarget, false);
             ImGui.SameLine();
@@ -945,7 +955,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
             {
                 if (_uiSharedService.IconButton(FontAwesomeIcon.Plus))
                 {
-                    _ = _charaDataManager.SpawnAndApplyData(meta!);
+                    _ = _charaDataManager.SpawnAndApplyData(_selectedServerIndex, meta!);
                 }
             }, "Spawn and Apply Character data", data, hasValidGposeTarget, true);
 
