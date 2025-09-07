@@ -1064,7 +1064,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     {
         string text = icon.ToIconString();
 
-        if (string.IsNullOrEmpty(uniqueId))
+        if (!string.IsNullOrEmpty(uniqueId))
             ImGui.PushID($"{text}-{uniqueId}");
         else
             ImGui.PushID(text);

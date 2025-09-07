@@ -56,10 +56,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SinusAPI\SinusSynchronousAPI\SinusSynchronous.API.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="CheapLoc">
       <HintPath>$(DalamudLibPath)CheapLoc.dll</HintPath>
       <Private>false</Private>
@@ -80,6 +76,10 @@
 
   <ItemGroup>
     <Folder Include="MultiConnectAPI\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SinusAPI\SinusSynchronousAPI\SinusSynchronous.API.csproj" />
   </ItemGroup>
 
 </Project>

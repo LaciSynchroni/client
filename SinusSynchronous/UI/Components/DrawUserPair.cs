@@ -349,9 +349,25 @@ public class DrawUserPair
 
         ImGui.SameLine(currentRightSide);
         ImGui.AlignTextToFramePadding();
-        if (_uiSharedService.IconButton(FontAwesomeIcon.EllipsisV, _pair.ServerIndex.ToString()))
+        if (_uiSharedService.IconButton(FontAwesomeIcon.EllipsisV, _id.ToString()))
         {
             ImGui.OpenPopup("User Flyout Menu");
+        }
+        if (ImGui.BeginPopup("User Flyout Menu"))
+        {
+            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}"))
+            {
+                ImGui.TextUnformatted("Common Pair Functions");
+                DrawCommonClientMenu();
+                ImGui.Separator();
+                DrawPairedClientMenu();
+                if (_menuWidth <= 0)
+                {
+                    _menuWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X;
+                }
+            }
+
+            ImGui.EndPopup();
         }
 
         currentRightSide -= (pauseButtonSize.X + spacingX);
@@ -508,23 +524,6 @@ public class DrawUserPair
                 _uiSharedService.IconText(icon);
                 UiSharedService.AttachToolTip(text);
             }
-        }
-
-        if (ImGui.BeginPopup("User Flyout Menu"))
-        {
-            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}"))
-            {
-                ImGui.TextUnformatted("Common Pair Functions");
-                DrawCommonClientMenu();
-                ImGui.Separator();
-                DrawPairedClientMenu();
-                if (_menuWidth <= 0)
-                {
-                    _menuWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X;
-                }
-            }
-
-            ImGui.EndPopup();
         }
 
         return currentRightSide - spacingX;
