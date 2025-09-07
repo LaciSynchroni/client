@@ -2064,37 +2064,49 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             if (ImGui.BeginTabItem("General"))
             {
+                ImGui.BeginChild("GeneralChild", new Vector2(0, 0), false);
                 DrawGeneral();
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Performance"))
             {
+                ImGui.BeginChild("PerformanceChild", new Vector2(0, 0), false);
                 DrawPerformance();
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Storage"))
             {
+                ImGui.BeginChild("StorageChild", new Vector2(0, 0), false);
                 DrawFileStorageSettings();
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Transfers"))
             {
+                ImGui.BeginChild("TransfersChild", new Vector2(0, 0), false);
                 DrawCurrentTransfers();
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Service Settings"))
             {
+                ImGui.BeginChild("ServiceSettingsChild", new Vector2(0, 0), false);
                 DrawServerConfiguration();
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Debug"))
             {
+                ImGui.BeginChild("DebugChild", new Vector2(0, 0), false);
                 DrawDebug();
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
