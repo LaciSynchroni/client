@@ -1060,12 +1060,12 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         return vector.X + vector2.X + ImGui.GetStyle().FramePadding.X * 2f + num;
     }
 
-    public bool IconButton(FontAwesomeIcon icon, int? uniqueId = null, float? height = null)
+    public bool IconButton(FontAwesomeIcon icon, string? uniqueId = null, float? height = null)
     {
         string text = icon.ToIconString();
 
-        if (uniqueId.HasValue)
-            ImGui.PushID(uniqueId.Value);
+        if (string.IsNullOrEmpty(uniqueId))
+            ImGui.PushID($"{text}-{uniqueId}");
         else
             ImGui.PushID(text);
 

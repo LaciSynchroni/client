@@ -198,31 +198,42 @@ public class DrawUserPair
         {
             userPairText = _apiController.GetServerNameByIndex(_pair.ServerIndex);
         }
-        
-        if (!_pair.IsOnline)
+
+        if (_pair.IsVisible)
+        {
+            _uiSharedService.IconText(FontAwesomeIcon.Eye, ImGuiColors.ParsedGreen);
+
+            if (!string.IsNullOrEmpty(userPairText))
+                userPairText += UiSharedService.TooltipSeparator;
+
+            userPairText += _pair.UserData.AliasOrUID + " is visible: " + _pair.PlayerName + Environment.NewLine + "Click to target this player";
+            if (ImGui.IsItemClicked())
+            {
+                _mediator.Publish(new TargetPairMessage(_pair));
+            }
+        }
+        else if (_pair.IsOnline)
+        {
+            using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.HealerGreen);
+            _uiSharedService.IconText(_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional
+                ? FontAwesomeIcon.User : FontAwesomeIcon.Users);
+            if (!string.IsNullOrEmpty(userPairText))
+                userPairText += UiSharedService.TooltipSeparator;
+
+            userPairText += _pair.UserData.AliasOrUID + " is online";
+        }
+        else
         {
             using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
             _uiSharedService.IconText(_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.OneSided
                 ? FontAwesomeIcon.ArrowsLeftRight
                 : (_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional
                     ? FontAwesomeIcon.User : FontAwesomeIcon.Users));
-            userPairText += UiSharedService.TooltipSeparator + _pair.UserData.AliasOrUID + " is offline";
-        }
-        else if (_pair.IsVisible)
-        {
-            _uiSharedService.IconText(FontAwesomeIcon.Eye, ImGuiColors.ParsedGreen);
-            userPairText = _pair.UserData.AliasOrUID + " is visible: " + _pair.PlayerName + Environment.NewLine + "Click to target this player";
-            if (ImGui.IsItemClicked())
-            {
-                _mediator.Publish(new TargetPairMessage(_pair));
-            }
-        }
-        else
-        {
-            using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.HealerGreen);
-            _uiSharedService.IconText(_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional
-                ? FontAwesomeIcon.User : FontAwesomeIcon.Users);
-            userPairText = _pair.UserData.AliasOrUID + " is online";
+            
+            if(!string.IsNullOrEmpty(userPairText))
+                userPairText += UiSharedService.TooltipSeparator;
+
+            userPairText += _pair.UserData.AliasOrUID + " is offline";
         }
 
         if (_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.OneSided)
@@ -338,7 +349,7 @@ public class DrawUserPair
 
         ImGui.SameLine(currentRightSide);
         ImGui.AlignTextToFramePadding();
-        if (_uiSharedService.IconButton(FontAwesomeIcon.EllipsisV))
+        if (_uiSharedService.IconButton(FontAwesomeIcon.EllipsisV, _pair.ServerIndex.ToString()))
         {
             ImGui.OpenPopup("User Flyout Menu");
         }
@@ -501,7 +512,7 @@ public class DrawUserPair
 
         if (ImGui.BeginPopup("User Flyout Menu"))
         {
-            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}-{_pair.ServerIndex}"))
+            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}"))
             {
                 ImGui.TextUnformatted("Common Pair Functions");
                 DrawCommonClientMenu();

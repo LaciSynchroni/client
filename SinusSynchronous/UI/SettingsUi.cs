@@ -1593,7 +1593,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                             _uiShared.DrawUIDComboForAuthentication(i, item, selectedServer.ServerUri, _logger);
                         }
                         bool isAutoLogin = item.AutoLogin;
-                        if (ImGui.Checkbox("Automatically login to Sinus", ref isAutoLogin))
+                        if (ImGui.Checkbox("Automatically login to service", ref isAutoLogin))
                         {
                             item.AutoLogin = isAutoLogin;
                             _serverConfigurationManager.Save();

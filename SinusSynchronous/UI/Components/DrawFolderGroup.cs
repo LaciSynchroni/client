@@ -92,6 +92,8 @@ public class DrawFolderGroup : DrawFolderBase
 
     protected override void DrawMenu(float menuWidth)
     {
+        ImGui.TextUnformatted(_apiController.GetServerNameByIndex(_serverIndex));
+        ImGui.Separator();
         ImGui.TextUnformatted("Syncshell Menu (" + _groupFullInfoDto.GroupAliasOrGID + ")");
         ImGui.Separator();
 
