@@ -2060,57 +2060,33 @@ public class SettingsUi : WindowMediatorSubscriberBase
             Util.OpenLink("https://discord.gg/qQQSz3jZnK");
         }
         ImGui.Separator();
-        if (ImGui.BeginTabBar("mainTabBar"))
+
+        using (var tabBar = ImRaii.TabBar("mainTabBar"))
         {
-            if (ImGui.BeginTabItem("General"))
+            if (tabBar.Success)
             {
-                ImGui.BeginChild("GeneralChild", new Vector2(0, 0), false);
-                DrawGeneral();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
+                CreateTabItem("General", DrawGeneral);
+                CreateTabItem("Performance", DrawPerformance);
+                CreateTabItem("Storage", DrawFileStorageSettings);
+                CreateTabItem("Transfers", DrawCurrentTransfers);
+                CreateTabItem("Service Settings", DrawServerConfiguration);
+                CreateTabItem("Debug", DrawDebug);
             }
+        }
+    }
 
-            if (ImGui.BeginTabItem("Performance"))
+    private void CreateTabItem(string name, Action drawAction)
+    {
+        using (var tabItem = ImRaii.TabItem(name))
+        {
+            if (tabItem.Success)
             {
-                ImGui.BeginChild("PerformanceChild", new Vector2(0, 0), false);
-                DrawPerformance();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
+                using (var child = ImRaii.Child($"{name.Replace(" ", string.Empty)}Child", new Vector2(0, 0), false))
+                {
+                    if (child.Success) 
+                        drawAction?.Invoke();
+                }
             }
-
-            if (ImGui.BeginTabItem("Storage"))
-            {
-                ImGui.BeginChild("StorageChild", new Vector2(0, 0), false);
-                DrawFileStorageSettings();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Transfers"))
-            {
-                ImGui.BeginChild("TransfersChild", new Vector2(0, 0), false);
-                DrawCurrentTransfers();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Service Settings"))
-            {
-                ImGui.BeginChild("ServiceSettingsChild", new Vector2(0, 0), false);
-                DrawServerConfiguration();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Debug"))
-            {
-                ImGui.BeginChild("DebugChild", new Vector2(0, 0), false);
-                DrawDebug();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            ImGui.EndTabBar();
         }
     }
 
