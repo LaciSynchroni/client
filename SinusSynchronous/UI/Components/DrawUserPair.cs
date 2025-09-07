@@ -357,6 +357,8 @@ public class DrawUserPair
         {
             using (ImRaii.PushId($"buttons-{_pair.UserData.UID}"))
             {
+                ImGui.TextUnformatted(_pair.UserData.AliasOrUID);
+                ImGui.Separator();
                 ImGui.TextUnformatted("Common Pair Functions");
                 DrawCommonClientMenu();
                 ImGui.Separator();
