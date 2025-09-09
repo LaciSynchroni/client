@@ -372,7 +372,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         {
             var currentDisplayName = _apiController.GetDisplayNameByServer(serverId);
             var currentUid = _apiController.GetUidByServer(serverId);
-            if (ImGui.IsItemClicked())
+            if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
             {
                 ImGui.SetClipboardText(currentDisplayName);
             }
@@ -383,7 +383,7 @@ public class CompactUi : WindowMediatorSubscriberBase
                 var origTextSize = ImGui.CalcTextSize(currentDisplayName);
                 ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X) / 2 - (origTextSize.X / 2));
                 ImGui.TextColored(uidColor, currentDisplayName);
-                if (ImGui.IsItemClicked())
+                if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
                 {
                     ImGui.SetClipboardText(currentDisplayName);
                 }
@@ -404,10 +404,13 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (!ImGui.IsMouseHoveringRect(rectMin, rectMax))
             return;
 
-        ImGui.SetTooltip("Click to manage service connections");
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (ImGui.IsWindowHovered())
         {
-            ToggleMultiServerSelect();
+            ImGui.SetTooltip("Click to manage service connections");
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                ToggleMultiServerSelect();
+            }
         }
     }
 
@@ -479,7 +482,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (_apiController.ConnectedServerIndexes.Any(p => p == serverId))
         {
             ImGui.TextColored(ImGuiColors.ParsedGreen, serverName);
-            if (ImGui.IsItemClicked())
+            if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
             {
                 _serverConfigManager.SelectServer(serverId);
             }
@@ -501,7 +504,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             var displayName = _apiController.GetDisplayNameByServer(serverId);
             ImGui.TextColored(textColor, uidText);
 
-            if (ImGui.IsItemClicked())
+            if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
             {
                 ImGui.SetClipboardText(displayName);
             }
@@ -510,7 +513,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             if (!string.Equals(displayName, uid, StringComparison.Ordinal))
             {
                 ImGui.TextColored(textColor, displayName);
-                if (ImGui.IsItemClicked())
+                if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
                 {
                     ImGui.SetClipboardText(displayName);
                 }

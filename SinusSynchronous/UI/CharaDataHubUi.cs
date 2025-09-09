@@ -98,6 +98,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _pairManager = pairManager;
         _charaDataGposeTogetherManager = charaDataGposeTogetherManager;
         _apiController = apiController;
+        AllowClickthrough = false;
         Mediator.Subscribe<GposeStartMessage>(this, (_) => IsOpen |= _configService.Current.OpenSinusHubOnGposeStart);
         Mediator.Subscribe<OpenCharaDataHubWithFilterMessage>(this, (msg) =>
         {
