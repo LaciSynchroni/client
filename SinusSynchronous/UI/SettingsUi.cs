@@ -1320,17 +1320,15 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 var serverName = selectedServer.ServerName;
                 var serverUri = selectedServer.ServerUri;
                 var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
-                var isMain = string.Equals(serverName, ApiController.MainServer, StringComparison.OrdinalIgnoreCase);
-                var flags = isMain ? ImGuiInputTextFlags.ReadOnly : ImGuiInputTextFlags.None;
                 var useAdvancedUris = selectedServer.UseAdvancedUris;
 
-                if (ImGui.InputText("Service Name", ref serverName, 255, flags))
+                if (ImGui.InputText("Service Name", ref serverName, 255))
                 {
                     selectedServer.ServerName = serverName;
                     _serverConfigurationManager.Save();
                 }
 
-                if (ImGui.InputText("Service URI", ref serverUri, 255, flags))
+                if (ImGui.InputText("Service URI", ref serverUri, 255))
                 {
                     selectedServer.ServerUri = serverUri;
                     _serverConfigurationManager.Save();
@@ -1345,7 +1343,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _uiShared.DrawHelpText("Configure the API & Hub URI individually");
                 if (useAdvancedUris)
                 {
-                    if (ImGui.InputText("Service Hub URI", ref serverHubUri, 255, flags))
+                    if (ImGui.InputText("Service Hub URI", ref serverHubUri, 255))
                     {
                         selectedServer.ServerHubUri = serverHubUri;
                         _serverConfigurationManager.Save();
