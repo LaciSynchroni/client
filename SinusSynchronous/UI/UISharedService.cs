@@ -213,33 +213,63 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public static void DrawGrouped(Action imguiDrawAction, float rounding = 5f, float? expectedWidth = null)
     {
         var cursorPos = ImGui.GetCursorPos();
-        using (ImRaii.Group())
-        {
-            if (expectedWidth != null)
-            {
-                ImGui.Dummy(new(expectedWidth.Value, 0));
-                ImGui.SetCursorPos(cursorPos);
-            }
 
-            imguiDrawAction.Invoke();
+        ImGui.BeginGroup();
+
+        if (expectedWidth != null)
+        {
+            ImGui.Dummy(new Vector2(expectedWidth.Value, 0));
+            ImGui.SetCursorPos(cursorPos);
         }
 
+        imguiDrawAction.Invoke();
+
+        ImGui.EndGroup();
+
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+
         ImGui.GetWindowDrawList().AddRect(
-            ImGui.GetItemRectMin() - ImGui.GetStyle().ItemInnerSpacing,
-            ImGui.GetItemRectMax() + ImGui.GetStyle().ItemInnerSpacing,
+            min - ImGui.GetStyle().ItemInnerSpacing,
+            max + ImGui.GetStyle().ItemInnerSpacing,
             Color(ImGuiColors.DalamudGrey2), rounding);
     }
 
     public static void DrawGroupedCenteredColorText(string text, Vector4 color, float? maxWidth = null)
     {
         var availWidth = ImGui.GetContentRegionAvail().X;
-        var textWidth = ImGui.CalcTextSize(text, wrapWidth: availWidth).X;
-        if (maxWidth != null && textWidth > maxWidth * ImGuiHelpers.GlobalScale) textWidth = maxWidth.Value * ImGuiHelpers.GlobalScale;
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth / 2f) - (textWidth / 2f));
+
+        // measure unwrapped text width
+        var textWidth = ImGui.CalcTextSize(text).X;
+
+        // effective width: clamp if maxWidth exists
+        var effectiveWidth = textWidth;
+        if (maxWidth != null && textWidth > maxWidth * ImGuiHelpers.GlobalScale)
+            effectiveWidth = maxWidth.Value * ImGuiHelpers.GlobalScale;
+
+        // center horizontally
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth / 2f) - (effectiveWidth / 2f));
+
+        // draw group with proper width
         DrawGrouped(() =>
         {
-            ColorTextWrapped(text, color, ImGui.GetCursorPosX() + textWidth);
-        }, expectedWidth: maxWidth == null ? null : maxWidth * ImGuiHelpers.GlobalScale);
+            ImGui.PushStyleColor(ImGuiCol.Text, color);
+
+            if (maxWidth != null && textWidth > maxWidth * ImGuiHelpers.GlobalScale)
+            {
+                // push wrap only if text actually exceeds maxWidth
+                ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + effectiveWidth);
+                ImGui.TextUnformatted(text);
+                ImGui.PopTextWrapPos();
+            }
+            else
+            {
+                // no wrap needed
+                ImGui.TextUnformatted(text);
+            }
+
+            ImGui.PopStyleColor();
+        }, expectedWidth: effectiveWidth);
     }
 
     public static void DrawOutlinedFont(string text, Vector4 fontColor, Vector4 outlineColor, int thickness)
@@ -298,8 +328,11 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         drawList.AddText(textPos, fontColor, text);
     }
 
-    public static void DrawTree(string leafName, Action drawOnOpened, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
+    public static void DrawTree(string leafName, Action drawOnOpened, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None, bool? drawOpen = false)
     {
+        if (drawOpen == true)
+            flags |= ImGuiTreeNodeFlags.DefaultOpen;
+
         using var tree = ImRaii.TreeNode(leafName, flags);
         if (tree)
         {
@@ -1109,6 +1142,21 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         return IconTextButtonInternal(icon, text,
             isInPopup ? ColorHelpers.RgbaUintToVector4(ImGui.GetColorU32(ImGuiCol.PopupBg)) : null,
             width <= 0 ? null : width);
+    }
+
+    public void CreateTabItem(string name, Action drawAction)
+    {
+        using (var tabItem = ImRaii.TabItem(name))
+        {
+            if (tabItem.Success)
+            {
+                using (var child = ImRaii.Child($"{name.Replace(" ", string.Empty)}Child", new Vector2(0, 0), false))
+                {
+                    if (child.Success)
+                        drawAction?.Invoke();
+                }
+            }
+        }
     }
 
     public IDalamudTextureWrap LoadImage(byte[] imageData)

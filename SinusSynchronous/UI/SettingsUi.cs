@@ -109,7 +109,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         SizeConstraints = new WindowSizeConstraints()
         {
             MinimumSize = new Vector2(800, 400),
-            MaximumSize = new Vector2(800, 2000),
+            MaximumSize = new Vector2(1200, 2000),
         };
 
         Mediator.Subscribe<OpenSettingsUiMessage>(this, (_) => Toggle());
@@ -2065,27 +2065,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             if (tabBar.Success)
             {
-                CreateTabItem("General", DrawGeneral);
-                CreateTabItem("Performance", DrawPerformance);
-                CreateTabItem("Storage", DrawFileStorageSettings);
-                CreateTabItem("Transfers", DrawCurrentTransfers);
-                CreateTabItem("Service Settings", DrawServerConfiguration);
-                CreateTabItem("Debug", DrawDebug);
-            }
-        }
-    }
-
-    private void CreateTabItem(string name, Action drawAction)
-    {
-        using (var tabItem = ImRaii.TabItem(name))
-        {
-            if (tabItem.Success)
-            {
-                using (var child = ImRaii.Child($"{name.Replace(" ", string.Empty)}Child", new Vector2(0, 0), false))
-                {
-                    if (child.Success) 
-                        drawAction?.Invoke();
-                }
+                _uiShared.CreateTabItem("General", DrawGeneral);
+                _uiShared.CreateTabItem("Performance", DrawPerformance);
+                _uiShared.CreateTabItem("Storage", DrawFileStorageSettings);
+                _uiShared.CreateTabItem("Transfers", DrawCurrentTransfers);
+                _uiShared.CreateTabItem("Service Settings", DrawServerConfiguration);
+                _uiShared.CreateTabItem("Debug", DrawDebug);
             }
         }
     }

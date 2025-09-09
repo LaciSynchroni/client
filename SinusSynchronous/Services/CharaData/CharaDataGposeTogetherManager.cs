@@ -95,6 +95,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
     }
 
     public string? CurrentGPoseLobbyId { get; private set; }
+    public int? CurrentGPoseLobbyServerId { get; private set; }
     public string? LastGPoseLobbyId { get; private set; }
 
     public IEnumerable<GposeLobbyUserData> UsersInLobby => _usersInLobby.Values;
@@ -147,6 +148,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
             CurrentGPoseLobbyId = await _apiController.GposeLobbyCreate(serverIndex).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(CurrentGPoseLobbyId))
             {
+                CurrentGPoseLobbyServerId = serverIndex;
                 _ = GposeWorldPositionBackgroundTask(serverIndex, _lobbyCts.Token);
                 _ = GposePoseDataBackgroundTask(serverIndex, _lobbyCts.Token);
             }
@@ -169,6 +171,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
                 }
 
                 CurrentGPoseLobbyId = joinLobbyId;
+                CurrentGPoseLobbyServerId = serverIndex;
                 _ = GposeWorldPositionBackgroundTask(serverIndex, _lobbyCts.Token);
                 _ = GposePoseDataBackgroundTask(serverIndex, _lobbyCts.Token);
             }
@@ -176,6 +179,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
             {
                 LeaveGPoseLobby(serverIndex);
                 LastGPoseLobbyId = string.Empty;
+                CurrentGPoseLobbyServerId = null;
             }
         });
     }
@@ -193,6 +197,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
                 }
 
                 ClearLobby(revertCharas: true);
+                CurrentGPoseLobbyServerId = null;
             }
         });
     }
@@ -364,6 +369,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
 
         while (!ct.IsCancellationRequested)
         {
+            //TODO maybe we can turn this timer into a setting, 5-20 seconds
             await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
             if (!_dalamudUtil.IsInGpose) continue;
             if (_usersInLobby.Count == 0) continue;
@@ -416,6 +422,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
     {
         while (!ct.IsCancellationRequested)
         {
+            //TODO maybe we can turn this timer into a setting, 5-20 seconds
             await Task.Delay(TimeSpan.FromSeconds(_dalamudUtil.IsInGpose ? 10 : 1), ct).ConfigureAwait(false);
 
             // if there are no players in lobby, don't do anything

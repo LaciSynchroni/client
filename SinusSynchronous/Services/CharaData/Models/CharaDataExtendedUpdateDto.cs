@@ -298,8 +298,10 @@ public sealed record CharaDataExtendedUpdateDto : CharaDataUpdateDto
         base.FileGamePaths = null;
         base.CustomizeData = null;
         base.ManipulationData = null;
-        AllowedUsers = null;
-        AllowedGroups = null;
+        AllowedUsers?.Clear();
+        UpdateAllowedUsers();
+        AllowedGroups?.Clear();
+        UpdateAllowedGroups();
         Poses = null;
         _poseList.Clear();
         _poseList.AddRange(_charaDataFullDto.PoseData.Select(k => new PoseEntry(k.Id)

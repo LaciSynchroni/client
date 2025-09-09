@@ -9,9 +9,9 @@ namespace SinusSynchronous.UI;
 
 internal partial class CharaDataHubUi
 {
-    private void DrawNearbyPoses()
+    private void DrawWorldPosesNearby()
     {
-        _uiSharedService.BigText("Poses Nearby");
+        _uiSharedService.BigText("World Poses Nearby");
 
         DrawHelpFoldout("This tab will show you all Shared World Poses nearby you." + Environment.NewLine + Environment.NewLine
                         + "Shared World Poses are poses in character data that have world data attached to them and are set to shared. "
@@ -20,6 +20,11 @@ internal partial class CharaDataHubUi
                         + "Shared World Poses will appear in the world as floating wisps, as well as in the list below. You can mouse over a Shared World Pose in the list for it to get highlighted in the world." + Environment.NewLine + Environment.NewLine
                         + "You can apply Shared World Poses to yourself or spawn the associated character to pose with them." + Environment.NewLine + Environment.NewLine
                         + "You can adjust the filter and change further settings in the 'Settings & Filter' foldout.");
+
+        if (!_apiController.ConnectedServerIndexes.Any(p => p == _selectedServerIndex))
+        {
+            _selectedServerIndex = _apiController.ConnectedServerIndexes.FirstOrDefault();
+        }
 
         UiSharedService.DrawTree("Settings & Filters", () =>
         {
@@ -90,10 +95,9 @@ internal partial class CharaDataHubUi
 
         ImGuiHelpers.ScaledDummy(3f);
 
-        using var indent = ImRaii.PushIndent(5f);
         if (_charaDataNearbyManager.NearbyData.Count == 0)
         {
-            UiSharedService.DrawGroupedCenteredColorText("No Shared World Poses found nearby.", ImGuiColors.DalamudYellow);
+            UiSharedService.DrawGroupedCenteredColorText("No Shared World Poses found nearby.", ImGuiColors.DalamudYellow, 400);
         }
 
         bool wasAnythingHovered = false;

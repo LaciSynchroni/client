@@ -37,6 +37,10 @@ namespace SinusSynchronous.UI.Components
                     {
                         ChangeSelectedIndex(i);
                     }
+                    if (!isConnected)
+                    {
+                        UiSharedService.AttachToolTip($"You are currently not connected to {serverName} service.");
+                    }
                     if (isSelected)
                     {
                         ImGui.SetItemDefaultFocus();

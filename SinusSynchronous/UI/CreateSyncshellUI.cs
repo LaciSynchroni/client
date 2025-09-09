@@ -37,8 +37,8 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
         _serverSelector = new ServerSelectorSmall(newIndex => _serverIndexForCreation = newIndex);
         SizeConstraints = new()
         {
-            MinimumSize = new(550, 330),
-            MaximumSize = new(550, 330)
+            MinimumSize = new(550, 350),
+            MaximumSize = new(550, 350)
         };
 
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse;

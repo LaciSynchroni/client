@@ -109,6 +109,14 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
         }
     }
 
+    public bool AnyServerConnecting
+    {
+        get
+        {
+            return _sinusClients.Any(client => client.Value._serverState == ServerState.Connecting);
+        }
+    }
+
     public bool AnyServerDisconnecting
     {
         get
@@ -120,7 +128,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     public int[] ConnectedServerIndexes {
         get
         {
-            return [.._sinusClients.Keys];
+            return [.._sinusClients.Where(p=> p.Value._serverState == ServerState.Connected)?.Select(p=> p.Key) ?? []];
         }
     }
 
