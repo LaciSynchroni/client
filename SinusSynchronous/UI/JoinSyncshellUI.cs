@@ -2,10 +2,10 @@
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using SinusSynchronous.API.Data.Enum;
-using SinusSynchronous.API.Data.Extensions;
-using SinusSynchronous.API.Dto;
-using SinusSynchronous.API.Dto.Group;
+using LaciSynchroni.Common.Data.Enum;
+using LaciSynchroni.Common.Data.Extensions;
+using LaciSynchroni.Common.Dto;
+using LaciSynchroni.Common.Dto.Group;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Utils;
@@ -22,17 +22,17 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly ServerSelectorSmall _serverSelector;
-    
+
     private string _desiredSyncshellToJoin = string.Empty;
     private int _desiredServerForSyncshell = 0;
-    
+
     private GroupJoinInfoDto? _groupJoinInfo = null;
     private DefaultPermissionsDto _ownPermissions = null!;
     private string _previousPassword = string.Empty;
     private string _syncshellPassword = string.Empty;
 
     public JoinSyncshellUI(ILogger<JoinSyncshellUI> logger, SinusMediator mediator,
-        UiSharedService uiSharedService, ApiController apiController, PerformanceCollectorService performanceCollectorService, ServerConfigurationManager serverConfigurationManager) 
+        UiSharedService uiSharedService, ApiController apiController, PerformanceCollectorService performanceCollectorService, ServerConfigurationManager serverConfigurationManager)
         : base(logger, mediator, "Join existing Syncshell###SinusSynchronousJoinSyncshell", performanceCollectorService)
     {
         _uiSharedService = uiSharedService;
@@ -50,7 +50,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             MinimumSize = new(700, 400),
             MaximumSize = new(700, 400)
         };
-        
+
         Mediator.Subscribe<DisconnectedMessage>(this, (_) =>
         {
             // Only disconnect if we have no server left to join to. The selector will auto-swap to the next available server.
@@ -95,7 +95,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             ImGui.TextUnformatted("Syncshell Server");
             ImGui.SameLine(200);
             _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 400);
-            
+
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("Syncshell ID");
             ImGui.SameLine(200);
@@ -105,13 +105,13 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             ImGui.TextUnformatted("Syncshell Password");
             ImGui.SameLine(200);
             ImGui.InputTextWithHint("##syncshellpw", "Password", ref _syncshellPassword, 50, ImGuiInputTextFlags.Password);
-            
+
             // TODO disable when there is no more joins left
             using (ImRaii.Disabled(string.IsNullOrEmpty(_desiredSyncshellToJoin) || string.IsNullOrEmpty(_syncshellPassword)))
             {
                 if (_uiSharedService.IconTextButton(Dalamud.Interface.FontAwesomeIcon.Plus, "Join Syncshell"))
                 {
-                    _groupJoinInfo = _apiController.GroupJoinForServer(_desiredServerForSyncshell, new GroupPasswordDto(new API.Data.GroupData(_desiredSyncshellToJoin), _syncshellPassword)).Result;
+                    _groupJoinInfo = _apiController.GroupJoinForServer(_desiredServerForSyncshell, new GroupPasswordDto(new LaciSynchroni.Common.Data.GroupData(_desiredSyncshellToJoin), _syncshellPassword)).Result;
                     _previousPassword = _syncshellPassword;
                     _syncshellPassword = string.Empty;
                 }

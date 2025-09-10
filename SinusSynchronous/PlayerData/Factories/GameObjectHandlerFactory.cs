@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data.Enum;
+using LaciSynchroni.Common.Data.Enum;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;

@@ -6,10 +6,10 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Comparer;
-using SinusSynchronous.API.Routes;
-using SinusSynchronous.API.SignalR;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Comparer;
+using LaciSynchroni.Common.Routes;
+using LaciSynchroni.Common.SignalR;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.PlayerData.Handlers;
@@ -742,7 +742,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
             ImGui.TextUnformatted("The file compactor is only available on Windows and NTFS drives.");
         }
-       
+
         ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
 
         ImGui.Separator();
@@ -1911,7 +1911,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 ImGui.Text(server.Uri);
 
                 ImGui.TableNextColumn();
-                ImGui.Text(string.IsNullOrEmpty(server.HubUri) ? (server.Uri + ISinusHub.Path) : server.HubUri);
+                ImGui.Text(string.IsNullOrEmpty(server.HubUri) ? (server.Uri + IServerHub.Path) : server.HubUri);
 
                 ImGui.TableNextColumn();
                 DrawMultiServerConnectButton(server.Id, server.Name);
@@ -1991,7 +1991,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
 
         var baseUri = serverStorage.ServerUri.Replace("wss://", "https://").Replace("ws://", "http://");
-        var oauthCheckUri = SinusAuth.GetUIDsBasedOnSecretKeyFullPath(new Uri(baseUri));
+        var oauthCheckUri = AuthRoutes.GetUIDsBasedOnSecretKeyFullPath(new Uri(baseUri));
         var requestContent = JsonContent.Create(secretKeyMapping.Select(k => k.Key).ToList());
         HttpRequestMessage requestMessage = new(HttpMethod.Post, oauthCheckUri);
         requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", serverStorage.OAuthToken);

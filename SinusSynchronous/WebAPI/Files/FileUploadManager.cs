@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.Files;
-using SinusSynchronous.API.Routes;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.Files;
+using LaciSynchroni.Common.Routes;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
@@ -51,7 +51,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
     {
         var uri = RequireUriForServer(serverIndex);
 
-        await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesDeleteAllFullPath(uri)).ConfigureAwait(false);
+        await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, FilesRoutes.ServerFilesDeleteAllFullPath(uri)).ConfigureAwait(false);
     }
 
     public async Task<List<string>> UploadFiles(int serverIndex, List<string> hashesToUpload, IProgress<string> progress, CancellationToken ct)
@@ -95,7 +95,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
     {
         CancelUpload(serverIndex);
 
-        var tokenSource = new CancellationTokenSource();    
+        var tokenSource = new CancellationTokenSource();
         if (!_cancellationTokens.TryAdd(serverIndex, tokenSource))
         {
             Logger.LogError("[{serverIndex} Failed to add cancellation token, token already present.", serverIndex);
@@ -126,7 +126,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
             FileHashes = hashes,
             UIDs = uids
         };
-        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesFilesSendFullPath(uri), filesSendDto, ct).ConfigureAwait(false);
+        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, FilesRoutes.ServerFilesFilesSendFullPath(uri), filesSendDto, ct).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<List<UploadFileDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
     }
 
@@ -202,9 +202,9 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         HttpResponseMessage response;
         if (!munged)
-            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesUploadFullPath(uri, fileHash), streamContent, uploadToken).ConfigureAwait(false);
+            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, FilesRoutes.ServerFilesUploadFullPath(uri, fileHash), streamContent, uploadToken).ConfigureAwait(false);
         else
-            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, SinusFiles.ServerFilesUploadMunged(uri, fileHash), streamContent, uploadToken).ConfigureAwait(false);
+            response = await _orchestrator.SendRequestStreamAsync(serverIndex, HttpMethod.Post, FilesRoutes.ServerFilesUploadMunged(uri, fileHash), streamContent, uploadToken).ConfigureAwait(false);
         Logger.LogDebug("[{hash}] Upload Status: {status}", fileHash, response.StatusCode);
     }
 
@@ -272,7 +272,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
         CurrentUploads.Clear();
     }
-    
+
     private void CancelUpload(ServerIndex serverIndex)
     {
         CancelUploadsToServer(serverIndex);
@@ -287,20 +287,20 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         }
         CurrentUploads.RemoveAll(transfer => transfer.ServerIndex == serverIndex);
     }
-    
+
     private Uri RequireUriForServer(int serverIndex)
     {
         var uri = _orchestrator.GetFileCdnUri(serverIndex);
         if (uri == null) throw new InvalidOperationException("FileTransferManager is not initialized");
         return uri;
     }
-    
+
     private void ResetForServer(ServerIndex serverIndex)
     {
         CancelUploadsToServer(serverIndex);
         _verifiedUploadedHashes.Clear();
     }
-    
+
     private void Reset()
     {
         _cancellationTokens.Values.ToList().ForEach(c =>
@@ -312,7 +312,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
         CurrentUploads.Clear();
         _verifiedUploadedHashes.Clear();
     }
-    
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

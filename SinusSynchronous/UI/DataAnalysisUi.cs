@@ -4,7 +4,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data.Enum;
+using LaciSynchroni.Common.Data.Enum;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.Services;

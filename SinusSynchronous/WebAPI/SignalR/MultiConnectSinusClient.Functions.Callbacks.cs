@@ -1,9 +1,9 @@
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Enum;
-using SinusSynchronous.API.Dto;
-using SinusSynchronous.API.Dto.CharaData;
-using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.API.Dto.User;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Enum;
+using LaciSynchroni.Common.Dto;
+using LaciSynchroni.Common.Dto.CharaData;
+using LaciSynchroni.Common.Dto.Group;
+using LaciSynchroni.Common.Dto.User;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Services.Mediator;
 using Microsoft.AspNetCore.SignalR.Client;

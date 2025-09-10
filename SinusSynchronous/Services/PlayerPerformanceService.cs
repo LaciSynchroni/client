@@ -1,4 +1,4 @@
-using SinusSynchronous.API.Data;
+using LaciSynchroni.Common.Data;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.PlayerData.Handlers;
@@ -46,7 +46,7 @@ public class PlayerPerformanceService
         var vramUsage = pairHandler.Pair.LastAppliedApproximateVRAMBytes;
         var triUsage = pairHandler.Pair.LastAppliedDataTris;
 
-        bool isPrefPerm = pairHandler.Pair.UserPair.OwnPermissions.HasFlag(API.Data.Enum.UserPermissions.Sticky);
+        bool isPrefPerm = pairHandler.Pair.UserPair.OwnPermissions.HasFlag(LaciSynchroni.Common.Data.Enum.UserPermissions.Sticky);
 
         bool exceedsTris = CheckForThreshold(config.WarnOnExceedingThresholds, config.TrisWarningThresholdThousands * 1000,
             triUsage, config.WarnOnPreferredPermissionsExceedingThresholds, isPrefPerm);
@@ -107,7 +107,7 @@ public class PlayerPerformanceService
 
         long triUsage = 0;
 
-        if (!charaData.FileReplacements.TryGetValue(API.Data.Enum.ObjectKind.Player, out List<FileReplacementData>? playerReplacements))
+        if (!charaData.FileReplacements.TryGetValue(LaciSynchroni.Common.Data.Enum.ObjectKind.Player, out List<FileReplacementData>? playerReplacements))
         {
             pair.LastAppliedDataTris = 0;
             return true;
@@ -132,7 +132,7 @@ public class PlayerPerformanceService
             .Exists(uid => string.Equals(uid, pair.UserData.Alias, StringComparison.Ordinal) || string.Equals(uid, pair.UserData.UID, StringComparison.Ordinal)))
             return true;
 
-        bool isPrefPerm = pair.UserPair.OwnPermissions.HasFlag(API.Data.Enum.UserPermissions.Sticky);
+        bool isPrefPerm = pair.UserPair.OwnPermissions.HasFlag(LaciSynchroni.Common.Data.Enum.UserPermissions.Sticky);
 
         // now check auto pause
         if (CheckForThreshold(config.AutoPausePlayersExceedingThresholds, config.TrisAutoPauseThresholdThousands * 1000,
@@ -162,7 +162,7 @@ public class PlayerPerformanceService
 
         long vramUsage = 0;
 
-        if (!charaData.FileReplacements.TryGetValue(API.Data.Enum.ObjectKind.Player, out List<FileReplacementData>? playerReplacements))
+        if (!charaData.FileReplacements.TryGetValue(LaciSynchroni.Common.Data.Enum.ObjectKind.Player, out List<FileReplacementData>? playerReplacements))
         {
             pair.LastAppliedApproximateVRAMBytes = 0;
             return true;
@@ -208,7 +208,7 @@ public class PlayerPerformanceService
             .Exists(uid => string.Equals(uid, pair.UserData.Alias, StringComparison.Ordinal) || string.Equals(uid, pair.UserData.UID, StringComparison.Ordinal)))
             return true;
 
-        bool isPrefPerm = pair.UserPair.OwnPermissions.HasFlag(API.Data.Enum.UserPermissions.Sticky);
+        bool isPrefPerm = pair.UserPair.OwnPermissions.HasFlag(LaciSynchroni.Common.Data.Enum.UserPermissions.Sticky);
 
         // now check auto pause
         if (CheckForThreshold(config.AutoPausePlayersExceedingThresholds, config.VRAMSizeAutoPauseThresholdMiB * 1024 * 1024,

@@ -1,7 +1,7 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using SinusSynchronous.API.Data.Extensions;
+using LaciSynchroni.Common.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.UI.Handlers;
 using SinusSynchronous.WebAPI;

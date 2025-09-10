@@ -1,5 +1,5 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
-using SinusSynchronous.API.Data;
+using LaciSynchroni.Common.Data;
 using SinusSynchronous.Interop;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.Services.CharaData.Models;

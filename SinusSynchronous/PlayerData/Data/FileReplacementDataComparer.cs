@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Data;
+﻿using LaciSynchroni.Common.Data;
 
 namespace SinusSynchronous.PlayerData.Data;
 

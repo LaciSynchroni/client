@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.SignalR.Client;
-using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.API.SignalR;
+using LaciSynchroni.Common.Dto.Group;
+using LaciSynchroni.Common.SignalR;
 using SinusSynchronous.WebAPI.SignalR.Utils;
 
 namespace SinusSynchronous.WebAPI;
 
-public partial class MultiConnectSinusClient: ISinusHub
+public partial class MultiConnectSinusClient: IServerHub
 {
   public async Task GroupBanUser(GroupPairDto dto, string reason)
     {

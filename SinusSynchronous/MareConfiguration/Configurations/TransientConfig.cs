@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Data.Enum;
+﻿using LaciSynchroni.Common.Data.Enum;
 
 namespace SinusSynchronous.SinusConfiguration.Configurations;
 

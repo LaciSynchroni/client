@@ -1,9 +1,9 @@
 ﻿using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Text.SeStringHandling;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Enum;
-using SinusSynchronous.API.Data.Extensions;
-using SinusSynchronous.API.Dto.User;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Enum;
+using LaciSynchroni.Common.Data.Extensions;
+using LaciSynchroni.Common.Dto.User;
 using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services.Mediator;

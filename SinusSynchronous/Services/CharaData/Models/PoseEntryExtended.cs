@@ -1,6 +1,6 @@
 ﻿using Dalamud.Utility;
 using Lumina.Excel.Sheets;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Dto.CharaData;
 using System.Globalization;
 using System.Numerics;
 using System.Text;

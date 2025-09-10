@@ -1,5 +1,5 @@
-﻿using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Comparer;
+﻿using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Comparer;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration;

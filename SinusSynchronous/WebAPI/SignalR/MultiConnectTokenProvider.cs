@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Routes;
+using LaciSynchroni.Common.Routes;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
@@ -68,7 +68,7 @@ public sealed class MultiConnectTokenProvider : IDisposable, IMediatorSubscriber
 
                 if (!ServerToUse.UseOAuth2)
                 {
-                    tokenUri = SinusAuth.AuthFullPath(new Uri(ServerToUse.ServerUri
+                    tokenUri = AuthRoutes.AuthFullPath(new Uri(ServerToUse.ServerUri
                         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                     var secretKey = _serverManager.GetSecretKey(out _, _serverIndex)!;
@@ -84,7 +84,7 @@ public sealed class MultiConnectTokenProvider : IDisposable, IMediatorSubscriber
                 }
                 else
                 {
-                    tokenUri = SinusAuth.AuthWithOauthFullPath(new Uri(ServerToUse.ServerUri
+                    tokenUri = AuthRoutes.AuthWithOauthFullPath(new Uri(ServerToUse.ServerUri
                         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenUri.ToString());
@@ -103,7 +103,7 @@ public sealed class MultiConnectTokenProvider : IDisposable, IMediatorSubscriber
             {
                 _logger.LogDebug("GetNewToken: Renewal");
 
-                tokenUri = SinusAuth.RenewTokenFullPath(new Uri(ServerToUse.ServerUri
+                tokenUri = AuthRoutes.RenewTokenFullPath(new Uri(ServerToUse.ServerUri
                     .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                     .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                 HttpRequestMessage request = new(HttpMethod.Get, tokenUri.ToString());
@@ -275,7 +275,7 @@ public sealed class MultiConnectTokenProvider : IDisposable, IMediatorSubscriber
                 return false;
         }
 
-        var tokenUri = SinusAuth.RenewOAuthTokenFullPath(new Uri(currentServer.ServerUri
+        var tokenUri = AuthRoutes.RenewOAuthTokenFullPath(new Uri(currentServer.ServerUri
             .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
             .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenUri.ToString());

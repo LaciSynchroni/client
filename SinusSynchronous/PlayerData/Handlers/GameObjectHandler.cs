@@ -5,7 +5,7 @@ using SinusSynchronous.Services.Mediator;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using static FFXIVClientStructs.FFXIV.Client.Game.Character.DrawDataContainer;
-using ObjectKind = SinusSynchronous.API.Data.Enum.ObjectKind;
+using ObjectKind = LaciSynchroni.Common.Data.Enum.ObjectKind;
 
 namespace SinusSynchronous.PlayerData.Handlers;
 

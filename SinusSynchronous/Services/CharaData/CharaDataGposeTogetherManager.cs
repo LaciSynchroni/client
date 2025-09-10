@@ -1,6 +1,6 @@
 ﻿using Dalamud.Game.ClientState.Objects.SubKinds;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Interop;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.Services.CharaData.Models;
@@ -111,11 +111,11 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
         if (playerData == null) return;
         if (!string.Equals(playerData.DataHash.Value, _lastCreatedCharaData?.ApiData.DataHash.Value, StringComparison.Ordinal))
         {
-            List<GamePathEntry> filegamePaths = [.. playerData.FileReplacements[API.Data.Enum.ObjectKind.Player]
+            List<GamePathEntry> filegamePaths = [.. playerData.FileReplacements[LaciSynchroni.Common.Data.Enum.ObjectKind.Player]
             .Where(u => string.IsNullOrEmpty(u.FileSwapPath)).SelectMany(u => u.GamePaths, (file, path) => new GamePathEntry(file.Hash, path))];
-            List<GamePathEntry> fileSwapPaths = [.. playerData.FileReplacements[API.Data.Enum.ObjectKind.Player]
+            List<GamePathEntry> fileSwapPaths = [.. playerData.FileReplacements[LaciSynchroni.Common.Data.Enum.ObjectKind.Player]
             .Where(u => !string.IsNullOrEmpty(u.FileSwapPath)).SelectMany(u => u.GamePaths, (file, path) => new GamePathEntry(file.FileSwapPath, path))];
-            await _charaDataManager.UploadFiles(serverIndex, [.. playerData.FileReplacements[API.Data.Enum.ObjectKind.Player]
+            await _charaDataManager.UploadFiles(serverIndex, [.. playerData.FileReplacements[LaciSynchroni.Common.Data.Enum.ObjectKind.Player]
             .Where(u => string.IsNullOrEmpty(u.FileSwapPath)).SelectMany(u => u.GamePaths, (file, path) => new GamePathEntry(file.Hash, path))])
                 .ConfigureAwait(false);
 
@@ -124,10 +124,10 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
             {
                 UpdatedDate = DateTime.UtcNow,
                 ManipulationData = playerData.ManipulationData,
-                CustomizeData = playerData.CustomizePlusData[API.Data.Enum.ObjectKind.Player],
+                CustomizeData = playerData.CustomizePlusData[LaciSynchroni.Common.Data.Enum.ObjectKind.Player],
                 FileGamePaths = filegamePaths,
                 FileSwaps = fileSwapPaths,
-                GlamourerData = playerData.GlamourerData[API.Data.Enum.ObjectKind.Player],
+                GlamourerData = playerData.GlamourerData[LaciSynchroni.Common.Data.Enum.ObjectKind.Player],
             };
 
             _lastCreatedCharaData = (playerData, charaDataDownloadDto);

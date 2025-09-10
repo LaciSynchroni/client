@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Dto.CharaData;
+﻿using LaciSynchroni.Common.Dto.CharaData;
 
 namespace SinusSynchronous.Services.CharaData.Models;
 

@@ -1,5 +1,5 @@
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Services.CharaData.Models;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;

@@ -1,6 +1,6 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data.Enum;
+using LaciSynchroni.Common.Data.Enum;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.PlayerData.Data;

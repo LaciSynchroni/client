@@ -1,6 +1,6 @@
 ﻿using Dalamud.Utility;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Utils;
 using System.Globalization;
 using System.Numerics;

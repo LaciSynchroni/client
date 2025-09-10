@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Dto.Files;
+﻿using LaciSynchroni.Common.Dto.Files;
 
 namespace SinusSynchronous.WebAPI.Files.Models;
 
