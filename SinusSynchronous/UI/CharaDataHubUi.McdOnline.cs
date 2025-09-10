@@ -597,8 +597,7 @@ internal sealed partial class CharaDataHubUi
             _selectedServerIndex = _apiController.ConnectedServerIndexes.FirstOrDefault();
         }
         
-        if (_selectedServerIndex != _serverConfigurationManager.CurrentServerIndex &&
-            !_charaDataManager.Initialized)
+        if (_selectedServerIndex != _serverConfigurationManager.CurrentServerIndex && !_charaDataManager.Initialized)
         {
             _serverConfigurationManager.CurrentServerIndex = _selectedServerIndex;
             _ = _charaDataManager.GetAllData(_selectedServerIndex, _disposalCts.Token);

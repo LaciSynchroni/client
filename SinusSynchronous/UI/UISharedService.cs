@@ -953,6 +953,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
     public void DrawAddCustomService()
     {
+        ImGuiHelpers.ScaledDummy(5);
         if (ImGui.TreeNode("Add New Service"))
         {
             ImGui.SetNextItemWidth(250);
@@ -985,6 +986,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             }
             ImGui.TreePop();
         }
+        ImGuiHelpers.ScaledDummy(5);
     }
 
     public void DrawUIDComboForAuthentication(int indexOffset, Authentication item, string serverUri, ILogger? logger = null)
