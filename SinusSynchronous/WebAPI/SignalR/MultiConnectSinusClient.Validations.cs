@@ -16,11 +16,15 @@ public partial class MultiConnectSinusClient
     {
         if (!_serverConfigurationManager.ShownCensusPopup)
         {
-            Mediator.Publish(new OpenCensusPopupMessage());
-            while (!_serverConfigurationManager.ShownCensusPopup)
-            {
-                await Task.Delay(500).ConfigureAwait(false);
-            }
+            // Mediator.Publish(new OpenCensusPopupMessage());
+            // while (!_serverConfigurationManager.ShownCensusPopup)
+            // {
+            //     await Task.Delay(500).ConfigureAwait(false);
+            // }
+            
+            // Set default to not upload census data and don't show the popup again
+            _serverConfigurationManager.SendCensusData = false;
+            _serverConfigurationManager.ShownCensusPopup = true;
 
             return false;
         }
