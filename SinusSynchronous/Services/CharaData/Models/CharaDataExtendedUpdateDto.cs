@@ -1,5 +1,5 @@
-﻿using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.CharaData;
+﻿using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.CharaData;
 
 namespace SinusSynchronous.Services.CharaData.Models;
 

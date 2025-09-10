@@ -1,13 +1,13 @@
-﻿using SinusSynchronous.API.Data.Enum;
-using SinusSynchronous.SinusConfiguration;
-using SinusSynchronous.SinusConfiguration.Configurations;
+﻿using System.Collections.Concurrent;
+using LaciSynchroni.Common.Data.Enum;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.PlayerData.Data;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
+using SinusSynchronous.SinusConfiguration;
+using SinusSynchronous.SinusConfiguration.Configurations;
 using SinusSynchronous.Utils;
-using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace SinusSynchronous.FileCache;
 
@@ -17,7 +17,19 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     private readonly HashSet<string> _cachedHandledPaths = new(StringComparer.Ordinal);
     private readonly TransientConfigService _configurationService;
     private readonly DalamudUtilService _dalamudUtil;
-    private readonly string[] _handledFileTypes = ["tmb", "pap", "avfx", "atex", "sklb", "eid", "phyb", "scd", "skp", "shpk"];
+    private readonly string[] _handledFileTypes =
+    [
+        "tmb",
+        "pap",
+        "avfx",
+        "atex",
+        "sklb",
+        "eid",
+        "phyb",
+        "scd",
+        "skp",
+        "shpk",
+    ];
     private readonly string[] _handledRecordingFileTypes = ["tex", "mdl", "mtrl"];
     private readonly HashSet<GameObjectHandler> _playerRelatedPointers = [];
     private ConcurrentDictionary<IntPtr, ObjectKind> _cachedFrameAddresses = [];
@@ -25,41 +37,69 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     private uint _lastClassJobId = uint.MaxValue;
     public bool IsTransientRecording { get; private set; } = false;
 
-    public TransientResourceManager(ILogger<TransientResourceManager> logger, TransientConfigService configurationService,
-            DalamudUtilService dalamudUtil, SinusMediator mediator) : base(logger, mediator)
+    public TransientResourceManager(
+        ILogger<TransientResourceManager> logger,
+        TransientConfigService configurationService,
+        DalamudUtilService dalamudUtil,
+        SinusMediator mediator
+    )
+        : base(logger, mediator)
     {
         _configurationService = configurationService;
         _dalamudUtil = dalamudUtil;
 
         Mediator.Subscribe<PenumbraResourceLoadMessage>(this, Manager_PenumbraResourceLoadEvent);
-        Mediator.Subscribe<PenumbraModSettingChangedMessage>(this, (_) => Manager_PenumbraModSettingChanged());
-        Mediator.Subscribe<PriorityFrameworkUpdateMessage>(this, (_) => DalamudUtil_FrameworkUpdate());
-        Mediator.Subscribe<GameObjectHandlerCreatedMessage>(this, (msg) =>
-        {
-            if (!msg.OwnedObject) return;
-            _playerRelatedPointers.Add(msg.GameObjectHandler);
-        });
-        Mediator.Subscribe<GameObjectHandlerDestroyedMessage>(this, (msg) =>
-        {
-            if (!msg.OwnedObject) return;
-            _playerRelatedPointers.Remove(msg.GameObjectHandler);
-        });
+        Mediator.Subscribe<PenumbraModSettingChangedMessage>(
+            this,
+            (_) => Manager_PenumbraModSettingChanged()
+        );
+        Mediator.Subscribe<PriorityFrameworkUpdateMessage>(
+            this,
+            (_) => DalamudUtil_FrameworkUpdate()
+        );
+        Mediator.Subscribe<GameObjectHandlerCreatedMessage>(
+            this,
+            (msg) =>
+            {
+                if (!msg.OwnedObject)
+                    return;
+                _playerRelatedPointers.Add(msg.GameObjectHandler);
+            }
+        );
+        Mediator.Subscribe<GameObjectHandlerDestroyedMessage>(
+            this,
+            (msg) =>
+            {
+                if (!msg.OwnedObject)
+                    return;
+                _playerRelatedPointers.Remove(msg.GameObjectHandler);
+            }
+        );
     }
 
     private TransientConfig.TransientPlayerConfig PlayerConfig
     {
         get
         {
-            if (!_configurationService.Current.TransientConfigs.TryGetValue(PlayerPersistentDataKey, out var transientConfig))
+            if (
+                !_configurationService.Current.TransientConfigs.TryGetValue(
+                    PlayerPersistentDataKey,
+                    out var transientConfig
+                )
+            )
             {
-                _configurationService.Current.TransientConfigs[PlayerPersistentDataKey] = transientConfig = new();
+                _configurationService.Current.TransientConfigs[PlayerPersistentDataKey] =
+                    transientConfig = new();
             }
 
             return transientConfig;
         }
     }
 
-    private string PlayerPersistentDataKey => _dalamudUtil.GetPlayerNameAsync().GetAwaiter().GetResult() + "_" + _dalamudUtil.GetHomeWorldIdAsync().GetAwaiter().GetResult();
+    private string PlayerPersistentDataKey =>
+        _dalamudUtil.GetPlayerNameAsync().GetAwaiter().GetResult()
+        + "_"
+        + _dalamudUtil.GetHomeWorldIdAsync().GetAwaiter().GetResult();
     private ConcurrentDictionary<ObjectKind, HashSet<string>> SemiTransientResources
     {
         get
@@ -67,9 +107,17 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
             if (_semiTransientResources == null)
             {
                 _semiTransientResources = new();
-                PlayerConfig.JobSpecificCache.TryGetValue(_dalamudUtil.ClassJobId, out var jobSpecificData);
-                _semiTransientResources[ObjectKind.Player] = PlayerConfig.GlobalPersistentCache.Concat(jobSpecificData ?? []).ToHashSet(StringComparer.Ordinal);
-                PlayerConfig.JobSpecificPetCache.TryGetValue(_dalamudUtil.ClassJobId, out var petSpecificData);
+                PlayerConfig.JobSpecificCache.TryGetValue(
+                    _dalamudUtil.ClassJobId,
+                    out var jobSpecificData
+                );
+                _semiTransientResources[ObjectKind.Player] = PlayerConfig
+                    .GlobalPersistentCache.Concat(jobSpecificData ?? [])
+                    .ToHashSet(StringComparer.Ordinal);
+                PlayerConfig.JobSpecificPetCache.TryGetValue(
+                    _dalamudUtil.ClassJobId,
+                    out var petSpecificData
+                );
                 _semiTransientResources[ObjectKind.Pet] = [.. petSpecificData ?? []];
             }
 
@@ -78,7 +126,10 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     }
     private ConcurrentDictionary<ObjectKind, HashSet<string>> TransientResources { get; } = new();
 
-    public void CleanUpSemiTransientResources(ObjectKind objectKind, List<FileReplacement>? fileReplacement = null)
+    public void CleanUpSemiTransientResources(
+        ObjectKind objectKind,
+        List<FileReplacement>? fileReplacement = null
+    )
     {
         if (!SemiTransientResources.TryGetValue(objectKind, out HashSet<string>? value))
             return;
@@ -90,7 +141,12 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         }
 
         int removedPaths = 0;
-        foreach (var replacement in fileReplacement.Where(p => !p.HasFileReplacement).SelectMany(p => p.GamePaths).ToList())
+        foreach (
+            var replacement in fileReplacement
+                .Where(p => !p.HasFileReplacement)
+                .SelectMany(p => p.GamePaths)
+                .ToList()
+        )
         {
             removedPaths += PlayerConfig.RemovePath(replacement, objectKind);
             value.Remove(replacement);
@@ -98,7 +154,11 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
         if (removedPaths > 0)
         {
-            Logger.LogTrace("Removed {amount} of SemiTransient paths during CleanUp, Saving from {name}", removedPaths, nameof(CleanUpSemiTransientResources));
+            Logger.LogTrace(
+                "Removed {amount} of SemiTransient paths during CleanUp, Saving from {name}",
+                removedPaths,
+                nameof(CleanUpSemiTransientResources)
+            );
             // force reload semi transient resources
             _configurationService.Save();
         }
@@ -113,9 +173,16 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
     public void PersistTransientResources(ObjectKind objectKind)
     {
-        if (!SemiTransientResources.TryGetValue(objectKind, out HashSet<string>? semiTransientResources))
+        if (
+            !SemiTransientResources.TryGetValue(
+                objectKind,
+                out HashSet<string>? semiTransientResources
+            )
+        )
         {
-            SemiTransientResources[objectKind] = semiTransientResources = new(StringComparer.Ordinal);
+            SemiTransientResources[objectKind] = semiTransientResources = new(
+                StringComparer.Ordinal
+            );
         }
 
         if (!TransientResources.TryGetValue(objectKind, out var resources))
@@ -125,7 +192,9 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
         var transientResources = resources.ToList();
         Logger.LogDebug("Persisting {count} transient resources", transientResources.Count);
-        List<string> newlyAddedGamePaths = resources.Except(semiTransientResources, StringComparer.Ordinal).ToList();
+        List<string> newlyAddedGamePaths = resources
+            .Except(semiTransientResources, StringComparer.Ordinal)
+            .ToList();
         foreach (var gamePath in transientResources)
         {
             semiTransientResources.Add(gamePath);
@@ -144,7 +213,12 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         {
             saveConfig = true;
 
-            if (!PlayerConfig.JobSpecificPetCache.TryGetValue(_dalamudUtil.ClassJobId, out var petPerma))
+            if (
+                !PlayerConfig.JobSpecificPetCache.TryGetValue(
+                    _dalamudUtil.ClassJobId,
+                    out var petPerma
+                )
+            )
             {
                 PlayerConfig.JobSpecificPetCache[_dalamudUtil.ClassJobId] = petPerma = [];
             }
@@ -157,7 +231,10 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
         if (saveConfig)
         {
-            Logger.LogTrace("Saving transient.json from {method}", nameof(PersistTransientResources));
+            Logger.LogTrace(
+                "Saving transient.json from {method}",
+                nameof(PersistTransientResources)
+            );
             _configurationService.Save();
         }
 
@@ -172,7 +249,10 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
             if (objectKind == ObjectKind.Player)
             {
                 PlayerConfig.RemovePath(path, objectKind);
-                Logger.LogTrace("Saving transient.json from {method}", nameof(RemoveTransientResource));
+                Logger.LogTrace(
+                    "Saving transient.json from {method}",
+                    nameof(RemoveTransientResource)
+                );
                 _configurationService.Save();
             }
         }
@@ -180,7 +260,11 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
     internal bool AddTransientResource(ObjectKind objectKind, string item)
     {
-        if (SemiTransientResources.TryGetValue(objectKind, out var semiTransient) && semiTransient != null && semiTransient.Contains(item))
+        if (
+            SemiTransientResources.TryGetValue(objectKind, out var semiTransient)
+            && semiTransient != null
+            && semiTransient.Contains(item)
+        )
             return false;
 
         if (!TransientResources.TryGetValue(objectKind, out HashSet<string>? transientResource))
@@ -195,10 +279,17 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     internal void ClearTransientPaths(ObjectKind objectKind, List<string> list)
     {
         // ignore all recording only datatypes
-        int recordingOnlyRemoved = list.RemoveAll(entry => _handledRecordingFileTypes.Any(ext => entry.EndsWith(ext, StringComparison.OrdinalIgnoreCase)));
+        int recordingOnlyRemoved = list.RemoveAll(entry =>
+            _handledRecordingFileTypes.Any(ext =>
+                entry.EndsWith(ext, StringComparison.OrdinalIgnoreCase)
+            )
+        );
         if (recordingOnlyRemoved > 0)
         {
-            Logger.LogTrace("Ignored {0} game paths when clearing transients", recordingOnlyRemoved);
+            Logger.LogTrace(
+                "Ignored {0} game paths when clearing transients",
+                recordingOnlyRemoved
+            );
         }
 
         if (TransientResources.TryGetValue(objectKind, out var set))
@@ -213,15 +304,22 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         }
 
         bool reloadSemiTransient = false;
-        if (objectKind == ObjectKind.Player && SemiTransientResources.TryGetValue(objectKind, out var semiset))
+        if (
+            objectKind == ObjectKind.Player
+            && SemiTransientResources.TryGetValue(objectKind, out var semiset)
+        )
         {
-            foreach (var file in semiset.Where(p => list.Contains(p, StringComparer.OrdinalIgnoreCase)))
+            foreach (
+                var file in semiset.Where(p => list.Contains(p, StringComparer.OrdinalIgnoreCase))
+            )
             {
                 Logger.LogTrace("Removing From SemiTransient: {file}", file);
                 PlayerConfig.RemovePath(file, objectKind);
             }
 
-            int removed = semiset.RemoveWhere(p => list.Contains(p, StringComparer.OrdinalIgnoreCase));
+            int removed = semiset.RemoveWhere(p =>
+                list.Contains(p, StringComparer.OrdinalIgnoreCase)
+            );
             Logger.LogDebug("Removed {removed} previously existing semi transient paths", removed);
             if (removed > 0)
             {
@@ -245,7 +343,11 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
     private void DalamudUtil_FrameworkUpdate()
     {
-        _cachedFrameAddresses = new(_playerRelatedPointers.Where(k => k.Address != nint.Zero).ToDictionary(c => c.Address, c => c.ObjectKind));
+        _cachedFrameAddresses = new(
+            _playerRelatedPointers
+                .Where(k => k.Address != nint.Zero)
+                .ToDictionary(c => c.Address, c => c.ObjectKind)
+        );
         lock (_cacheAdditionLock)
         {
             _cachedHandledPaths.Clear();
@@ -260,15 +362,26 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
             }
 
             // reload config for current new classjob
-            PlayerConfig.JobSpecificCache.TryGetValue(_dalamudUtil.ClassJobId, out var jobSpecificData);
-            SemiTransientResources[ObjectKind.Player] = PlayerConfig.GlobalPersistentCache.Concat(jobSpecificData ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            PlayerConfig.JobSpecificPetCache.TryGetValue(_dalamudUtil.ClassJobId, out var petSpecificData);
+            PlayerConfig.JobSpecificCache.TryGetValue(
+                _dalamudUtil.ClassJobId,
+                out var jobSpecificData
+            );
+            SemiTransientResources[ObjectKind.Player] = PlayerConfig
+                .GlobalPersistentCache.Concat(jobSpecificData ?? [])
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            PlayerConfig.JobSpecificPetCache.TryGetValue(
+                _dalamudUtil.ClassJobId,
+                out var petSpecificData
+            );
             SemiTransientResources[ObjectKind.Pet] = [.. petSpecificData ?? []];
         }
 
         foreach (var kind in Enum.GetValues(typeof(ObjectKind)))
         {
-            if (!_cachedFrameAddresses.Any(k => k.Value == (ObjectKind)kind) && TransientResources.Remove((ObjectKind)kind, out _))
+            if (
+                !_cachedFrameAddresses.Any(k => k.Value == (ObjectKind)kind)
+                && TransientResources.Remove((ObjectKind)kind, out _)
+            )
             {
                 Logger.LogDebug("Object not present anymore: {kind}", kind.ToString());
             }
@@ -299,7 +412,8 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         var filePath = msg.FilePath;
 
         // ignore files already processed this frame
-        if (_cachedHandledPaths.Contains(gamePath)) return;
+        if (_cachedHandledPaths.Contains(gamePath))
+            return;
 
         lock (_cacheAdditionLock)
         {
@@ -312,17 +426,23 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
             filePath = filePath.Split("|")[2];
         }
         // replace filepath
-        filePath = filePath.ToLowerInvariant().Replace("\\", "/", StringComparison.OrdinalIgnoreCase);
+        filePath = filePath
+            .ToLowerInvariant()
+            .Replace("\\", "/", StringComparison.OrdinalIgnoreCase);
 
         // ignore files that are the same
-        var replacedGamePath = gamePath.ToLowerInvariant().Replace("\\", "/", StringComparison.OrdinalIgnoreCase);
+        var replacedGamePath = gamePath
+            .ToLowerInvariant()
+            .Replace("\\", "/", StringComparison.OrdinalIgnoreCase);
         if (string.Equals(filePath, replacedGamePath, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
         // ignore files to not handle
-        var handledTypes = IsTransientRecording ? _handledRecordingFileTypes.Concat(_handledFileTypes) : _handledFileTypes;
+        var handledTypes = IsTransientRecording
+            ? _handledRecordingFileTypes.Concat(_handledFileTypes)
+            : _handledFileTypes;
         if (!handledTypes.Any(type => gamePath.EndsWith(type, StringComparison.OrdinalIgnoreCase)))
         {
             lock (_cacheAdditionLock)
@@ -354,12 +474,19 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         bool alreadyTransient = false;
 
         bool transientContains = transientResources.Contains(replacedGamePath);
-        bool semiTransientContains = SemiTransientResources.SelectMany(k => k.Value).Any(f => string.Equals(f, gamePath, StringComparison.OrdinalIgnoreCase));
+        bool semiTransientContains = SemiTransientResources
+            .SelectMany(k => k.Value)
+            .Any(f => string.Equals(f, gamePath, StringComparison.OrdinalIgnoreCase));
         if (transientContains || semiTransientContains)
         {
             if (!IsTransientRecording)
-                Logger.LogTrace("Not adding {replacedPath} => {filePath}, Reason: Transient: {contains}, SemiTransient: {contains2}", replacedGamePath, filePath,
-                    transientContains, semiTransientContains);
+                Logger.LogTrace(
+                    "Not adding {replacedPath} => {filePath}, Reason: Transient: {contains}, SemiTransient: {contains2}",
+                    replacedGamePath,
+                    filePath,
+                    transientContains,
+                    semiTransientContains
+                );
             alreadyTransient = true;
         }
         else
@@ -369,7 +496,12 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
                 bool isAdded = transientResources.Add(replacedGamePath);
                 if (isAdded)
                 {
-                    Logger.LogDebug("Adding {replacedGamePath} for {gameObject} ({filePath})", replacedGamePath, owner?.ToString() ?? gameObjectAddress.ToString("X"), filePath);
+                    Logger.LogDebug(
+                        "Adding {replacedGamePath} for {gameObject} ({filePath})",
+                        replacedGamePath,
+                        owner?.ToString() ?? gameObjectAddress.ToString("X"),
+                        filePath
+                    );
                     SendTransients(gameObjectAddress, objectKind);
                 }
             }
@@ -377,7 +509,12 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
         if (owner != null && IsTransientRecording)
         {
-            _recordedTransients.Add(new TransientRecord(owner, replacedGamePath, filePath, alreadyTransient) { AddTransient = !alreadyTransient });
+            _recordedTransients.Add(
+                new TransientRecord(owner, replacedGamePath, filePath, alreadyTransient)
+                {
+                    AddTransient = !alreadyTransient,
+                }
+            );
         }
     }
 
@@ -403,7 +540,8 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
     public void StartRecording(CancellationToken token)
     {
-        if (IsTransientRecording) return;
+        if (IsTransientRecording)
+            return;
         _recordedTransients.Clear();
         IsTransientRecording = true;
         RecordTimeRemaining.Value = TimeSpan.FromSeconds(150);
@@ -414,7 +552,9 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
                 while (RecordTimeRemaining.Value > TimeSpan.Zero && !token.IsCancellationRequested)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
-                    RecordTimeRemaining.Value = RecordTimeRemaining.Value.Subtract(TimeSpan.FromSeconds(1));
+                    RecordTimeRemaining.Value = RecordTimeRemaining.Value.Subtract(
+                        TimeSpan.FromSeconds(1)
+                    );
                 }
             }
             finally
@@ -437,13 +577,18 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         HashSet<nint> addedTransients = [];
         foreach (var item in _recordedTransients)
         {
-            if (!item.AddTransient || item.AlreadyTransient) continue;
+            if (!item.AddTransient || item.AlreadyTransient)
+                continue;
             if (!TransientResources.TryGetValue(item.Owner.ObjectKind, out var transient))
             {
                 TransientResources[item.Owner.ObjectKind] = transient = [];
             }
 
-            Logger.LogTrace("Adding recorded: {gamePath} => {filePath}", item.GamePath, item.FilePath);
+            Logger.LogTrace(
+                "Adding recorded: {gamePath} => {filePath}",
+                item.GamePath,
+                item.FilePath
+            );
 
             transient.Add(item.GamePath);
             addedTransients.Add(item.Owner.Address);
@@ -463,7 +608,12 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     public ValueProgress<TimeSpan> RecordTimeRemaining { get; } = new();
     private CancellationTokenSource _sendTransientCts = new();
 
-    public record TransientRecord(GameObjectHandler Owner, string GamePath, string FilePath, bool AlreadyTransient)
+    public record TransientRecord(
+        GameObjectHandler Owner,
+        string GamePath,
+        string FilePath,
+        bool AlreadyTransient
+    )
     {
         public bool AddTransient { get; set; }
     }

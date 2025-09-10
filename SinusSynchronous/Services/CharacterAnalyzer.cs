@@ -1,7 +1,7 @@
 ﻿using Lumina.Data.Files;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Enum;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Enum;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.UI;

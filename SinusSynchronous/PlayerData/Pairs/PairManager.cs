@@ -1,9 +1,9 @@
 ﻿using Dalamud.Plugin.Services;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Comparer;
-using SinusSynchronous.API.Data.Extensions;
-using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.API.Dto.User;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Comparer;
+using LaciSynchroni.Common.Data.Extensions;
+using LaciSynchroni.Common.Dto.Group;
+using LaciSynchroni.Common.Dto.User;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.PlayerData.Factories;
@@ -64,7 +64,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         var key = BuildKey(dto.User, serverIndex);
         if (!_allClientPairs.ContainsKey(key))
             _allClientPairs[key] = _pairFactory.Create(new UserFullPairDto(dto.User,
-                API.Data.Enum.IndividualPairStatus.None,
+                LaciSynchroni.Common.Data.Enum.IndividualPairStatus.None,
                 [dto.Group.GID], dto.SelfToOtherPermissions, dto.OtherToSelfPermissions), serverIndex);
         else _allClientPairs[key].UserPair.Groups.Add(dto.GID);
         RecreateLazy();
@@ -140,7 +140,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
 
     public List<Pair> GetOnlineUserPairsAcrossAllServers() => _allClientPairs
         .Where(p => !string.IsNullOrEmpty(p.Value.GetPlayerNameHash())).Select(p => p.Value).ToList();
-    
+
     public int GetVisibleUserCountAcrossAllServers() => _allClientPairs
         .Count(p => p.Value.IsVisible);
 
@@ -153,7 +153,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
             .Where(p => p.Value.IsVisible)
             .Select(p => p.Key)
     ];
-    
+
     public List<ServerBasedUserKey> GetVisibleUsersAcrossAllServers() =>
     [
         .. _allClientPairs
@@ -262,7 +262,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         var key = BuildKey(dto.User, serverIndex);
         if (_allClientPairs.TryGetValue(key, out var pair))
         {
-            pair.UserPair.IndividualPairStatus = API.Data.Enum.IndividualPairStatus.None;
+            pair.UserPair.IndividualPairStatus = LaciSynchroni.Common.Data.Enum.IndividualPairStatus.None;
 
             if (!pair.HasAnyConnection())
             {
@@ -413,7 +413,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     }
 
     private Lazy<List<Pair>> DirectPairsLazy() => new(() => _allClientPairs.Select(k => k.Value)
-        .Where(k => k.IndividualPairStatus != API.Data.Enum.IndividualPairStatus.None).ToList());
+        .Where(k => k.IndividualPairStatus != LaciSynchroni.Common.Data.Enum.IndividualPairStatus.None).ToList());
 
     private void DisposePairs(int? serverIndex)
     {
@@ -434,7 +434,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
                 item.Value.MarkOffline(wait: false);
             });
         }
-      
+
     }
 
     private Lazy<Dictionary<GroupFullInfoWithServer, List<Pair>>> GroupPairsLazy()

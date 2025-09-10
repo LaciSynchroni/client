@@ -3,7 +3,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data.Extensions;
+using LaciSynchroni.Common.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
@@ -130,7 +130,7 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
                 ImGui.SameLine();
                 ImGui.TextUnformatted($"({_pair.PlayerName})");
             }
-            if (_pair.UserPair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional)
+            if (_pair.UserPair.IndividualPairStatus == LaciSynchroni.Common.Data.Enum.IndividualPairStatus.Bidirectional)
             {
                 ImGui.TextUnformatted("Directly paired");
                 if (_pair.UserPair.OwnPermissions.IsPaused())

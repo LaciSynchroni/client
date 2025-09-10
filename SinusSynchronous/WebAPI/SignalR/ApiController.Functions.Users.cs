@@ -1,6 +1,6 @@
-﻿using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto;
-using SinusSynchronous.API.Dto.User;
+﻿using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto;
+using LaciSynchroni.Common.Dto.User;
 
 namespace SinusSynchronous.WebAPI;
 using ServerIndex = int;

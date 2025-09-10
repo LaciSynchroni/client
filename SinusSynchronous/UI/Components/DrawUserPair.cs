@@ -3,9 +3,9 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using SinusSynchronous.API.Data.Extensions;
-using SinusSynchronous.API.Dto.Group;
-using SinusSynchronous.API.Dto.User;
+using LaciSynchroni.Common.Data.Extensions;
+using LaciSynchroni.Common.Dto.Group;
+using LaciSynchroni.Common.Dto.User;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
@@ -165,7 +165,7 @@ public class DrawUserPair
         ImGui.TextUnformatted("Individual Pair Functions");
         var entryUID = _pair.UserData.AliasOrUID;
 
-        if (_pair.IndividualPairStatus != API.Data.Enum.IndividualPairStatus.None)
+        if (_pair.IndividualPairStatus != LaciSynchroni.Common.Data.Enum.IndividualPairStatus.None)
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Folder, "Pair Groups", _menuWidth, true))
             {
@@ -215,7 +215,7 @@ public class DrawUserPair
         else if (_pair.IsOnline)
         {
             using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.HealerGreen);
-            _uiSharedService.IconText(_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional
+            _uiSharedService.IconText(_pair.IndividualPairStatus == LaciSynchroni.Common.Data.Enum.IndividualPairStatus.Bidirectional
                 ? FontAwesomeIcon.User : FontAwesomeIcon.Users);
             if (!string.IsNullOrEmpty(userPairText))
                 userPairText += UiSharedService.TooltipSeparator;
@@ -225,22 +225,22 @@ public class DrawUserPair
         else
         {
             using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-            _uiSharedService.IconText(_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.OneSided
+            _uiSharedService.IconText(_pair.IndividualPairStatus == LaciSynchroni.Common.Data.Enum.IndividualPairStatus.OneSided
                 ? FontAwesomeIcon.ArrowsLeftRight
-                : (_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional
+                : (_pair.IndividualPairStatus == LaciSynchroni.Common.Data.Enum.IndividualPairStatus.Bidirectional
                     ? FontAwesomeIcon.User : FontAwesomeIcon.Users));
-            
+
             if(!string.IsNullOrEmpty(userPairText))
                 userPairText += UiSharedService.TooltipSeparator;
 
             userPairText += _pair.UserData.AliasOrUID + " is offline";
         }
 
-        if (_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.OneSided)
+        if (_pair.IndividualPairStatus == LaciSynchroni.Common.Data.Enum.IndividualPairStatus.OneSided)
         {
             userPairText += UiSharedService.TooltipSeparator + "User has not added you back";
         }
-        else if (_pair.IndividualPairStatus == API.Data.Enum.IndividualPairStatus.Bidirectional)
+        else if (_pair.IndividualPairStatus == LaciSynchroni.Common.Data.Enum.IndividualPairStatus.Bidirectional)
         {
             userPairText += UiSharedService.TooltipSeparator + "You are directly Paired";
         }
@@ -542,7 +542,7 @@ public class DrawUserPair
                 ImGui.CloseCurrentPopup();
                 if (!group.GroupPairUserInfos.TryGetValue(_pair.UserData.UID, out var userinfo))
                 {
-                    userinfo = API.Data.Enum.GroupPairUserInfo.IsPinned;
+                    userinfo = LaciSynchroni.Common.Data.Enum.GroupPairUserInfo.IsPinned;
                 }
                 else
                 {
@@ -578,7 +578,7 @@ public class DrawUserPair
                 ImGui.CloseCurrentPopup();
                 if (!group.GroupPairUserInfos.TryGetValue(_pair.UserData.UID, out var userinfo))
                 {
-                    userinfo = API.Data.Enum.GroupPairUserInfo.IsModerator;
+                    userinfo = LaciSynchroni.Common.Data.Enum.GroupPairUserInfo.IsModerator;
                 }
                 else
                 {

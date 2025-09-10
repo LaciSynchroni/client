@@ -1,7 +1,7 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using SinusSynchronous.API.Dto.Group;
+using LaciSynchroni.Common.Dto.Group;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;

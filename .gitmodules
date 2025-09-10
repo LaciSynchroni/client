@@ -1,4 +1,3 @@
-[submodule "SinusAPI"]
-	path = SinusAPI
-	url = https://github.com/MareSynchronos2/api.git
-	branch = rename
+[submodule "Common"]
+	path = Common
+	url = https://github.com/LaciSynchroni/common.git

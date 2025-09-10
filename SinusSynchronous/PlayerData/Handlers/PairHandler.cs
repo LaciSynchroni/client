@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Data;
+﻿using LaciSynchroni.Common.Data;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.PlayerData.Factories;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using ObjectKind = SinusSynchronous.API.Data.Enum.ObjectKind;
+using ObjectKind = LaciSynchroni.Common.Data.Enum.ObjectKind;
 
 namespace SinusSynchronous.PlayerData.Handlers;
 

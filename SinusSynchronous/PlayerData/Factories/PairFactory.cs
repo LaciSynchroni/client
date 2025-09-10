@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Dto.User;
+using LaciSynchroni.Common.Dto.User;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;

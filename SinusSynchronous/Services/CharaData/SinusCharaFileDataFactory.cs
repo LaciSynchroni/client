@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Data;
+﻿using LaciSynchroni.Common.Data;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.Services.CharaData.Models;
 

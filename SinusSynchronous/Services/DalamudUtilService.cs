@@ -11,7 +11,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.Sheets;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Interop;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.PlayerData.Handlers;

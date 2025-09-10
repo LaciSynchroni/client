@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Extensions;
-using SinusSynchronous.API.Dto;
-using SinusSynchronous.API.Dto.User;
-using SinusSynchronous.API.SignalR;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Extensions;
+using LaciSynchroni.Common.Dto;
+using LaciSynchroni.Common.Dto.User;
+using LaciSynchroni.Common.SignalR;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Events;
@@ -311,7 +311,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
 
         var hubUrl = useAdvancedUris && !string.IsNullOrEmpty(serverHubUri) ?
             serverHubUri :
-            ServerToUse.ServerUri + ISinusHub.Path;
+            ServerToUse.ServerUri + IServerHub.Path;
 
         _logger.LogDebug("Building new HubConnection using transport {transport}", transportType);
 
@@ -380,7 +380,7 @@ public partial class MultiConnectSinusClient : DisposableMediatorSubscriberBase
         {
             InitializeApiHooks();
             ConnectionDto = await GetConnectionDtoAsync(publishConnected: false).ConfigureAwait(false);
-            if (ConnectionDto.ServerVersion != ISinusHub.ApiVersion)
+            if (ConnectionDto.ServerVersion != IServerHub.ApiVersion)
             {
                 await StopConnectionAsync(ServerState.VersionMisMatch).ConfigureAwait(false);
                 return;

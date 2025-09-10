@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Dto;
+using LaciSynchroni.Common.Dto;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;

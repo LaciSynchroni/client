@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Data.Enum;
+﻿using LaciSynchroni.Common.Data.Enum;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.PlayerData.Handlers;

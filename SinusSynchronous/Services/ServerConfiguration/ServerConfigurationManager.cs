@@ -1,7 +1,7 @@
 ﻿using Dalamud.Utility;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Routes;
+using LaciSynchroni.Common.Routes;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
@@ -41,7 +41,7 @@ public class ServerConfigurationManager
     }
 
     public IEnumerable<int> ServerIndexes => _serverConfigService.Current.ServerStorage.Select((_, i) => i);
-    
+
     public string CurrentApiUrl => CurrentServer.ServerUri;
     public ServerStorage CurrentServer => _serverConfigService.Current.ServerStorage[CurrentServerIndex];
     public bool SendCensusData
@@ -541,7 +541,7 @@ public class ServerConfigurationManager
         try
         {
             var baseUri = serverUri.Replace("wss://", "https://").Replace("ws://", "http://");
-            var oauthCheckUri = SinusAuth.GetUIDsFullPath(new Uri(baseUri));
+            var oauthCheckUri = AuthRoutes.GetUIDsFullPath(new Uri(baseUri));
             _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var response = await _httpClient.GetAsync(oauthCheckUri).ConfigureAwait(false);
             var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -559,7 +559,7 @@ public class ServerConfigurationManager
         try
         {
             var baseUri = serverUri.Replace("wss://", "https://").Replace("ws://", "http://");
-            var oauthCheckUri = SinusAuth.GetDiscordOAuthEndpointFullPath(new Uri(baseUri));
+            var oauthCheckUri = AuthRoutes.GetDiscordOAuthEndpointFullPath(new Uri(baseUri));
             var response = await _httpClient.GetFromJsonAsync<Uri?>(oauthCheckUri).ConfigureAwait(false);
             return response;
         }
@@ -582,7 +582,7 @@ public class ServerConfigurationManager
         try
         {
             var baseUri = serverUri.Replace("wss://", "https://").Replace("ws://", "http://");
-            var oauthCheckUri = SinusAuth.GetDiscordOAuthTokenFullPath(new Uri(baseUri), sessionId);
+            var oauthCheckUri = AuthRoutes.GetDiscordOAuthTokenFullPath(new Uri(baseUri), sessionId);
             var response = await _httpClient.GetAsync(oauthCheckUri, linkedCts.Token).ConfigureAwait(false);
             discordToken = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }

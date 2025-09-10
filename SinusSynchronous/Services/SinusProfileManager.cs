@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Comparer;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Comparer;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration;
@@ -68,7 +68,7 @@ public class SinusProfileManager : MediatorSubscriberBase
             _sinusProfiles[data] = _loadingProfileData;
             var userData = data.UserData;
             var userUid = _apiController.GetUidByServer(data.ServerIndex);
-            var profile = await _apiController.UserGetProfile(data.ServerIndex, new API.Dto.User.UserDto(data.UserData)).ConfigureAwait(false);
+            var profile = await _apiController.UserGetProfile(data.ServerIndex, new LaciSynchroni.Common.Dto.User.UserDto(data.UserData)).ConfigureAwait(false);
             SinusProfileData profileData = new(profile.Disabled, profile.IsNSFW ?? false,
                 string.IsNullOrEmpty(profile.ProfilePictureBase64) ? _sinusLogo : profile.ProfilePictureBase64,
                 !string.IsNullOrEmpty(userData.Alias) && !string.Equals(userData.Alias, userData.UID, StringComparison.Ordinal) ? _sinusSupporter : string.Empty,

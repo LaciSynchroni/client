@@ -3,7 +3,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data.Extensions;
+using LaciSynchroni.Common.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;

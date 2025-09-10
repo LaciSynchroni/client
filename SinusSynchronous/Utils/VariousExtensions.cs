@@ -1,6 +1,6 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Data.Enum;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Data.Enum;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.PlayerData.Pairs;
 using Microsoft.Extensions.Logging;

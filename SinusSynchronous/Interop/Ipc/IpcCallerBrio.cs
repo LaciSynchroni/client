@@ -1,7 +1,7 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Services;
 using Microsoft.Extensions.Logging;
 using System.Numerics;

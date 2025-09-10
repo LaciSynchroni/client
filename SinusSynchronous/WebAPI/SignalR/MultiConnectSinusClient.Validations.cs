@@ -1,7 +1,7 @@
 using Dalamud.Utility;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Dto;
-using SinusSynchronous.API.SignalR;
+using LaciSynchroni.Common.Dto;
+using LaciSynchroni.Common.SignalR;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.WebAPI.SignalR.Utils;
@@ -31,7 +31,7 @@ public partial class MultiConnectSinusClient
 
         return true;
     }
-    
+
     private async Task<bool> VerifyFullPause()
     {
         if (ServerToUse?.FullPause ?? true)
@@ -45,7 +45,7 @@ public partial class MultiConnectSinusClient
 
         return true;
     }
-    
+
     private async Task<bool> VerifyOAuth()
     {
         if (!ServerToUse.UseOAuth2)
@@ -88,7 +88,7 @@ public partial class MultiConnectSinusClient
     private async Task<bool> VerifyClientVersion(ConnectionDto connectionDto)
     {
         var currentClientVer = Assembly.GetExecutingAssembly().GetName().Version!;
-        if (connectionDto.ServerVersion != ISinusHub.ApiVersion)
+        if (connectionDto.ServerVersion != IServerHub.ApiVersion)
         {
             if (connectionDto.CurrentClientVersion > currentClientVer)
             {
@@ -102,7 +102,7 @@ public partial class MultiConnectSinusClient
         }
         return true;
     }
-    
+
     private void TriggerConnectionWarnings(ConnectionDto connectionDto)
     {
         var currentClientVer = Assembly.GetExecutingAssembly().GetName().Version!;
@@ -147,7 +147,7 @@ public partial class MultiConnectSinusClient
             _naggedAboutLod = false;
         }
     }
-    
+
     private async Task<bool> VerifySecretKeyAuth()
     {
         if (ServerToUse.UseOAuth2)

@@ -1,8 +1,8 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using K4os.Compression.LZ4.Legacy;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Interop.Ipc;
 using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.PlayerData.Handlers;

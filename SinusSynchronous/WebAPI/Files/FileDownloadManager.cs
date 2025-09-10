@@ -1,8 +1,8 @@
 ﻿using Dalamud.Utility;
 using K4os.Compression.LZ4.Legacy;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto.Files;
-using SinusSynchronous.API.Routes;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto.Files;
+using LaciSynchroni.Common.Routes;
 using SinusSynchronous.FileCache;
 using SinusSynchronous.PlayerData.Handlers;
 using SinusSynchronous.Services.Mediator;
@@ -145,7 +145,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         _downloadStatus[downloadGroup].DownloadStatus = DownloadStatus.Downloading;
 
         HttpResponseMessage response = null!;
-        var requestUrl = SinusFiles.CacheGetFullPath(fileTransfer[0].DownloadUri, requestId);
+        var requestUrl = FilesRoutes.CacheGetFullPath(fileTransfer[0].DownloadUri, requestId);
 
         Logger.LogDebug("Downloading {requestUrl} for request {id}", requestUrl, requestId);
         try
@@ -268,7 +268,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         async (fileGroup, token) =>
         {
             // let server predownload files
-            var requestIdResponse = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, SinusFiles.RequestEnqueueFullPath(fileGroup.First().DownloadUri),
+            var requestIdResponse = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Post, FilesRoutes.RequestEnqueueFullPath(fileGroup.First().DownloadUri),
                 fileGroup.Select(c => c.Hash), token).ConfigureAwait(false);
             Logger.LogDebug("Sent request for {n} files on server {uri} with result {result}", fileGroup.Count(), fileGroup.First().DownloadUri,
                 await requestIdResponse.Content.ReadAsStringAsync(token).ConfigureAwait(false));
@@ -382,7 +382,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         {
             throw new InvalidOperationException("FileTransferManager is not initialized");
         }
-        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, SinusFiles.ServerFilesGetSizesFullPath(fileCdnUri), hashes, ct).ConfigureAwait(false);
+        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.ServerFilesGetSizesFullPath(fileCdnUri), hashes, ct).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<List<DownloadFileDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
     }
 
@@ -435,7 +435,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                 {
                     if (downloadCt.IsCancellationRequested) throw;
 
-                    var req = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, SinusFiles.RequestCheckQueueFullPath(downloadFileTransfer[0].DownloadUri, requestId),
+                    var req = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.RequestCheckQueueFullPath(downloadFileTransfer[0].DownloadUri, requestId),
                         downloadFileTransfer.Select(c => c.Hash).ToList(), downloadCt).ConfigureAwait(false);
                     req.EnsureSuccessStatusCode();
                     localTimeoutCts.Dispose();
@@ -455,7 +455,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         {
             try
             {
-                await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, SinusFiles.RequestCancelFullPath(downloadFileTransfer[0].DownloadUri, requestId)).ConfigureAwait(false);
+                await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.RequestCancelFullPath(downloadFileTransfer[0].DownloadUri, requestId)).ConfigureAwait(false);
                 alreadyCancelled = true;
             }
             catch
@@ -471,7 +471,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             {
                 try
                 {
-                    await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, SinusFiles.RequestCancelFullPath(downloadFileTransfer[0].DownloadUri, requestId)).ConfigureAwait(false);
+                    await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.RequestCancelFullPath(downloadFileTransfer[0].DownloadUri, requestId)).ConfigureAwait(false);
                 }
                 catch
                 {

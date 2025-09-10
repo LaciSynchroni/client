@@ -5,7 +5,7 @@ using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.CharaData;

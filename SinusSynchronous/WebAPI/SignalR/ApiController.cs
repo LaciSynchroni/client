@@ -1,7 +1,7 @@
 ﻿using Dalamud.Utility;
 using Microsoft.Extensions.Logging;
-using SinusSynchronous.API.Data;
-using SinusSynchronous.API.Dto;
+using LaciSynchroni.Common.Data;
+using LaciSynchroni.Common.Dto;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;

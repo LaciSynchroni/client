@@ -3,7 +3,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface;
-using SinusSynchronous.API.Dto.CharaData;
+using LaciSynchroni.Common.Dto.CharaData;
 using SinusSynchronous.Services.CharaData.Models;
 using System.Numerics;
 using SinusSynchronous.Services.ServerConfiguration;

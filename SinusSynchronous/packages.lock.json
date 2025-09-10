@@ -518,7 +518,7 @@
         "resolved": "9.0.8",
         "contentHash": "kpvkzWJoHR9os3/4LL5feaTTLD92+XzTqPyYLU2tw2BoJ4MrWCfkjGXtL7MsdpV/20e1+SamCbrPj2L9ptwgBA=="
       },
-      "sinussynchronous.api": {
+      "lacisynchroni.common": {
         "type": "Project",
         "dependencies": {
           "MessagePack.Annotations": "[3.1.3, )"

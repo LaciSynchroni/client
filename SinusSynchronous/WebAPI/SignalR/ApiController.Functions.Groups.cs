@@ -1,4 +1,4 @@
-﻿using SinusSynchronous.API.Dto.Group;
+﻿using LaciSynchroni.Common.Dto.Group;
 
 namespace SinusSynchronous.WebAPI;
 using ServerIndex = int;

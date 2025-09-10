@@ -1,8 +1,8 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using SinusSynchronous.API.Data.Enum;
-using SinusSynchronous.API.Data.Extensions;
+using LaciSynchroni.Common.Data.Enum;
+using LaciSynchroni.Common.Data.Extensions;
 using SinusSynchronous.PlayerData.Pairs;
 using SinusSynchronous.Services;
 using SinusSynchronous.Services.Mediator;
