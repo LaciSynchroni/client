@@ -2045,7 +2045,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.SameLine();
             ImGui.TextUnformatted("(");
             ImGui.SameLine();
-            ImGui.TextColored(ImGuiColors.ParsedGreen, _apiController.OnlineUsers.ToString(CultureInfo.InvariantCulture));
+            ImGui.TextColored(ImGuiColors.ParsedGreen, _apiController.GetOnlineUsersForServer(_lastSelectedServerIndex).ToString(CultureInfo.InvariantCulture));
             ImGui.SameLine();
             ImGui.TextUnformatted("Users Online");
             ImGui.SameLine();
