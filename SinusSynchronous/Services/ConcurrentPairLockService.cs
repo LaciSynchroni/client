@@ -3,27 +3,34 @@ using System.Collections.Concurrent;
 
 namespace SinusSynchronous.Services
 {
-    using PlayerName = string;
-    
+    using PlayerNameHash = string;
+    using ServerIndex = int;
+
     public class ConcurrentPairLockService
     {
-        private readonly ConcurrentDictionary<PlayerName, bool> _renderLocks = new();
+        private readonly ConcurrentDictionary<PlayerNameHash, ServerIndex> _renderLocks = new();
+        private readonly Lock _resourceLock = new();
 
-
-        public bool TryAcquireLock(PlayerName? playerName)
+        public int GetRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex)
         {
-            if (playerName.IsNullOrWhitespace())
+            if (serverIndex is null || playerNameHash.IsNullOrWhitespace()) return -1;
+
+            lock (_resourceLock)
             {
-                return false;
+                bool renderLockExists = _renderLocks.TryGetValue(playerNameHash, out ServerIndex existingServerIndex);
+                if (renderLockExists && existingServerIndex == serverIndex) return existingServerIndex;
+                return _renderLocks.TryAdd(playerNameHash, serverIndex.Value) ? serverIndex.Value : -1;
             }
-            return _renderLocks.GetOrAdd(playerName, true);
         }
 
-        public void ReleaseLock(PlayerName? playerName)
+        public bool ReleaseRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex)
         {
-            if (playerName != null)
+            if (serverIndex is null || playerNameHash.IsNullOrWhitespace()) return false;
+
+            lock (_resourceLock)
             {
-                _renderLocks.Remove(playerName, out _);
+                ServerIndex existingServerIndex = _renderLocks.GetValueOrDefault(playerNameHash, -1);
+                return (serverIndex == existingServerIndex) && _renderLocks.Remove(playerNameHash, out _);
             }
         }
     }

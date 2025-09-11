@@ -4,12 +4,13 @@ using LaciSynchroni.Common.Data.Comparer;
 using LaciSynchroni.Common.Data.Extensions;
 using LaciSynchroni.Common.Dto.Group;
 using LaciSynchroni.Common.Dto.User;
+using Microsoft.Extensions.Logging;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.PlayerData.Factories;
 using SinusSynchronous.Services.Events;
 using SinusSynchronous.Services.Mediator;
-using Microsoft.Extensions.Logging;
+using SinusSynchronous.Utils;
 using System.Collections.Concurrent;
 
 namespace SinusSynchronous.PlayerData.Pairs;
@@ -149,8 +150,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     public List<ServerBasedUserKey> GetVisibleUsers(int serverIndex) =>
     [
         .. _allClientPairs
-            .Where(p => p.Key.ServerIndex == serverIndex)
-            .Where(p => p.Value.IsVisible)
+            .Where(p => p.Key.ServerIndex == serverIndex && p.Value.IsVisible)
             .Select(p => p.Key)
     ];
 
@@ -427,14 +427,26 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         }
         else
         {
-            Logger.LogDebug("Disposing all Pairs for server {serverIndex}", serverIndex);
-            var toDispose = _allClientPairs.Where(index => index.Key.ServerIndex == serverIndex);
-            Parallel.ForEach(toDispose, item =>
+            Logger.LogDebug("Disposing all Pairs for server {ServerIndex}", serverIndex);
+            var toDispose = _allClientPairs.Where(item => item.Key.ServerIndex == serverIndex).Select(item => item.Value);
+            var toRedraw = _allClientPairs.Where(
+                item => item.Value.IsVisible &&
+                item.Key.ServerIndex != serverIndex &&
+                toDispose.Any(disposePair => disposePair.GetPlayerNameHash().Equals(item.Value.GetPlayerNameHash(), StringComparison.Ordinal)))
+                .DistinctBy(item => item.Value.GetPlayerNameHash())
+                .Select(item => item.Key)
+                .DeepClone();
+
+            Parallel.ForEach(toDispose, disposePair =>
             {
-                item.Value.MarkOffline(wait: false);
+                disposePair.MarkOffline(wait: false);
+            });
+
+            Parallel.ForEach(_allClientPairs.Where(item => toRedraw.Contains(item.Key)).Select(item => item.Value), redrawPair =>
+            {
+                redrawPair.ApplyLastReceivedData(forced: true);
             });
         }
-
     }
 
     private Lazy<Dictionary<GroupFullInfoWithServer, List<Pair>>> GroupPairsLazy()
