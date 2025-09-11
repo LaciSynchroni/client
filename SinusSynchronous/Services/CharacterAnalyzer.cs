@@ -35,8 +35,11 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
     public int TotalFiles { get; internal set; }
     
     public bool HasUnconvertedTextures => LastAnalysis != null && LastAnalysis.Values.SelectMany(v => v.Values)
-        .Any(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && !v.Format.Value.StartsWith("BC", StringComparison.OrdinalIgnoreCase));
-    
+        .Any(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && !v.Format.Value.StartsWith("BC7", StringComparison.OrdinalIgnoreCase));
+
+    public int UnconvertedTextureCount => LastAnalysis != null ? LastAnalysis.Values.SelectMany(v => v.Values)
+        .Count(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && !v.Format.Value.StartsWith("BC7", StringComparison.OrdinalIgnoreCase)) : 0;
+
     internal Dictionary<ObjectKind, Dictionary<string, FileDataEntry>> LastAnalysis { get; } = [];
 
     public void CancelAnalyze()

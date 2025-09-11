@@ -633,10 +633,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             _uiSharedService.IconText(FontAwesomeIcon.PersonCircleQuestion);
             if (ImGui.IsItemHovered())
             {
-                var unconvertedTextures = _cachedAnalysis.Values
-                    .SelectMany(v => v.Values)
-                    .Count(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && 
-                               !v.Format.Value.StartsWith("BC7", StringComparison.OrdinalIgnoreCase));
+                var unconvertedTextures = _characterAnalyzer.UnconvertedTextureCount;
 
                 if (ImGui.IsItemClicked())
                 {

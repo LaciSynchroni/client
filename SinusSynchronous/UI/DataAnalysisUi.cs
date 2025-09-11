@@ -613,9 +613,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                     }
                 }
 
-                var unconvertedTextures = groupedfiles.Count(p => string.Equals(p.Key, "tex", StringComparison.Ordinal) &&
-                                                                  p.AsEnumerable().Any(p => !string.Equals(p.Format.Value, "BC7", StringComparison.InvariantCultureIgnoreCase)));
-
+                var unconvertedTextures = _characterAnalyzer.UnconvertedTextureCount;
                 if (unconvertedTextures > 0)
                 {
                     UiSharedService.ColorTextWrapped($"You have {unconvertedTextures} texture(s) that are not BC7 format. Consider converting them to BC7 to reduce their size.",
