@@ -7,6 +7,7 @@ using SinusSynchronous.Services;
 using SinusSynchronous.Services.Events;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI.Files;
 using Microsoft.Extensions.Hosting;
@@ -43,6 +44,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private bool _isVisible;
     private Guid _penumbraCollection;
     private bool _redrawOnNextApplication = false;
+    private readonly ServerStorage _serverInfo;
 
     public PairHandler(ILogger<PairHandler> logger, Pair pair,
         GameObjectHandlerFactory gameObjectHandlerFactory,
@@ -65,6 +67,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _serverConfigManager = serverConfigManager;
         _concurrentPairLockService = concurrentPairLockService;
         _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, Pair.UserData.UID).ConfigureAwait(false).GetAwaiter().GetResult();
+        _serverInfo = _serverConfigManager.GetServerByIndex(Pair.ServerIndex);
 
         Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
@@ -183,7 +186,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 "Cannot apply character data to {Player} from server {NewServerIndex} ({NewServerName}): server {ExistingServerIndex} ({ExistingServerName}) already syncs this target",
                 PlayerName,
                 Pair.ServerIndex,
-                _serverConfigManager.GetServerByIndex(Pair.ServerIndex).ServerName,
+                _serverInfo.ServerName,
                 renderLockServerIndex,
                 _serverConfigManager.GetServerByIndex(renderLockServerIndex).ServerName);
             return;
