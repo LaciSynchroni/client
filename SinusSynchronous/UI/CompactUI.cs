@@ -27,6 +27,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System;
 
 namespace SinusSynchronous.UI;
 
@@ -567,7 +568,6 @@ public class CompactUi : WindowMediatorSubscriberBase
         UiSharedService.AttachToolTip(isConnectingOrConnected ?
            "Disconnect from " + serverName :
            "Connect to " + serverName);
-
     }
 
     private void DrawOnlineUsers(int serverId)
@@ -625,6 +625,31 @@ public class CompactUi : WindowMediatorSubscriberBase
         ImGui.TextUnformatted("Mem.:");
         ImGui.SameLine();
         ImGui.TextUnformatted($"{UiSharedService.ByteToString(playerLoadMemory)}");
+
+        
+        if (config.WarnOnExceedingThresholds && _characterAnalyzer.HasUnconvertedTextures)
+        {
+            ImGui.SameLine();
+            _uiSharedService.IconText(FontAwesomeIcon.PersonCircleQuestion);
+            if (ImGui.IsItemHovered())
+            {
+                var unconvertedTextures = _cachedAnalysis.Values
+                    .SelectMany(v => v.Values)
+                    .Count(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && 
+                               !v.Format.Value.StartsWith("BC7", StringComparison.OrdinalIgnoreCase));
+
+                if (ImGui.IsItemClicked())
+                {
+                    Mediator.Publish(new UiToggleMessage(typeof(DataAnalysisUi)));
+                }
+                if (unconvertedTextures > 0)
+                {
+                    UiSharedService.AttachToolTip($"You have {unconvertedTextures} texture(s) that are not BC7 format. Consider converting them to BC7 to reduce their size." +
+                        UiSharedService.TooltipSeparator +
+                        "Click to open the Character Data Analysis");
+                }
+            }
+        }
 
         if (config.VRAMSizeAutoPauseThresholdMiB > 0)
         {
@@ -786,7 +811,6 @@ public class CompactUi : WindowMediatorSubscriberBase
                 && (!u.Key.IsOneSidedPair || u.Value.Any()) && !u.Key.IsOnline && !u.Key.UserPair.OwnPermissions.IsPaused();
         bool FilterOfflineSyncshellUsers(KeyValuePair<Pair, List<GroupFullInfoDto>> u)
             => (!u.Key.IsDirectlyPaired && !u.Key.IsOnline && !u.Key.UserPair.OwnPermissions.IsPaused());
-
 
         if (_configService.Current.ShowVisibleUsersSeparately)
         {

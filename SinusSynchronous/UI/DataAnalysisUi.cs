@@ -12,6 +12,7 @@ using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.SinusConfiguration;
 using SinusSynchronous.Utils;
 using System.Numerics;
+using System;
 
 namespace SinusSynchronous.UI;
 
@@ -24,7 +25,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
     private readonly PlayerPerformanceConfigService _playerPerformanceConfig;
     private readonly TransientResourceManager _transientResourceManager;
     private readonly TransientConfigService _transientConfigService;
-    private readonly Dictionary<string, string[]> _texturesToConvert = new(StringComparer.Ordinal);
+    private Dictionary<string, string[]> _texturesToConvert = new(StringComparer.Ordinal);
     private Dictionary<ObjectKind, Dictionary<string, CharacterAnalyzer.FileDataEntry>>? _cachedAnalysis;
     private CancellationTokenSource _conversionCancellationTokenSource = new();
     private string _conversionCurrentFileName = string.Empty;
@@ -38,6 +39,14 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
     private ObjectKind _selectedObjectTab;
     private bool _showModal = false;
     private CancellationTokenSource _transientRecordCts = new();
+    private bool _showAlreadyAddedTransients = false;
+    private bool _acknowledgeReview = false;
+    private string _selectedStoredCharacter = string.Empty;
+    private string _selectedJobEntry = string.Empty;
+    private readonly List<string> _storedPathsToRemove = [];
+    private readonly Dictionary<string, string> _filePathResolve = [];
+    private string _filterGamePath = string.Empty;
+    private string _filterFilePath = string.Empty;
 
     public DataAnalysisUi(ILogger<DataAnalysisUi> logger, SinusMediator mediator,
         CharacterAnalyzer characterAnalyzer, IpcManager ipcManager,
@@ -151,15 +160,6 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             }
         }
     }
-
-    private bool _showAlreadyAddedTransients = false;
-    private bool _acknowledgeReview = false;
-    private string _selectedStoredCharacter = string.Empty;
-    private string _selectedJobEntry = string.Empty;
-    private readonly List<string> _storedPathsToRemove = [];
-    private readonly Dictionary<string, string> _filePathResolve = [];
-    private string _filterGamePath = string.Empty;
-    private string _filterFilePath = string.Empty;
 
     private void DrawStoredData()
     {
@@ -613,6 +613,15 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                     }
                 }
 
+                var unconvertedTextures = groupedfiles.Count(p => string.Equals(p.Key, "tex", StringComparison.Ordinal) &&
+                                                                  p.AsEnumerable().Any(p => !string.Equals(p.Format.Value, "BC7", StringComparison.InvariantCultureIgnoreCase)));
+
+                if (unconvertedTextures > 0)
+                {
+                    UiSharedService.ColorTextWrapped($"You have {unconvertedTextures} texture(s) that are not BC7 format. Consider converting them to BC7 to reduce their size.",
+                        ImGuiColors.DalamudYellow);
+                }
+
                 ImGui.Separator();
                 if (_selectedObjectTab != kvp.Key)
                 {
@@ -675,12 +684,34 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                             Environment.NewLine + "- Some textures, especially ones utilizing colorsets, might not be suited for BC7 conversion and might produce visual artifacts." +
                             Environment.NewLine + "- Before converting textures, make sure to have the original files of the mod you are converting so you can reimport it in case of issues." +
                             Environment.NewLine + "- Conversion will convert all found texture duplicates (entries with more than 1 file path) automatically." +
-                            Environment.NewLine + "- Converting textures to BC7 is a very expensive operation and, depending on the amount of textures to convert, will take a while to complete."
-                                , ImGuiColors.DalamudYellow);
-                            if (_texturesToConvert.Count > 0 && _uiSharedService.IconTextButton(FontAwesomeIcon.PlayCircle, "Start conversion of " + _texturesToConvert.Count + " texture(s)"))
+                            Environment.NewLine + "- Converting textures to BC7 is a very expensive operation and, depending on the amount of textures to convert, will take a while to complete." +
+                            Environment.NewLine + "- Make sure you have a BACKUP of your texture mod files before enabling this conversion.", ImGuiColors.DalamudYellow);
+
+                            ImGuiHelpers.ScaledDummy(5);
+
+                            var nonBC7Textures = fileGroup
+                                .Where(p => !string.Equals(p.Format.Value, "BC7", StringComparison.InvariantCultureIgnoreCase))
+                                .ToList();
+
+                            var filesToConvert = fileGroup
+                                .Where(p => p.ToConvert && !string.Equals(p.Format.Value, "BC7", StringComparison.InvariantCultureIgnoreCase))
+                                .ToList();
+
+                            using (ImRaii.Disabled(nonBC7Textures.Count == 0 || _conversionTask != null))
                             {
-                                _conversionCancellationTokenSource = _conversionCancellationTokenSource.CancelRecreate();
-                                _conversionTask = _ipcManager.Penumbra.ConvertTextureFiles(_logger, _texturesToConvert, _conversionProgress, _conversionCancellationTokenSource.Token);
+                                if (_uiSharedService.IconTextButton(FontAwesomeIcon.CheckSquare, $"Select all {nonBC7Textures.Count} non-BC7 texture files"))
+                                {
+                                    foreach (var entry in nonBC7Textures)
+                                        entry.ToConvert = true;
+                                }
+
+                                ImGui.SameLine();
+                                if (filesToConvert.Count > 0 && _uiSharedService.IconTextButton(FontAwesomeIcon.PlayCircle, "Start conversion of " + filesToConvert.Count + " texture(s)"))
+                                {
+                                    _texturesToConvert = filesToConvert.ToDictionary(p => p.FilePaths[0], p => p.FilePaths.ToArray(), StringComparer.Ordinal);
+                                    _conversionCancellationTokenSource = _conversionCancellationTokenSource.CancelRecreate();
+                                    _conversionTask = _ipcManager.Penumbra.ConvertTextureFiles(_logger, _texturesToConvert, _conversionProgress, _conversionCancellationTokenSource.Token);
+                                }
                             }
                         }
                     }
@@ -828,6 +859,8 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             }
             ImGui.TextUnformatted(item.Hash);
             if (ImGui.IsItemClicked()) _selectedHash = item.Hash;
+            if(item.FilePaths.Count > 0)
+                UiSharedService.AttachToolTip(item.FilePaths[0]);
             ImGui.TableNextColumn();
             ImGui.TextUnformatted(item.FilePaths.Count.ToString());
             if (ImGui.IsItemClicked()) _selectedHash = item.Hash;
@@ -853,18 +886,11 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                         ImGui.TextUnformatted("");
                         continue;
                     }
-                    var filePath = item.FilePaths[0];
-                    bool toConvert = _texturesToConvert.ContainsKey(filePath);
+
+                    bool toConvert = item.ToConvert;
                     if (ImGui.Checkbox("###convert" + item.Hash, ref toConvert))
                     {
-                        if (toConvert && !_texturesToConvert.ContainsKey(filePath))
-                        {
-                            _texturesToConvert[filePath] = item.FilePaths.Skip(1).ToArray();
-                        }
-                        else if (!toConvert && _texturesToConvert.ContainsKey(filePath))
-                        {
-                            _texturesToConvert.Remove(filePath);
-                        }
+                        item.ToConvert = toConvert;
                     }
                 }
             }

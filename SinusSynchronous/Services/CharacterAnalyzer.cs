@@ -33,6 +33,10 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
     public int CurrentFile { get; internal set; }
     public bool IsAnalysisRunning => _analysisCts != null;
     public int TotalFiles { get; internal set; }
+    
+    public bool HasUnconvertedTextures => LastAnalysis != null && LastAnalysis.Values.SelectMany(v => v.Values)
+        .Any(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && !v.Format.Value.StartsWith("BC", StringComparison.OrdinalIgnoreCase));
+    
     internal Dictionary<ObjectKind, Dictionary<string, FileDataEntry>> LastAnalysis { get; } = [];
 
     public void CancelAnalyze()
@@ -207,6 +211,7 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
         public long OriginalSize { get; private set; } = OriginalSize;
         public long CompressedSize { get; private set; } = CompressedSize;
         public long Triangles { get; private set; } = Triangles;
+        public bool ToConvert { get; set; } = false;
 
         public Lazy<string> Format = new(() =>
         {
