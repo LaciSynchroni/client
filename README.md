@@ -4,7 +4,6 @@
 ![GitHub Release](https://img.shields.io/github/v/release/LaciSynchroni/repo?label=Release)
 ![GitHub Release](https://img.shields.io/github/v/release/LaciSynchroni/repo?include_prereleases&label=Testing)
 
-
 The Laci Synchroni Multi-Connect Plugin, powered by our awesome contributors (see [Major Contributors](#major-contributors) and [Contributors](#contributors) section), is our client that allows you to connect to multiple Laci Synchroni (or API compatible alternative) servers simultaneously.
 
 ## Links

@@ -7,6 +7,7 @@ using SinusSynchronous.Services;
 using SinusSynchronous.Services.Events;
 using SinusSynchronous.Services.Mediator;
 using SinusSynchronous.Services.ServerConfiguration;
+using SinusSynchronous.SinusConfiguration.Models;
 using SinusSynchronous.Utils;
 using SinusSynchronous.WebAPI.Files;
 using Microsoft.Extensions.Hosting;
@@ -43,6 +44,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private bool _isVisible;
     private Guid _penumbraCollection;
     private bool _redrawOnNextApplication = false;
+    private readonly ServerStorage _serverInfo;
 
     public PairHandler(ILogger<PairHandler> logger, Pair pair,
         GameObjectHandlerFactory gameObjectHandlerFactory,
@@ -65,6 +67,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _serverConfigManager = serverConfigManager;
         _concurrentPairLockService = concurrentPairLockService;
         _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, Pair.UserData.UID).ConfigureAwait(false).GetAwaiter().GetResult();
+        _serverInfo = _serverConfigManager.GetServerByIndex(Pair.ServerIndex);
 
         Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
@@ -176,9 +179,16 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             return;
         }
 
-        if (!_concurrentPairLockService.TryAcquireLock(PlayerName))
+        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex);
+        if (renderLockServerIndex != Pair.ServerIndex && renderLockServerIndex > -1)
         {
-            Logger.LogInformation("Cannot apply character data to {player}: Another server you are connected to already syncs this target", PlayerName);
+            Logger.LogInformation(
+                "Cannot apply character data to {Player} from server {NewServerIndex} ({NewServerName}): server {ExistingServerIndex} ({ExistingServerName}) already syncs this target",
+                PlayerName,
+                Pair.ServerIndex,
+                _serverInfo.ServerName,
+                renderLockServerIndex,
+                _serverConfigManager.GetServerByIndex(renderLockServerIndex).ServerName);
             return;
         }
 
@@ -236,7 +246,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         try
         {
             Guid applicationId = Guid.NewGuid();
-            _concurrentPairLockService.ReleaseLock(name);
+            _concurrentPairLockService.ReleaseRenderLock(PlayerNameHash, Pair.ServerIndex);
             _applicationCancellationTokenSource?.CancelDispose();
             _applicationCancellationTokenSource = null;
             _downloadCancellationTokenSource?.CancelDispose();
