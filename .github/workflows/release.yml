@@ -1,0 +1,65 @@
+name: Build and Release
+
+on:
+  push:
+    tags-ignore: 
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '9.x.x'
+      - name: Download Dalamud
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: |
+          $version = '${{ github.ref_name }}'
+          Invoke-Expression 'dotnet build --no-restore --configuration Release -p:Version=$version -p:FileVersion=$version -p:AssemblyVersion=$version'
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Laci Synchroni ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+      - name: Upload Release
+        id: upload_release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: .\Client\bin\Release\SinusSynchronous\latest.zip
+          asset_name: latest.zip
+          asset_content_type: application/zip
+      - name: Request Repository Update (Generate App Token, 1/2)
+        id: app_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.BUILD_ORGANIZER_APP_ID }}
+          private_key: ${{ secrets.BUILD_ORGANIZER_APP_PRIVATE_KEY }}
+      - name: Request Repository Update (Trigger Workflow, 2/2)
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.app_token.outputs.token }}
+          repository: LaciSynchroni/repo
+          event-type: new-release
+          client-payload: |
+            {
+              "tag": "${{ github.ref_name }}",
+              "asset_url": "${{ steps.upload_release.outputs.browser_download_url }}"
+            }
