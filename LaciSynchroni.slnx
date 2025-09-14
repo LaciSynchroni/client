@@ -1,10 +1,16 @@
 <Solution>
   <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
     <Platform Name="x64" />
   </Configurations>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
   <Project Path="Common/LaciSynchroni.Common.csproj" />
-  <Project Path="LaciSynchroni/LaciSynchroni.csproj" />
+  <Project Path="LaciSynchroni/LaciSynchroni.csproj">
+    <BuildType Solution="Debug|*" Project="Debug" />
+    <BuildType Solution="Release|*" Project="Release" />
+    <Platform Project="x64" />
+  </Project>
 </Solution>
