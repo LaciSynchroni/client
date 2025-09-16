@@ -208,7 +208,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
                 joinPermissions.SetDisableSounds(_ownPermissions.DisableGroupSounds);
                 joinPermissions.SetDisableAnimations(_ownPermissions.DisableGroupAnimations);
                 joinPermissions.SetDisableVFX(_ownPermissions.DisableGroupVFX);
-                _ = _apiController.GroupJoinForServer(_desiredServerForSyncshell, new GroupJoinDto(_groupJoinInfo.Group, _previousPassword, joinPermissions));
+                _ = _apiController.GroupJoinFinalizeForServer(_desiredServerForSyncshell, new GroupJoinDto(_groupJoinInfo.Group, _previousPassword, joinPermissions));
                 IsOpen = false;
             }
         }
