@@ -47,8 +47,19 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
         _httpClient = httpClient;
         _loggerFactory = loggerFactory;
         _loggerProvider = loggerProvider;
-
-        AutoConnectClients();
+        
+        // When we log out, we could either:
+        // - Disconnect all clients
+        // - Dispose all clients
+        // It seems wise to just discard everything instead of disconnecting them. If we just disconnect them, it might
+        // take a tad longer in case of network errors. Potentially, that causes a reconnect during the next login,
+        // which might get weird!
+        // Better to just throw them away and recreate if needed from scratch!
+        Mediator.Subscribe<DalamudLogoutMessage>(this, (_) => DisposeAllClients());
+        // We get the login message both when:
+        // - the plugin framework updates the first time and the user is logged in
+        // - the user manually logged in
+        Mediator.Subscribe<DalamudLoginMessage>(this, (_) => AutoConnectClients());
     }
 
     public ServerState GetServerState(ServerIndex index)
@@ -218,6 +229,9 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
             foreach (int serverIndex in _serverConfigManager.ServerIndexes)
             {
                 var server = _serverConfigManager.GetServerByIndex(serverIndex);
+                // When you manually disconnect a service it gets full paused. In that case, the user explicitly asked for it
+                // not to be connected, so we'll just leave it
+                // Manually connecting once triggers auto connects again!
                 if (!server.FullPause)
                 {
                     await GetOrCreateForServer(serverIndex).DalamudUtilOnLogIn().ConfigureAwait(false);
@@ -228,13 +242,20 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
 
     protected override void Dispose(bool disposing)
     {
-        // We can always just Dispose() this - even if not used
+        DisposeAllClients();
+        base.Dispose(disposing);
+    }
+
+    private void DisposeAllClients()
+    {
+        // We can always just Dispose() this - even if the client is currently not connected. Getting rid of them all
+        // this way is the safest way to prevent connection leaks. If we'd wait for each of them to disconnect first,
+        // we might run into FF14 exiting or similar before they are connected (if you really have to have a lot of connections)
         foreach (var syncHubClient in _syncClients.Values)
         {
             syncHubClient.Dispose();
         }
         _syncClients.Clear();
-        base.Dispose(disposing);
     }
 }
 #pragma warning restore MA0040

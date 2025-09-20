@@ -84,11 +84,6 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         _dalamudUtil = dalamudUtilService;
         _serverConfigurationManager = serverConfigurationManager;
 
-        Mediator.Subscribe<DalamudLoginMessage>(this, msg =>
-        {
-            _ = Task.Run(DalamudUtilOnLogIn);
-        });
-        Mediator.Subscribe<DalamudLogoutMessage>(this, (_) => DalamudUtilOnLogOut());
         Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePauseAsync(msg.ServerIndex, msg.UserData));
         Mediator.Subscribe<CensusUpdateMessage>(this, (msg) => _lastCensus = msg);
         Mediator.Subscribe<PauseMessage>(this, (msg) => _ = PauseAsync(msg.ServerIndex, msg.UserData));
@@ -240,9 +235,9 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     {
         var configuredHubUri = ServerToUse.ServerHubUri.Replace("wss://", "https://").Replace("ws://", "http://");
         var baseUri = ServerToUse.ServerUri.Replace("wss://", "https://").Replace("ws://", "http://");
-        if (!baseUri.EndsWith("/", StringComparison.Ordinal))
+        if (baseUri.EndsWith("/", StringComparison.Ordinal))
         {
-            baseUri += "/";
+            baseUri = baseUri.Remove(baseUri.Length - 1);
         }
         
         // Essentially, we try every hub we are aware of plus the configured hub to see if we can find a connection
@@ -285,7 +280,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     {
         _serverState = ServerState.Disconnecting;
 
-        _logger.LogInformation("Stopping existing connection");
+        _logger.LogInformation("Stopping existing connection to {ServerName}", ServerToUse.ServerName);
 
         if (_connection != null && !_isDisposed)
         {
@@ -313,25 +308,6 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         }
 
         _serverState = state;
-    }
-
-    private async Task DisposeHubAsync()
-    {
-        if (_connection == null || _isDisposed) return;
-
-        _logger.LogDebug("Disposing current HubConnection");
-        _isDisposed = true;
-
-        _connection.Closed -= ConnectionOnClosed;
-        _connection.Reconnecting -= ConnectionOnReconnecting;
-        _connection.Reconnected -= ConnectionOnReconnectedAsync;
-
-        await _connection.StopAsync().ConfigureAwait(false);
-        await _connection.DisposeAsync().ConfigureAwait(false);
-
-        _connection = null;
-
-        Logger.LogDebug("Current HubConnection disposed");
     }
 
     private HubConnection InitializeHubConnection(CancellationToken ct, string hubUrl)
@@ -585,14 +561,17 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
     public async Task DisposeAsync()
     {
+        // Important to dispose all subscriptions first, just in case some random event fires that triggers a reconnect or something
+        // Make sure to call the override. If you don't, you end up looping between Dispose and DisposeAsync.
+        base.Dispose(true);
         _healthCheckTokenSource?.Cancel();
+        // Important to call StopConnectionAsync here because we want the proper message publishing of the disconnect message.
         await StopConnectionAsync(ServerState.Disconnected).ConfigureAwait(false);
         _connectionCancellationTokenSource?.Cancel();
     }
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
         _ = Task.Run(async () => await DisposeAsync().ConfigureAwait(false));
     }
 
@@ -617,12 +596,6 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
             Logger.LogInformation("Not logging into {chara}, auto login disabled", charaName);
             await StopConnectionAsync(ServerState.NoAutoLogon).ConfigureAwait(false);
         }
-    }
-
-    private void DalamudUtilOnLogOut()
-    {
-        _ = Task.Run(async () => await StopConnectionAsync(ServerState.Disconnected).ConfigureAwait(false));
-        _serverState = ServerState.Offline;
     }
 
     public Task CyclePauseAsync(int serverIndex, UserData userData)
