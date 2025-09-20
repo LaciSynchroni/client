@@ -168,9 +168,12 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         var key = BuildKey(user, serverIndex);
         if (_allClientPairs.TryGetValue(key, out var pair))
         {
+            // Gets cleared when the pair is marked offline, but we need it after for the redraw
+            var removedPairName = pair.PlayerName;
             var message = new ServerBasedUserKey(user, serverIndex);
             Mediator.Publish(new ClearProfileDataMessage(message));
             pair.MarkOffline();
+            RedrawStillVisiblePairs(pair, removedPairName);
         }
 
         RecreateLazy();
@@ -489,6 +492,30 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         {
             pair.ApplyLastReceivedData(forced: true);
         }
+    }
+
+    /// <summary>
+    /// Whenever a pair disconnects (either because of a disconnect on the other side or because of a pause), that pair might
+    /// still be visible through another connected server.
+    /// This happens in scenarios where the the disconnect/pause only happens through one server, but the other server still being available.
+    /// In cases like this, more than one pair exists for the same player, because one pair exists per server.
+    ///
+    /// The PairManager will dispose the pair that just went offline. The other pair, however, is not aware of it. So we
+    /// need to figure out if any of these pairs are left, and then redraw them by reapplying last data. 
+    /// </summary>
+    /// <param name="removedPair">The instance of the pair that got removed</param>
+    /// <param name="removedPlayerName">The name of the remvoed pair. Don't remove this, the pair has to be disposed
+    /// before we try to redraw other pairs, so the name will not be available anymore!
+    /// </param>
+    private void RedrawStillVisiblePairs(Pair removedPair, string? removedPlayerName)
+    {
+        _allClientPairs
+            .Where(valuePair => string.Equals(valuePair.Value.PlayerName, removedPlayerName, StringComparison.OrdinalIgnoreCase))
+            .Where(valuePair => removedPair != valuePair.Value)
+            .Where(valuePair => valuePair.Value.IsVisible)
+            .Select(valuePair => valuePair.Value)
+            .ToList()
+            .ForEach(p => p.ApplyLastReceivedData(true));
     }
 
     private void RecreateLazy()
