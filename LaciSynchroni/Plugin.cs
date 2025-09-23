@@ -216,6 +216,16 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddScoped<UiFactory>();
             collection.AddScoped<SelectTagForPairUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, SettingsUi>();
+            collection.AddScoped<WindowMediatorSubscriberBase, LaciServerTesterUi>(s => new LaciServerTesterUi(
+                s.GetRequiredService<DalamudUtilService>(),
+                pluginInterface,
+                s.GetRequiredService<ILogger<LaciServerTesterUi>>(),
+                s.GetRequiredService<PerformanceCollectorService>(),
+                s.GetRequiredService<UiSharedService>(),
+                s.GetRequiredService<HttpClient>(),
+                s.GetRequiredService<SyncMediator>(),
+                s.GetRequiredService<ILoggerProvider>())
+            );
             collection.AddScoped<WindowMediatorSubscriberBase, CompactUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, IntroUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, DownloadUi>();

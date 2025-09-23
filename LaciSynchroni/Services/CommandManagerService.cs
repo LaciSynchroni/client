@@ -107,6 +107,10 @@ public sealed class CommandManagerService : IDisposable
         {
             _mediator.Publish(new UiToggleMessage(typeof(SettingsUi)));
         }
+        else if (string.Equals(splitArgs[0], "servertest", StringComparison.OrdinalIgnoreCase))
+        {
+            _mediator.Publish(new UiToggleMessage(typeof(LaciServerTesterUi))); 
+        }
     }
 
     private void HandleToggleCommand(string[] splitArgs)
