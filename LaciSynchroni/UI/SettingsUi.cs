@@ -1348,7 +1348,15 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     UiSharedService.ColorTextWrapped($"To delete the {serverName} service you need to disconnect from the service.", ImGuiColors.DalamudYellow);
                 }
 
-                using (ImRaii.Disabled(isServerConnected))
+                // Doesn't really make much sense to use this plugin without any configured services. Must have at least one.
+                var onlyOneServerLeft = _serverConfigurationManager.ConfiguredServerCount <= 1;
+                if (onlyOneServerLeft)
+                {
+                    UiSharedService.ColorTextWrapped($"The last service cannot be deleted, please add a new service before deleting {serverName}.", ImGuiColors.DalamudYellow);
+                }
+
+                
+                using (ImRaii.Disabled(isServerConnected || onlyOneServerLeft))
                 {
                     if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
                     {
