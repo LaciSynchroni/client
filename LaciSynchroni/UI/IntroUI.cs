@@ -60,6 +60,8 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         Mediator.Subscribe<SwitchToIntroUiMessage>(this, (_) =>
         {
             _configService.Current.UseCompactor = !dalamudUtilService.IsWine;
+            // In case intro UI gets called on an empty server config that is initialized (someone meddling with the file, for example)
+            _serverConfigurationManager.EnsureAServerExists();
             IsOpen = true;
         });
     }

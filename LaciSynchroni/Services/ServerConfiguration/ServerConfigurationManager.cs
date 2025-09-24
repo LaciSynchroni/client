@@ -42,7 +42,8 @@ public class ServerConfigurationManager
 
     public IEnumerable<int> ServerIndexes => _serverConfigService.Current.ServerStorage.Select((_, i) => i);
 
-    public bool AnyServerConfigured => _serverTagConfig.Current.ServerTagStorage.Count > 0;
+    public bool AnyServerConfigured => ConfiguredServerCount > 0;
+    public int ConfiguredServerCount => _serverTagConfig.Current.ServerTagStorage.Count;
     public bool SendCensusData
     {
         get
@@ -544,5 +545,14 @@ public class ServerConfigurationManager
     {
         GetServerByIndex(serverIndex).HttpTransportType = httpTransportType;
         Save();
+    }
+
+    public void EnsureAServerExists()
+    {
+        if (_serverConfigService.Current.ServerStorage.Count <= 0)
+        {
+            var server = new ServerStorage() { ServerName = ApiController.MainServer, ServerUri = ApiController.MainServiceUri, UseOAuth2 = true };
+            _serverConfigService.Current.ServerStorage.Add(server);
+        }
     }
 }
