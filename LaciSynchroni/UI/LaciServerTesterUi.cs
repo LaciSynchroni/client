@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -24,7 +25,7 @@ using System.Security.Cryptography;
 
 namespace LaciSynchroni.UI;
 
-public class LaciServerTesterUi : WindowMediatorSubscriberBase
+public sealed class LaciServerTesterUi : WindowMediatorSubscriberBase
 {
     private readonly string _goatImagePath;
     private readonly ILogger _log;
@@ -59,8 +60,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         PerformanceCollectorService performanceCollectorService,
         UiSharedService uiShared, 
         HttpClient httpClient,
-        SyncMediator mediator, 
-        ILoggerProvider pluginLogProvider)
+        SyncMediator mediator)
         : base(logger, mediator, $"{dalamudUtilService.GetPluginName()} Server Tester", performanceCollectorService)
     {
         SizeConstraints = new WindowSizeConstraints
@@ -69,7 +69,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         };
 
         _goatImagePath = Path.Combine(pluginInterface.AssemblyLocation.Directory?.FullName!, "images/goat.png");
-        _log = pluginLogProvider.CreateLogger(nameof(LaciServerTesterUi));
+        _log = logger;
         _httpClient = httpClient;
         _uiSharedService = uiShared;
         _testChain = GetTestChains();
@@ -151,19 +151,28 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     private async Task<bool> CheckHubExists()
     {
-        var negotiateUrl = $"https://{_host}:{_port}/{_hubPath}/negotiate";
-        var resHub = await _httpClient.GetAsync(negotiateUrl, _cancellationToken).ConfigureAwait(false);
-        var hubExists =
-            resHub.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.OK or HttpStatusCode.NoContent;
-        if (hubExists)
+        try
         {
-            _testLog.Add($"Hub found at {negotiateUrl}");
-            return true;
+            var negotiateUrl = $"https://{_host}:{_port}/{_hubPath}/negotiate";
+            var resHub = await _httpClient.GetAsync(negotiateUrl, _cancellationToken).ConfigureAwait(false);
+            var hubExists =
+                resHub.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.OK or HttpStatusCode.NoContent;
+            if (hubExists)
+            {
+                _testLog.Add($"Hub found at {negotiateUrl}");
+                return true;
+            }
+            else
+            {
+                var content = await resHub.Content.ReadAsStringAsync(_cancellationToken).ConfigureAwait(false);
+                _testLog.Add($"Failed to find hub at {negotiateUrl}: {content}");
+                return false;
+            }
         }
-        else
+        catch (Exception exception)
         {
-            var content = await resHub.Content.ReadAsStringAsync(_cancellationToken).ConfigureAwait(false);
-            _testLog.Add($"Failed to find hub at {negotiateUrl}: {content}");
+            _testLog.Add($"{_host} failed to connect to hub: {exception.Message}");
+            _log.LogError(exception, "Failed to connect to hub {HostName}", _host);
             return false;
         }
     }
@@ -254,14 +263,26 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
             var dto = await _hubConnection!.InvokeAsync<ConnectionDto>("GetConnectionDto", _cancellationToken)
                 .ConfigureAwait(false);
             _connectionDto = dto;
+            var asJsonString = JsonConvert.SerializeObject(dto, Formatting.Indented);
+            if (dto.User?.AliasOrUID == null)
+            {
+                _testLog.Add($"Failed to retrieve alias or UID. Config returned: {asJsonString}");
+                return false;
+            }
+
+            if (dto.ServerInfo?.FileServerAddress == null)
+            {
+                _testLog.Add($"Failed to retrieve file server address. Config returned: {asJsonString}");
+                return false;
+            }
             _testLog.Add(
-                $"Server connection working. Data returned: [UID = {dto.User.AliasOrUID}, Server version = {dto.ServerVersion.ToString()}, Shard Name = {dto.ServerInfo.ShardName}, CDN URL = {dto.ServerInfo.FileServerAddress.AbsoluteUri}]");
+                $"Server connection working. Config returned: {asJsonString}");
             return true;
         }
         catch (Exception e)
         {
             _testLog.Add($"Failed to verify SignalR connection by requesting server info: {e.Message}");
-            _log.LogError(e, "Failed to verify SignalR connection by requesting connection DTO");
+            _log.LogError(e, "Failed to verify SignalR connection by requesting connection DTO:");
             return false;
         }
         finally

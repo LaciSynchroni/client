@@ -223,9 +223,8 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<PerformanceCollectorService>(),
                 s.GetRequiredService<UiSharedService>(),
                 s.GetRequiredService<HttpClient>(),
-                s.GetRequiredService<SyncMediator>(),
-                s.GetRequiredService<ILoggerProvider>())
-            );
+                s.GetRequiredService<SyncMediator>()
+            ));
             collection.AddScoped<WindowMediatorSubscriberBase, CompactUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, IntroUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, DownloadUi>();
