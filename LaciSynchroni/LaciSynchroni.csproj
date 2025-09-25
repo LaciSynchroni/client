@@ -57,4 +57,7 @@
   <ItemGroup>
     <ProjectReference Include="../Common/LaciSynchroni.Common.csproj" />
   </ItemGroup>
+  <Target Name="CopyIconToDebugOutput" AfterTargets="Build">
+    <Copy SourceFiles="images\goat.png" DestinationFolder="$(OutDir)/images/" />
+  </Target>
 </Project>
