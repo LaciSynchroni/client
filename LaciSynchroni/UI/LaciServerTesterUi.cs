@@ -6,6 +6,8 @@ using Dalamud.Plugin;
 using K4os.Compression.LZ4.Legacy;
 using LaciSynchroni.Common.Dto;
 using LaciSynchroni.Common.Dto.Files;
+using LaciSynchroni.Common.Routes;
+using LaciSynchroni.Common.SignalR;
 using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Utils;
@@ -15,6 +17,7 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -24,7 +27,7 @@ using System.Security.Cryptography;
 
 namespace LaciSynchroni.UI;
 
-public class LaciServerTesterUi : WindowMediatorSubscriberBase
+public sealed class LaciServerTesterUi : WindowMediatorSubscriberBase
 {
     private readonly string _goatImagePath;
     private readonly ILogger _log;
@@ -32,9 +35,9 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
 
     // Config for the test
-    private string _host = "myvenue.party";
+    private string _host = "example.com";
     private int _port = 443;
-    private string _hubPath = "mare";
+    private string _hubPath = "hub";
     private string _secretKey = "";
     
     // Test status
@@ -44,12 +47,13 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     // Test context that is used through the entire testing process
     private CancellationTokenSource _cancellationTokenSource = new();
-    private CancellationToken _cancellationToken = CancellationToken.None;
     private string _goatFileHash = "";
     private List<string> _testLog = new();
     private string _accessToken = "";
     private HubConnection? _hubConnection;
     private ConnectionDto? _connectionDto;
+    
+    private CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
 
     public LaciServerTesterUi(
@@ -59,8 +63,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         PerformanceCollectorService performanceCollectorService,
         UiSharedService uiShared, 
         HttpClient httpClient,
-        SyncMediator mediator, 
-        ILoggerProvider pluginLogProvider)
+        SyncMediator mediator)
         : base(logger, mediator, $"{dalamudUtilService.GetPluginName()} Server Tester", performanceCollectorService)
     {
         SizeConstraints = new WindowSizeConstraints
@@ -68,8 +71,8 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
             MinimumSize = new Vector2(375, 330), MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
 
-        _goatImagePath = Path.Combine(pluginInterface.AssemblyLocation.Directory?.FullName!, "images/goat.png");
-        _log = pluginLogProvider.CreateLogger(nameof(LaciServerTesterUi));
+        _goatImagePath = Path.Combine(pluginInterface.AssemblyLocation.Directory!.FullName, "images/goat.png");
+        _log = logger;
         _httpClient = httpClient;
         _uiSharedService = uiShared;
         _testChain = GetTestChains();
@@ -105,7 +108,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         ImGui.SameLine();
         if (_uiSharedService.IconTextButton(FontAwesomeIcon.Clipboard, "Copy test results to clipboard"))
         {
-            ImGui.SetClipboardText(string.Join("\n", _testLog));
+            ImGui.SetClipboardText(string.Join('\n', _testLog));
         }
         ImGui.Spacing();
         DrawTestLog();
@@ -121,7 +124,6 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         _testLog = new List<string>();
         _cancellationTokenSource.Dispose();
         _cancellationTokenSource = new CancellationTokenSource();
-        _cancellationToken = _cancellationTokenSource.Token;
         
         
         var testSuccess = await _testChain.Execute().ConfigureAwait(false);
@@ -136,7 +138,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
     {
         try
         {
-            var hostEntryAsync = await Dns.GetHostEntryAsync(_host, _cancellationToken).ConfigureAwait(false);
+            var hostEntryAsync = await Dns.GetHostEntryAsync(_host, CancellationToken).ConfigureAwait(false);
             var ips = hostEntryAsync.AddressList.Select(v => v.ToString()).ToArray();
             _testLog.Add($"{_host} resolved to IP(s): {string.Join(", ", ips)}");
             return true;
@@ -151,35 +153,43 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     private async Task<bool> CheckHubExists()
     {
-        var negotiateUrl = $"https://{_host}:{_port}/{_hubPath}/negotiate";
-        var resHub = await _httpClient.GetAsync(negotiateUrl, _cancellationToken).ConfigureAwait(false);
-        var hubExists =
-            resHub.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.OK or HttpStatusCode.NoContent;
-        if (hubExists)
+        try
         {
-            _testLog.Add($"Hub found at {negotiateUrl}");
-            return true;
-        }
-        else
-        {
-            var content = await resHub.Content.ReadAsStringAsync(_cancellationToken).ConfigureAwait(false);
+            var negotiateUrl =new UriBuilder(Uri.UriSchemeHttps, _host, _port, $"{_hubPath}/negotiate").Uri;
+            var resHub = await _httpClient.GetAsync(negotiateUrl, CancellationToken).ConfigureAwait(false);
+            var hubExists =
+                resHub.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.OK;
+            if (hubExists)
+            {
+                _testLog.Add($"Hub found at {negotiateUrl}");
+                return true;
+            }
+
+            var content = await resHub.Content.ReadAsStringAsync(CancellationToken).ConfigureAwait(false);
             _testLog.Add($"Failed to find hub at {negotiateUrl}: {content}");
+            return false;
+        }
+        catch (Exception exception)
+        {
+            _testLog.Add($"{_host} failed to connect to hub: {exception.Message}");
+            _log.LogError(exception, "Failed to connect to hub {HostName}", _host);
             return false;
         }
     }
 
     private async Task<bool> CheckAuthentication()
     {
-        var tokenUri = $"https://{_host}:{_port}/auth/createWithIdent";
-        var hashedKey = Crypto.GetHash256(_secretKey);
+        var baseUri = new UriBuilder(Uri.UriSchemeHttps, _host, _port).Uri;
+        var tokenUri = AuthRoutes.AuthFullPath(baseUri);
+        var hashedKey = _secretKey.GetHash256();
         try
         {
             using var response = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent(
             [
                 new KeyValuePair<string, string>("auth", hashedKey),
                 new KeyValuePair<string, string>("charaIdent", "John Finalfantasy@CloudDC"),
-            ]), _cancellationToken).ConfigureAwait(false);
-            var responseContent = await response.Content.ReadAsStringAsync(_cancellationToken).ConfigureAwait(false);
+            ]), CancellationToken).ConfigureAwait(false);
+            var responseContent = await response.Content.ReadAsStringAsync(CancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 var jwt = ParseJwt(responseContent);
@@ -189,11 +199,8 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
                 _accessToken = responseContent;
                 return true;
             }
-            else
-            {
-                _testLog.Add($"Failed to obtain JWT via {tokenUri}. Server replied with: {responseContent}");
-                return false;
-            }
+            _testLog.Add($"Failed to obtain JWT via {tokenUri}. Server replied with: {responseContent}");
+            return false;
         }
         catch (Exception exception)
         {
@@ -205,7 +212,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     private async Task<bool> CheckHubConnection()
     {
-        var hubUrl = $"https://{_host}:{_port}/{_hubPath}";
+        var hubUrl = new UriBuilder(Uri.UriSchemeHttps, _host, _port, _hubPath).Uri;
         try
         {
             _hubConnection = new HubConnectionBuilder()
@@ -219,14 +226,13 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
                     var resolver = CompositeResolver.Create(StandardResolverAllowPrivate.Instance,
                         BuiltinResolver.Instance,
                         AttributeFormatterResolver.Instance,
-                        // replace enum resolver
                         DynamicEnumAsStringResolver.Instance,
                         DynamicGenericResolver.Instance,
                         DynamicUnionResolver.Instance,
                         DynamicObjectResolver.Instance,
                         PrimitiveObjectResolver.Instance,
-                        // final fallback(last priority)www
-                        StandardResolver.Instance);
+                        StandardResolver.Instance
+                    );
 
                     opt.SerializerOptions =
                         MessagePackSerializerOptions.Standard
@@ -234,7 +240,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
                             .WithResolver(resolver);
                 })
                 .Build();
-            await _hubConnection.StartAsync(_cancellationToken).ConfigureAwait(false);
+            await _hubConnection.StartAsync(CancellationToken).ConfigureAwait(false);
             _testLog.Add($"Connection to SignalR@{hubUrl} established.");
             return true;
         }
@@ -248,20 +254,31 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     private async Task<bool> CheckConnectionDto()
     {
-        // Wait a total of 2seconds tops
         try
         {
-            var dto = await _hubConnection!.InvokeAsync<ConnectionDto>("GetConnectionDto", _cancellationToken)
+            var dto = await _hubConnection!.InvokeAsync<ConnectionDto>(nameof(IServerHub.GetConnectionDto), CancellationToken)
                 .ConfigureAwait(false);
             _connectionDto = dto;
+            var asJsonString = JsonConvert.SerializeObject(dto, Formatting.Indented);
+            if (dto.User?.AliasOrUID == null)
+            {
+                _testLog.Add($"Failed to retrieve alias or UID. Config returned: {asJsonString}");
+                return false;
+            }
+
+            if (dto.ServerInfo?.FileServerAddress == null)
+            {
+                _testLog.Add($"Failed to retrieve file server address. Config returned: {asJsonString}");
+                return false;
+            }
             _testLog.Add(
-                $"Server connection working. Data returned: [UID = {dto.User.AliasOrUID}, Server version = {dto.ServerVersion.ToString()}, Shard Name = {dto.ServerInfo.ShardName}, CDN URL = {dto.ServerInfo.FileServerAddress.AbsoluteUri}]");
+                $"Server connection working. Config returned: {asJsonString}");
             return true;
         }
         catch (Exception e)
         {
             _testLog.Add($"Failed to verify SignalR connection by requesting server info: {e.Message}");
-            _log.LogError(e, "Failed to verify SignalR connection by requesting connection DTO");
+            _log.LogError(e, "Failed to verify SignalR connection by requesting connection DTO:");
             return false;
         }
         finally
@@ -274,7 +291,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
     private async Task<bool> CheckUploadFile()
     {
         var cdnUri = GetFilesCdnUri();
-        var goatFileBytes = await File.ReadAllBytesAsync(_goatImagePath, _cancellationToken).ConfigureAwait(false);
+        var goatFileBytes = await File.ReadAllBytesAsync(_goatImagePath, CancellationToken).ConfigureAwait(false);
         _goatFileHash = GetFileHash(goatFileBytes);
         var fileSize = (int)new FileInfo(_goatImagePath).Length;
         var compressedFile = LZ4Wrapper.WrapHC(goatFileBytes, 0, fileSize);
@@ -282,7 +299,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         var streamContent = new StreamContent(compressedFileStream);
         streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
 
-        var uploadFileUri = new Uri(cdnUri, "/files/upload/" + _goatFileHash);
+        var uploadFileUri = FilesRoutes.ServerFilesUploadFullPath(cdnUri, _goatFileHash);
 
         using var requestMessage = new HttpRequestMessage(HttpMethod.Post, uploadFileUri);
         requestMessage.Content = streamContent;
@@ -290,7 +307,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
         try
         {
-            var response = await _httpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
+            var response = await _httpClient.SendAsync(requestMessage, CancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 _testLog.Add($"Successfully uploaded goat image to {uploadFileUri}");
@@ -313,29 +330,26 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
         try
         {
             var fileCdnUri = GetFilesCdnUri();
-            var getUri = new Uri(fileCdnUri, "/files/getFileSizes/");
+            var getUri = FilesRoutes.ServerFilesGetSizesFullPath(fileCdnUri);
             var content = JsonContent.Create(new List<string>([_goatFileHash]));
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, getUri);
             requestMessage.Content = content;
             requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
-            var response = await _httpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
+            var response = await _httpClient.SendAsync(requestMessage, CancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                var fileSizes = await response.Content.ReadFromJsonAsync<List<DownloadFileDto>>(_cancellationToken)
+                var fileSizes = await response.Content.ReadFromJsonAsync<List<DownloadFileDto>>(CancellationToken)
                     .ConfigureAwait(false) ?? [];
                 var fileSize = fileSizes[0];
                 _testLog.Add(
                     $"Successfully downloaded goat file info: {fileSize.Url} with size {fileSize.RawSize} bytes");
                 return true;
             }
-            else
-            {
-                var responseContent =
-                    await response.Content.ReadAsStringAsync(_cancellationToken).ConfigureAwait(false);
-                _testLog.Add(
-                    $"{response.StatusCode}: Failed to download goat image info from {getUri}: {responseContent}");
-                return false;
-            }
+            var responseContent =
+                await response.Content.ReadAsStringAsync(CancellationToken).ConfigureAwait(false);
+            _testLog.Add(
+                $"{response.StatusCode}: Failed to download goat image info from {getUri}: {responseContent}");
+            return false;
         }
         catch (Exception e)
         {
@@ -363,9 +377,9 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     private void DrawInputs()
     {
-        ImGui.InputTextWithHint("Laci Host", "Your hostname, i.e. myvenue.party", ref _host);
+        ImGui.InputTextWithHint("Laci Host", "Your hostname, i.e. example.com", ref _host);
         ImGui.InputInt("Laci Port", ref _port);
-        ImGui.InputTextWithHint("Laci Hub", "Hub name, should be 'laci'", ref _hubPath);
+        ImGui.InputTextWithHint("Laci Hub", "Hub name, should be 'hub'", ref _hubPath);
         ImGui.InputTextWithHint("Secret Key", "Secret key to authenticate", ref _secretKey);
     }
 
@@ -455,8 +469,7 @@ public class LaciServerTesterUi : WindowMediatorSubscriberBase
 
     private static string GetFileHash(byte[] fileContentUncompressed)
     {
-        return BitConverter.ToString(SHA1.HashData(fileContentUncompressed))
-            .Replace("-", "", StringComparison.Ordinal).ToUpperInvariant();
+        return Convert.ToHexString(SHA1.HashData(fileContentUncompressed)).ToUpperInvariant();
     }
     
     internal class TestStep(string description, Func<Task<bool>> testStep, TestStep? next)
