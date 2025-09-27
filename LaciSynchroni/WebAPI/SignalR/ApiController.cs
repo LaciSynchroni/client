@@ -64,7 +64,8 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
 
     public ServerState GetServerState(ServerIndex index)
     {
-        return GetClientForServer(index)?._serverState ?? ServerState.Offline;
+        // No client found means it's disconnected. We can't say anything about it's online state
+        return GetClientForServer(index)?._serverState ?? ServerState.Disconnected;
     }
 
     public bool IsServerConnected(int index)
@@ -85,8 +86,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     public bool IsServerAlive(int index)
     {
         var serverState = GetServerState(index);
-        return serverState is ServerState.Connected or ServerState.RateLimited
-            or ServerState.Unauthorized or ServerState.Disconnected;
+        return serverState is ServerState.Connected or ServerState.Disconnected;
     }
 
     public int OnlineUsers
@@ -105,12 +105,6 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     public DefaultPermissionsDto? GetDefaultPermissionsForServer(ServerIndex index)
     {
         return GetClientForServer(index)?.ConnectionDto?.DefaultPreferredPermissions;
-    }
-
-    public ServerState GetServerStateForServer(ServerIndex index)
-    {
-        // No client found means it's offline
-        return GetClientForServer(index)?._serverState ?? ServerState.Offline;
     }
 
     public bool AnyServerConnected
@@ -146,7 +140,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
 
     public bool IsServerConnecting(ServerIndex index)
     {
-        return GetServerStateForServer(index) == ServerState.Connecting;
+        return GetServerState(index) == ServerState.Connecting;
     }
 
     public int GetMaxGroupsJoinedByUser(ServerIndex serverIndex)

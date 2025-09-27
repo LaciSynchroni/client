@@ -449,7 +449,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (ImGui.BeginTable("MultiServerInterface", 5, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
         {
             ImGui.TableSetupColumn($" Server Name", ImGuiTableColumnFlags.None, 4);
-            ImGui.TableSetupColumn($"My User ID", ImGuiTableColumnFlags.None, 2);
+            ImGui.TableSetupColumn($"My User ID (Hover for more)", ImGuiTableColumnFlags.None, 4);
             ImGui.TableSetupColumn($"Users", ImGuiTableColumnFlags.None, 1);
             ImGui.TableSetupColumn($"Visible", ImGuiTableColumnFlags.None, 1);
             ImGui.TableSetupColumn($"Connection", ImGuiTableColumnFlags.None, 1);
@@ -497,13 +497,14 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private void DrawMultiServerUID(int serverId)
     {
-        var textColor = GetUidColorByServer(serverId);
-        if (_apiController.IsServerConnected(serverId))
+        var status = _apiController.GetServerState(serverId);
+        var statusColor = GetUidColorByState(status);
+        if (status == ServerState.Connected)
         {
             var uidText = GetUidTextMultiServer(serverId);
             var uid = _apiController.GetUidByServer(serverId);
             var displayName = _apiController.GetDisplayNameByServer(serverId);
-            ImGui.TextColored(textColor, uidText);
+            ImGui.TextColored(ImGuiColors.HealerGreen, uidText);
 
             if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
             {
@@ -513,7 +514,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
             if (!string.Equals(displayName, uid, StringComparison.Ordinal))
             {
-                ImGui.TextColored(textColor, displayName);
+                ImGui.TextColored(statusColor, displayName);
                 if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
                 {
                     ImGui.SetClipboardText(displayName);
@@ -521,26 +522,27 @@ public class CompactUi : WindowMediatorSubscriberBase
                 UiSharedService.AttachToolTip("Click to copy");
             }
         }
-        else if(_apiController.IsServerConnecting(serverId))
+        else if(status is ServerState.Connecting or ServerState.Reconnecting)
         {
-            UiSharedService.ColorTextWrapped("Connecting", ImGuiColors.DalamudYellow);
-            UiSharedService.AttachToolTip("The server is currently connecting. This may take a moment.");
+            UiSharedService.ColorTextWrapped("Connecting", statusColor);
+            UiSharedService.AttachToolTip(GetServerErrorByState(status, null));
         }
-        else if (_apiController.IsServerAlive(serverId))
+        else if(status is ServerState.Offline or ServerState.Disconnected or ServerState.Disconnecting)
         {
-            var serverError = GetServerErrorByServer(serverId);
-            UiSharedService.ColorTextWrapped("Offline", ImGuiColors.DalamudYellow);
-
-            if (!string.IsNullOrEmpty(serverError))
-                UiSharedService.AttachToolTip(serverError);
+            UiSharedService.ColorTextWrapped("Not Connected", statusColor);
+            UiSharedService.AttachToolTip(GetServerErrorByState(status, null));
+        }
+        else if (status is ServerState.NoAutoLogon)
+        {
+            UiSharedService.ColorTextWrapped("Auto-Login Disabled", statusColor);
+            UiSharedService.AttachToolTip(GetServerErrorByState(status, null));
         }
         else
         {
-            var serverError = GetServerErrorByServer(serverId);
-            UiSharedService.ColorTextWrapped("Offline", ImGuiColors.DalamudRed);
-
-            if (!string.IsNullOrEmpty(serverError))
-                UiSharedService.AttachToolTip(serverError);
+            var authFailureMessage = _apiController.GetAuthFailureMessageByServer(serverId);
+            var serverError = GetServerErrorByState(status, authFailureMessage);
+            UiSharedService.ColorTextWrapped($"Error: {status.ToString()}", statusColor);
+            UiSharedService.AttachToolTip(serverError);
         }
     }
 
@@ -940,21 +942,28 @@ public class CompactUi : WindowMediatorSubscriberBase
     {
         return state switch
         {
-            ServerState.Connecting => ImGuiColors.DalamudYellow,
-            ServerState.Reconnecting => ImGuiColors.DalamudRed,
+            // All good
             ServerState.Connected => ImGuiColors.ParsedGreen,
-            ServerState.Disconnected => ImGuiColors.DalamudYellow,
+            // user-desired states. Manually disconnected or similar, so we make it grey so it's not that prominent
+            ServerState.Offline => ImGuiColors.ParsedGrey,
+            ServerState.Disconnected => ImGuiColors.ParsedGrey,
+            ServerState.NoAutoLogon => ImGuiColors.ParsedGrey,
+            
+            // Something in limbo, like connection pending
+            ServerState.Connecting => ImGuiColors.DalamudYellow,
+            ServerState.Reconnecting => ImGuiColors.DalamudYellow,
             ServerState.Disconnecting => ImGuiColors.DalamudYellow,
+          
+            // All these are actual errors that the user has to do something about
             ServerState.Unauthorized => ImGuiColors.DalamudRed,
             ServerState.VersionMisMatch => ImGuiColors.DalamudRed,
-            ServerState.Offline => ImGuiColors.DalamudRed,
-            ServerState.RateLimited => ImGuiColors.DalamudYellow,
-            ServerState.NoSecretKey => ImGuiColors.DalamudYellow,
-            ServerState.MultiChara => ImGuiColors.DalamudYellow,
+            ServerState.RateLimited => ImGuiColors.DalamudRed,
+            ServerState.NoSecretKey => ImGuiColors.DalamudRed,
+            ServerState.MultiChara => ImGuiColors.DalamudRed,
             ServerState.OAuthMisconfigured => ImGuiColors.DalamudRed,
             ServerState.OAuthLoginTokenStale => ImGuiColors.DalamudRed,
-            ServerState.NoAutoLogon => ImGuiColors.DalamudYellow,
-            _ => ImGuiColors.DalamudRed
+            ServerState.NoHubFound => ImGuiColors.DalamudRed,
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null)
         };
     }
 
