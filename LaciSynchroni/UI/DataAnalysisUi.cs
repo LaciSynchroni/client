@@ -10,6 +10,7 @@ using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.Utils;
+using Lumina.Data.Files;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
 
@@ -615,7 +616,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 var unconvertedTextures = _characterAnalyzer.UnconvertedTextureCount;
                 if (unconvertedTextures > 0)
                 {
-                    UiSharedService.ColorTextWrapped($"You have {unconvertedTextures} texture(s) that are not BC7 format. Consider converting them to BC7 to reduce their size.",
+                    UiSharedService.ColorTextWrapped($"You have {unconvertedTextures} texture(s) that are not compressed. Consider converting them to BC7 to reduce their size.",
                         ImGuiColors.DalamudYellow);
                 }
 
@@ -686,19 +687,19 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
 
                             ImGuiHelpers.ScaledDummy(5);
 
-                            var nonBC7Textures = fileGroup
-                                .Where(p => !string.Equals(p.Format.Value, "BC7", StringComparison.InvariantCultureIgnoreCase))
+                            var compressibleTextures = fileGroup
+                                .Where(p => p.IsTextureConversionAllowed())
                                 .ToList();
 
                             var filesToConvert = fileGroup
-                                .Where(p => p.ToConvert && !string.Equals(p.Format.Value, "BC7", StringComparison.InvariantCultureIgnoreCase))
+                                .Where(p => p.ToConvert && p.IsTextureConversionAllowed())
                                 .ToList();
 
-                            using (ImRaii.Disabled(nonBC7Textures.Count == 0 || _conversionTask != null))
+                            using (ImRaii.Disabled(compressibleTextures.Count == 0 || _conversionTask != null))
                             {
-                                if (_uiSharedService.IconTextButton(FontAwesomeIcon.CheckSquare, $"Select all {nonBC7Textures.Count} non-BC7 texture files"))
+                                if (_uiSharedService.IconTextButton(FontAwesomeIcon.CheckSquare, $"Select all {compressibleTextures.Count} compressable texture files"))
                                 {
-                                    foreach (var entry in nonBC7Textures)
+                                    foreach (var entry in compressibleTextures)
                                         entry.ToConvert = true;
                                 }
 
@@ -832,9 +833,9 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             if (string.Equals(fileGroup.Key, "mdl", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending)
                 _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Triangles).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
             if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending)
-                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderBy(k => k.Value.Format.Value, StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
+                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderBy(k => k.Value.Format.Value.ToString(), StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
             if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending)
-                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Format.Value, StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
+                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Format.Value.ToString(), StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
 
             sortSpecs.SpecsDirty = false;
         }
@@ -873,12 +874,12 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal))
             {
                 ImGui.TableNextColumn();
-                ImGui.TextUnformatted(item.Format.Value);
+                ImGui.TextUnformatted(item.Format.Value.ToString());
                 if (ImGui.IsItemClicked()) _selectedHash = item.Hash;
                 if (_enableBc7ConversionMode)
                 {
                     ImGui.TableNextColumn();
-                    if (string.Equals(item.Format.Value, "BC7", StringComparison.Ordinal))
+                    if (!item.IsTextureConversionAllowed())
                     {
                         ImGui.TextUnformatted("");
                         continue;
@@ -899,4 +900,5 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             }
         }
     }
+
 }

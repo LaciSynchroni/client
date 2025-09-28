@@ -6,11 +6,25 @@ using LaciSynchroni.UI;
 using LaciSynchroni.Utils;
 using Lumina.Data.Files;
 using Microsoft.Extensions.Logging;
+using static Lumina.Data.Files.TexFile.TextureFormat;
 
 namespace LaciSynchroni.Services;
 
 public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
 {
+    // These are all already compressed textures. BC1 = DXT1 and so on, same format, different name
+    private static readonly HashSet<TexFile.TextureFormat> ConversionForbiddenFormats =
+    [
+        BC1,
+        BC2,
+        // TODO Add BC4 = 0x6120 when Lumina updates
+        BC3,
+        BC5,
+        // TODO Add BC6H = 0x6330 when Lumina updates
+        BC7,
+        Null,
+    ];
+    
     private readonly FileCacheManager _fileCacheManager;
     private readonly XivDataAnalyzer _xivDataAnalyzer;
     private CancellationTokenSource? _analysisCts;
@@ -34,11 +48,10 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
     public bool IsAnalysisRunning => _analysisCts != null;
     public int TotalFiles { get; internal set; }
 
-    public bool HasUnconvertedTextures => LastAnalysis != null && LastAnalysis.Values.SelectMany(v => v.Values)
-        .Any(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && !v.Format.Value.StartsWith("BC7", StringComparison.OrdinalIgnoreCase));
+    public bool HasUnconvertedTextures => LastAnalysis != null && UnconvertedTextureCount > 0;
 
-    public int UnconvertedTextureCount => LastAnalysis != null ? LastAnalysis.Values.SelectMany(v => v.Values)
-        .Count(v => v.FileType.Equals("tex", StringComparison.OrdinalIgnoreCase) && !v.Format.Value.StartsWith("BC7", StringComparison.OrdinalIgnoreCase)) : 0;
+    public int UnconvertedTextureCount => LastAnalysis != null
+        ? LastAnalysis.Values.SelectMany(v => v.Values).Count(v => v.IsTextureConversionAllowed()) : 0;
 
     internal Dictionary<ObjectKind, Dictionary<string, FileDataEntry>> LastAnalysis { get; } = [];
 
@@ -194,7 +207,8 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
             UiSharedService.ByteToString(LastAnalysis.Values.Sum(c => c.Values.Sum(v => v.CompressedSize))));
         Logger.LogInformation("IMPORTANT NOTES:\n\r- For Laci Synchroni uploads and downloads, only the compressed size is relevant.\n\r- An unusually high total files count beyond 200 and up will also increase your download time to others significantly.");
     }
-
+            
+        
     internal sealed record FileDataEntry(string Hash, string FileType, List<string> GamePaths, List<string> FilePaths, long OriginalSize, long CompressedSize, long Triangles)
     {
         public bool IsComputed => OriginalSize > 0 && CompressedSize > 0;
@@ -216,7 +230,7 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
         public long Triangles { get; private set; } = Triangles;
         public bool ToConvert { get; set; } = false;
 
-        public Lazy<string> Format = new(() =>
+        public readonly Lazy<TexFile.TextureFormat> Format = new(() =>
         {
             switch (FileType)
             {
@@ -228,16 +242,31 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
                             using var reader = new BinaryReader(stream);
                             reader.BaseStream.Position = 4;
                             var format = (TexFile.TextureFormat)reader.ReadInt32();
-                            return format.ToString();
+                            return format;
                         }
                         catch
                         {
-                            return "Unknown";
+                            return Null;
                         }
                     }
                 default:
-                    return string.Empty;
+                    return Null;
             }
         });
+
+        private bool IsTexture()
+        {
+            return FileType.Equals("tex", StringComparison.OrdinalIgnoreCase);
+        }
+        
+        public bool IsTextureConversionAllowed()
+        {
+            if (!IsTexture())
+            {
+                return false;
+            }
+            return !ConversionForbiddenFormats.Contains(Format.Value);
+        }
+
     }
 }
