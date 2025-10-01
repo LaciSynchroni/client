@@ -502,7 +502,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             var uidText = GetUidTextMultiServer(serverId);
             var uid = _apiController.GetUidByServer(serverId);
             var displayName = _apiController.GetDisplayNameByServer(serverId);
-            ImGui.TextColored(ImGuiColors.HealerGreen, uidText);
+            ImGui.TextColored(statusColor, uidText);
 
             if (ImGui.IsItemClicked() && ImGui.IsWindowHovered())
             {
