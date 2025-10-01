@@ -398,8 +398,6 @@ public class CompactUi : WindowMediatorSubscriberBase
         else if (_apiController.GetServerState(serverId) is not (ServerState.Disconnected or ServerState.Offline))
         {
             var errorText = GetServerErrorByServer(serverId);
-            var origTextSize = ImGui.CalcTextSize(errorText);
-            ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X) / 2 - (origTextSize.X / 2));
             UiSharedService.ColorTextWrapped(errorText, uidColor);
         }
     }
