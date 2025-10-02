@@ -175,7 +175,16 @@ public class ServerConfigurationManager
     
     public ServerStorage GetServerByIndex(int idx)
     {
-        return _serverConfigService.Current.ServerStorage[idx];
+        if (idx < _serverConfigService.Current.ServerStorage.Count)
+        {
+            return _serverConfigService.Current.ServerStorage[idx];
+        }
+        return _serverConfigService.Current.ServerStorage[_serverConfigService.Current.ServerStorage.Count - 1];
+    }
+
+    public int GetServerCount()
+    {
+        return _serverConfigService.Current.ServerStorage.Count;
     }
 
     public string GetDiscordUserFromToken(ServerStorage server)
