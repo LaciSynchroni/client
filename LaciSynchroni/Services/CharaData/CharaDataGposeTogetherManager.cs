@@ -95,8 +95,9 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
         {
             if (msg.ServerIndex == _dataServerIndex)
             {
-                // Only leave if the server we are gposing on disconnected
-                LeaveGPoseLobby(msg.ServerIndex);
+                // Lobby leave happens server-side, we just clear state and add last
+                // joined lobby ID so player can rejoin
+                AfterLobbyLeave();
             }
         });
 
@@ -207,15 +208,20 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
             var left = await _apiController.GposeLobbyLeave(serverIndex).ConfigureAwait(false);
             if (left)
             {
-                if (_usersInLobby.Count != 0)
-                {
-                    LastGPoseLobbyId = CurrentGPoseLobbyId;
-                }
-
-                ClearLobby(revertCharas: true);
-                CurrentGPoseLobbyServerId = null;
+               AfterLobbyLeave();
             }
         });
+    }
+
+    private void AfterLobbyLeave()
+    {
+        if (_usersInLobby.Count != 0)
+        {
+            LastGPoseLobbyId = CurrentGPoseLobbyId;
+        }
+
+        ClearLobby(revertCharas: true);
+        CurrentGPoseLobbyServerId = null;
     }
 
     protected override void Dispose(bool disposing)
