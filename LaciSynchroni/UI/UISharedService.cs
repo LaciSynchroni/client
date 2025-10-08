@@ -11,6 +11,7 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
+using LaciSynchroni.Common.Dto.Server;
 using LaciSynchroni.FileCache;
 using LaciSynchroni.Interop.Ipc;
 using LaciSynchroni.Localization;
@@ -23,12 +24,14 @@ using LaciSynchroni.SyncConfiguration.Models;
 using LaciSynchroni.Utils;
 using LaciSynchroni.WebAPI;
 using LaciSynchroni.WebAPI.SignalR.Utils;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.IdentityModel.Tokens.Jwt;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace LaciSynchroni.UI;
 
@@ -57,8 +60,12 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private bool _cacheDirectoryHasOtherFilesThanCache = false;
     private bool _cacheDirectoryIsValidPath = true;
     private bool _customizePlusExists = false;
+    private string _quickConnectCode = "";
     private string _customServerName = "";
     private string _customServerUri = "";
+    private string _secretKey = "";
+    private bool _isQuickConnectCodeInvalid = false;
+    private bool _useOAuth = true;
     private bool _useAdvancedUris = false;
     private string _serverHubUri = "";
     private Task<Uri?>? _discordOAuthCheck;
@@ -900,33 +907,88 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGuiHelpers.ScaledDummy(5);
         if (ImGui.TreeNode("Add New Service"))
         {
-            ImGui.SetNextItemWidth(250);
-            ImGui.InputText("Custom Service Name", ref _customServerName, 255);
-            ImGui.SetNextItemWidth(250);
-            ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
-            ImGui.SameLine();
-            ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
-            if (_useAdvancedUris)
+            if (ImGui.BeginTable("newservice", 2))
             {
-                ImGui.SetNextItemWidth(250);
-                ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
-            }
+                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthStretch, 1);
+                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthStretch, 1);
 
-            if (IconTextButton(FontAwesomeIcon.Plus, "Add Custom Service")
-                && !string.IsNullOrEmpty(_customServerUri)
-                && !string.IsNullOrEmpty(_customServerName))
-            {
-                _serverConfigurationManager.AddServer(new ServerStorage()
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+
+                ImGui.TextUnformatted("Enter Quick Connect Code");
+                var prevQuickConnectCode = _quickConnectCode;
+                ImGui.InputText("", ref _quickConnectCode, 4096);
+
+                if (_isQuickConnectCodeInvalid && !_quickConnectCode.IsNullOrEmpty())
                 {
-                    ServerName = _customServerName,
-                    ServerUri = _customServerUri,
-                    UseAdvancedUris = _useAdvancedUris,
-                    ServerHubUri = _serverHubUri,
-                    UseOAuth2 = true
-                });
-                _customServerName = string.Empty;
-                _customServerUri = string.Empty;
-                _configService.Save();
+                    ImGui.TextColored(new Vector4(1, 0, 0, 1), "An error occurred during quick connect code processing!");
+                }
+
+                if (!prevQuickConnectCode.Equals(_quickConnectCode))
+                {
+                    try
+                    {
+                        var data = MessagePackSerializer.Deserialize<QuickConnectDto>(Convert.FromBase64String(_quickConnectCode.Trim()), MessagePackSerializerOptions.Standard);
+                        _customServerName = data.ServerName;
+                        _customServerUri = data.ServerURI;
+                        _secretKey = data.SecretKey;
+                        _useAdvancedUris = false;
+                        _isQuickConnectCodeInvalid = false;
+                    }
+                    catch (Exception e) when (e is MessagePackSerializationException or FormatException)
+                    {
+                        _isQuickConnectCodeInvalid = true;
+                        Logger.LogError(e, "An error occurred during quick connect code processing!");
+                    }
+                }
+
+                ImGui.TableNextColumn();
+
+                ImGui.InputText("Service Name", ref _customServerName, 255);
+                ImGui.InputText("Service URI", ref _customServerUri, 255);
+                ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
+                if (_useAdvancedUris)
+                {
+                    ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
+                }
+                ImGui.Checkbox("Use Discord OAuth", ref _useOAuth);
+                if (!_useOAuth)
+                {
+                    ImGui.InputText("Secret Key", ref _secretKey, 64, ImGuiInputTextFlags.CharsHexadecimal);
+                }
+
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - 100);
+                if (IconTextButton(FontAwesomeIcon.Plus, "Add Service")
+                    && !string.IsNullOrEmpty(_customServerUri)
+                    && !string.IsNullOrEmpty(_customServerName))
+                {
+                    _serverConfigurationManager.AddServer(new ServerStorage()
+                    {
+                        ServerName = _customServerName,
+                        ServerUri = _customServerUri,
+                        UseAdvancedUris = _useAdvancedUris,
+                        ServerHubUri = _serverHubUri,
+                        UseOAuth2 = _useOAuth
+                    });
+                    if (!_useOAuth)
+                    {
+                        var server = _serverConfigurationManager.GetServerByIndex(_serverConfigurationManager.GetServerCount() - 1);
+                        var secretKey = new SecretKey()
+                        {
+                            FriendlyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})",
+                            Key = _secretKey,
+                        };
+                        server.SecretKeys[0] = secretKey;
+                        _serverConfigurationManager.AddCurrentCharacterToServer(_serverConfigurationManager.GetServerCount() - 1);
+                    }
+                    _customServerName = string.Empty;
+                    _customServerUri = string.Empty;
+                    _useAdvancedUris = false;
+                    _useOAuth = false;
+                    _secretKey = string.Empty;
+                    _configService.Save();
+                }
+                ImGui.EndTable();
             }
             ImGui.TreePop();
         }
