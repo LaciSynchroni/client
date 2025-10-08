@@ -33,7 +33,15 @@ public partial class IntroUi : WindowMediatorSubscriberBase
     private string _timeoutLabel = string.Empty;
     private Task? _timeoutTask;
     private string[]? _tosParagraphs;
-    private bool _useLegacyLogin = false;
+    private bool _useOAuthLogin = true;
+    private bool _useCustomService;
+    private bool _useDefaultService;
+    
+    private string _customServerName = string.Empty;
+    private string _customServerUri = string.Empty;
+    private string _customServerHub= string.Empty;
+    private bool _hasAddedCustomService = false;
+    private bool _isConnectingCustomService;
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, SyncConfigService configService,
         CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, SyncMediator syncMediator,
@@ -207,57 +215,69 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             using (_uiShared.UidFont.Push())
                 ImGui.TextUnformatted("Service Registration");
             ImGui.Separator();
-            UiSharedService.TextWrapped("To be able to use Laci Synchroni you will have to register an account.");
-            UiSharedService.TextWrapped("For the official Laci Synchroni servers the account creation will be handled on the official Laci Synchroni Discord. Due to security risks for the server, there is no way to handle this sensibly otherwise.");
-            UiSharedService.TextWrapped("If you want to register at the main server \"" + ApiController.MainServer + "\" join the Discord and follow the instructions as described in #laci-service.");
-
-            if (ImGui.Button("Join the Laci Synchroni Discord"))
+            UiSharedService.TextWrapped("To be able to use Laci Synchroni you will have to configure an service. You can either use the default service, or configure a custom one.");
+            bool hasChosen = _useCustomService || _useDefaultService;
+            if (!hasChosen)
             {
-                Util.OpenLink("https://discord.gg/qQQSz3jZnK");
+                if (ImGui.Button($"Use {ApiController.MainServer} Service"))
+                {
+                    SwitchToDefaultService();
+                }
+                ImGui.SameLine();
+                if (ImGui.Button($"Configure Custom Service"))
+                {
+                    SwitchToCustomService();
+                }
+
+                return;
+            }
+  
+
+            if (_useDefaultService)
+            {
+                UiSharedService.TextWrapped("For the official Laci Synchroni servers the account creation will be handled on the official Laci Synchroni Discord. Due to security risks for the server, there is no way to handle this sensibly otherwise.");
+                UiSharedService.TextWrapped("If you want to register at the main server \"" + ApiController.MainServer + "\" join the Discord and follow the instructions as described in #laci-service.");
+                UiSharedService.TextWrapped("For all other services please register a custom service below");
+                if (ImGui.Button("Join the Laci Synchroni Discord"))
+                {
+                    Util.OpenLink("https://discord.gg/qQQSz3jZnK");
+                }
+                if (ImGui.Button("Register Custom Service Instead"))
+                {
+                    SwitchToCustomService();
+                }
+                UiSharedService.DistanceSeparator();
+
+                UiSharedService.TextWrapped("Once you have registered you can connect to the service using the tools provided below.");
+            }
+            else if (_useCustomService && !_hasAddedCustomService)
+            {
+                DrawAddCustomService();
             }
 
-            UiSharedService.TextWrapped("For all other services you will have to contact the service provider for registration instructions.");
-
-            UiSharedService.DistanceSeparator();
-
-            UiSharedService.TextWrapped("Once you have registered you can connect to the service using the tools provided below.");
+            // Only draw the rest if we have a custom service configured or use the default
+            if (!_hasAddedCustomService && !_useDefaultService)
+            {
+                return;
+            }
 
             int serverIdx = 0;
             var selectedServer = _serverConfigurationManager.GetServerByIndex(serverIdx);
 
-            using (var node = ImRaii.TreeNode("Advanced Options"))
+            UiSharedService.DistanceSeparator();
+            UiSharedService.TextWrapped($"You have configured {_serverConfigurationManager.GetServerNameByIndex(serverIdx)} as your Laci Synchroni service. You now have to configure login and authenticate yourself.");
+            if (ImGui.Checkbox("Use Login with OAuth", ref _useOAuthLogin))
             {
-                if (node)
-                {
-                    serverIdx = _uiShared.DrawServiceSelection(serverIdx);
-                    if (serverIdx != _prevIdx)
-                    {
-                        _uiShared.ResetOAuthTasksState();
-                        _prevIdx = serverIdx;
-                    }
-
-                    selectedServer = _serverConfigurationManager.GetServerByIndex(serverIdx);
-                    _useLegacyLogin = !selectedServer.UseOAuth2;
-
-                    if (ImGui.Checkbox("Use Legacy Login with Secret Key", ref _useLegacyLogin))
-                    {
-                        _serverConfigurationManager.GetServerByIndex(serverIdx).UseOAuth2 = !_useLegacyLogin;
-                        _serverConfigurationManager.Save();
-                    }
-                }
+                _serverConfigurationManager.GetServerByIndex(serverIdx).UseOAuth2 = _useOAuthLogin;
+                _serverConfigurationManager.Save();
             }
-
-            if (_useLegacyLogin)
+            if (!_useOAuthLogin)
             {
                 var text = "Enter Secret Key";
-                var buttonText = "Save";
+                var buttonText = "Save and Connect";
                 var buttonWidth = _secretKey.Length != 64 ? 0 : ImGuiHelpers.GetButtonSize(buttonText).X + ImGui.GetStyle().ItemSpacing.X;
                 var textSize = ImGui.CalcTextSize(text);
 
-                ImGuiHelpers.ScaledDummy(5);
-                UiSharedService.DrawGroupedCenteredColorText("Strongly consider to use OAuth2 to authenticate, if the server supports it. " +
-                    "The authentication flow is simpler and you do not require to store or maintain Secret Keys. " +
-                    "You already implicitly register using Discord, so the OAuth2 method will be cleaner and more straight-forward to use.", ImGuiColors.DalamudYellow, 500);
                 ImGuiHelpers.ScaledDummy(5);
 
                 ImGui.AlignTextToFramePadding();
@@ -276,22 +296,31 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                 else if (_secretKey.Length == 64)
                 {
                     ImGui.SameLine();
-                    if (ImGui.Button(buttonText))
+                    var server = _serverConfigurationManager.GetServerByIndex(serverIdx);
+                    if (!_isConnectingCustomService)
                     {
-                        // For now, IntroUI works on the first server. That is the default server that has been added on plugin boot if none exists.
-                        var server = _serverConfigurationManager.GetServerByIndex(serverIdx);
-                        var secretKey = new SecretKey()
+                        if (ImGui.Button(buttonText))
                         {
-                            FriendlyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})",
-                            Key = _secretKey,
-                        };
-                        server.SecretKeys[0] = secretKey;
-                        _serverConfigurationManager.AddCurrentCharacterToServer(serverIdx);
-                        // Just assume the user has seen the census popup, since the popup itself is disabled.
-                        _serverConfigurationManager.ShownCensusPopup = true;
-                        _serverConfigurationManager.Save();
-                        _secretKey = string.Empty;
-                        _ = Task.Run(() => _uiShared.ApiController.CreateConnectionsAsync(serverIdx));
+                            var secretKey = new SecretKey()
+                            {
+                                FriendlyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})",
+                                Key = _secretKey,
+                            };
+                            server.SecretKeys[0] = secretKey;
+                            _serverConfigurationManager.AddCurrentCharacterToServer(serverIdx);
+                            // Just assume the user has seen the census popup, since the popup itself is disabled.
+                            _serverConfigurationManager.ShownCensusPopup = true;
+                            _serverConfigurationManager.Save();
+                            _ = Task.Run(() => _uiShared.ApiController.CreateConnectionsAsync(serverIdx));
+                            _isConnectingCustomService = true;
+                        }
+                    }
+                    else
+                    {
+                        using (ImRaii.Disabled())
+                        {
+                            ImGui.Button($"Connecting to {server.ServerName}");
+                        }
                     }
                 }
             }
@@ -354,6 +383,55 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         }
 
         _tosParagraphs = [Strings.ToS.Paragraph1, Strings.ToS.Paragraph2, Strings.ToS.Paragraph3, Strings.ToS.Paragraph4, Strings.ToS.Paragraph5, Strings.ToS.Paragraph6];
+    }
+    
+    public void DrawAddCustomService()
+    {
+        ImGuiHelpers.ScaledDummy(5);
+        UiSharedService.TextWrapped("Please fill out the values below to use a custom service. If you don't know what to put here, please ask your service provider!");
+        ImGui.SetNextItemWidth(250);
+        ImGui.InputText("Custom Service Name", ref _customServerName, 255);
+        ImGui.SetNextItemWidth(250);
+        ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
+        ImGui.SetNextItemWidth(250);
+        ImGui.InputText("Custom Service Hub (Optional, only fill if prompted)", ref _customServerHub, 255);
+
+        if (ImGui.Button("Use as custom service"))
+        {
+            _serverConfigurationManager.SetFirstServer(new ServerStorage()
+            {
+                ServerName = _customServerName,
+                ServerUri = _customServerUri,
+                UseAdvancedUris = !_customServerHub.IsNullOrWhitespace(),
+                ServerHubUri = _customServerHub,
+                UseOAuth2 = true
+            });
+            _hasAddedCustomService = true;
+            _customServerName = string.Empty;
+            _customServerUri = string.Empty;
+            _customServerHub = string.Empty;
+
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("Use default service instead"))
+        {
+            SwitchToDefaultService();
+        }
+    }
+
+    private void SwitchToDefaultService()
+    {
+        _serverConfigurationManager.SetFirstServer(new ServerStorage() { ServerName = ApiController.MainServer, ServerUri = ApiController.MainServiceUri, UseOAuth2 = true });
+        _useCustomService = false;
+        _useDefaultService = true;
+        _uiShared.ResetOAuthTasksState();
+    }
+
+    private void SwitchToCustomService()
+    {
+        _useCustomService = true;
+        _useDefaultService = false;
+        _uiShared.ResetOAuthTasksState();
     }
 
     [GeneratedRegex("^([A-F0-9]{2})+")]

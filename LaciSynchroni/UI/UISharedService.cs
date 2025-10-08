@@ -688,7 +688,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 }
             }
 
-            if (_discordOAuthCheck != null && _discordOAuthCheck.IsCompleted)
+            if (_discordOAuthCheck != null && _discordOAuthCheck.Result != null && _discordOAuthCheck.IsCompleted)
             {
                 if (IconTextButton(FontAwesomeIcon.ArrowRight, "Authenticate with Server"))
                 {
