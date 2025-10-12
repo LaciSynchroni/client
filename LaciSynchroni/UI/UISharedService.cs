@@ -60,6 +60,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private string _customServerName = "";
     private string _customServerUri = "";
     private bool _useAdvancedUris = false;
+    private bool _bypassApiVersionCheck = false;
     private string _serverHubUri = "";
     private Task<Uri?>? _discordOAuthCheck;
     private Task<string?>? _discordOAuthGetCode;
@@ -904,7 +905,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             ImGui.InputText("Custom Service Name", ref _customServerName, 255);
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
-            ImGui.SameLine();
+            ImGui.Checkbox("Bypass API version check", ref _bypassApiVersionCheck);
+            DrawHelpText("This will bypass the API version check during the initial connection attempt. Use this only if you know the service is actually compatible, otherwise, unexpected errors may occur");
             ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
             if (_useAdvancedUris)
             {
@@ -922,6 +924,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                     ServerUri = _customServerUri,
                     UseAdvancedUris = _useAdvancedUris,
                     ServerHubUri = _serverHubUri,
+                    BypassVersionCheck = _bypassApiVersionCheck,
                     UseOAuth2 = true
                 });
                 _customServerName = string.Empty;

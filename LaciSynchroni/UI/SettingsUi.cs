@@ -1262,6 +1262,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 var serverUri = selectedServer.ServerUri;
                 var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
                 var useAdvancedUris = selectedServer.UseAdvancedUris;
+                var bypassVersionCheck = selectedServer.BypassVersionCheck;
 
                 if (ImGui.InputText("Service Name", ref serverName, 255))
                 {
@@ -1274,6 +1275,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     selectedServer.ServerUri = serverUri;
                     _serverConfigurationManager.Save();
                 }
+
+                if (ImGui.Checkbox("Bypass API version check", ref bypassVersionCheck))
+                {
+                    selectedServer.BypassVersionCheck = bypassVersionCheck;
+                    _serverConfigurationManager.Save();
+                }
+                _uiShared.DrawHelpText("This will bypass the API version check during the initial connection attempt. Use this only if you know the service is actually compatible, otherwise, unexpected errors may occur");
 
                 if (ImGui.Checkbox("Advanced URIs", ref useAdvancedUris))
                 {

@@ -397,7 +397,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         {
             InitializeApiHooks();
             ConnectionDto = await GetConnectionDtoAsync(publishConnected: false).ConfigureAwait(false);
-            if (ConnectionDto.ServerVersion != IServerHub.ApiVersion)
+            if (ConnectionDto.ServerVersion != IServerHub.ApiVersion && !ServerToUse.BypassVersionCheck)
             {
                 await StopConnectionAsync(ServerState.VersionMisMatch).ConfigureAwait(false);
                 return;
