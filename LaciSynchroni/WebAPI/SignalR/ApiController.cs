@@ -301,7 +301,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
 
                 var currentClientVer = Assembly.GetExecutingAssembly().GetName().Version!;
 
-                if (_connectionDto.ServerVersion != IServerHub.ApiVersion)
+                if (!_serverManager.CurrentServer.UseAdvancedUris && _connectionDto.ServerVersion != IServerHub.ApiVersion)
                 {
                     if (_connectionDto.CurrentClientVersion > currentClientVer)
                     {
@@ -627,7 +627,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IS
             InitializeApiHooks();
             _connectionDto = await GetConnectionDtoAsync(publishConnected: false)
                 .ConfigureAwait(false);
-            if (_connectionDto.ServerVersion != IServerHub.ApiVersion)
+            if (!_serverManager.CurrentServer.UseAdvancedUris && _connectionDto.ServerVersion != IServerHub.ApiVersion)
             {
                 await StopConnectionAsync(ServerState.VersionMisMatch).ConfigureAwait(false);
                 return;
