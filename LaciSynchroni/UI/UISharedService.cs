@@ -667,7 +667,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             {
                 if (IconTextButton(FontAwesomeIcon.QuestionCircle, "Check if Server supports Discord OAuth2"))
                 {
-                    _discordOAuthCheck = _serverConfigurationManager.CheckDiscordOAuth(selectedServer.ServerUri);
+                    _discordOAuthCheck = _serverConfigurationManager.CheckDiscordOAuth(selectedServer.GetAuthServerUri());
                 }
             }
             else
@@ -693,7 +693,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             {
                 if (IconTextButton(FontAwesomeIcon.ArrowRight, "Authenticate with Server"))
                 {
-                    _discordOAuthGetCode = _serverConfigurationManager.GetDiscordOAuthToken(_discordOAuthCheck.Result!, selectedServer.ServerUri, _discordOAuthGetCts.Token);
+                    _discordOAuthGetCode = _serverConfigurationManager.GetDiscordOAuthToken(_discordOAuthCheck.Result!, selectedServer.GetAuthServerUri(), _discordOAuthGetCts.Token);
                 }
                 else if (_discordOAuthGetCode != null && !_discordOAuthGetCode.IsCompleted)
                 {
@@ -759,7 +759,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 if ((_discordOAuthUIDs == null || _discordOAuthUIDs.IsCompleted)
                     && IconTextButton(FontAwesomeIcon.Question, "Check Discord Connection"))
                 {
-                    _discordOAuthUIDs = _serverConfigurationManager.GetUIDsWithDiscordToken(selectedServer.ServerUri, oauthToken);
+                    _discordOAuthUIDs = _serverConfigurationManager.GetUIDsWithDiscordToken(selectedServer.GetAuthServerUri(), oauthToken);
                 }
                 else if (_discordOAuthUIDs != null)
                 {
@@ -791,11 +791,11 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 {
                     selectedServer.OAuthToken = null;
                     _serverConfigurationManager.Save();
-                    _ = _serverConfigurationManager.CheckDiscordOAuth(selectedServer.ServerUri)
+                    _ = _serverConfigurationManager.CheckDiscordOAuth(selectedServer.GetAuthServerUri())
                         .ContinueWith(async (urlTask) =>
                         {
                             var url = await urlTask.ConfigureAwait(false);
-                            var token = await _serverConfigurationManager.GetDiscordOAuthToken(url!, selectedServer.ServerUri, CancellationToken.None).ConfigureAwait(false);
+                            var token = await _serverConfigurationManager.GetDiscordOAuthToken(url!, selectedServer.GetAuthServerUri(), CancellationToken.None).ConfigureAwait(false);
                             selectedServer.OAuthToken = token;
                             _serverConfigurationManager.Save();
                             await _apiController.CreateConnectionsAsync(serverIndex).ConfigureAwait(false);
@@ -1000,7 +1000,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 && IconTextButton(FontAwesomeIcon.ArrowsSpin, "Update UIDs from Service")
                 && !string.IsNullOrEmpty(selectedServer.OAuthToken))
             {
-                _discordOAuthUIDs = _serverConfigurationManager.GetUIDsWithDiscordToken(selectedServer.ServerUri, selectedServer.OAuthToken);
+                _discordOAuthUIDs = _serverConfigurationManager.GetUIDsWithDiscordToken(selectedServer.GetAuthServerUri(), selectedServer.OAuthToken);
             }
         }
         DateTime tokenExpiry = DateTime.MinValue;

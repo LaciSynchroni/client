@@ -2004,7 +2004,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             return (false, false, $"Failed to convert {failedConversions.Count} entries: " + string.Join(", ", failedConversions.Select(k => k.CharacterName)));
         }
 
-        var baseUri = serverStorage.ServerUri.Replace("wss://", "https://").Replace("ws://", "http://");
+        var baseUri = serverStorage.GetAuthServerUri().Replace("wss://", "https://").Replace("ws://", "http://");
         var oauthCheckUri = AuthRoutes.GetUIDsBasedOnSecretKeyFullPath(new Uri(baseUri));
         var requestContent = JsonContent.Create(secretKeyMapping.Select(k => k.Key).ToList());
         HttpRequestMessage requestMessage = new(HttpMethod.Post, oauthCheckUri);

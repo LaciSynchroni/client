@@ -68,7 +68,7 @@ public sealed class ServerHubTokenProvider : IDisposable, IMediatorSubscriber
 
                 if (!ServerToUse.UseOAuth2)
                 {
-                    tokenUri = AuthRoutes.AuthFullPath(new Uri(ServerToUse.ServerUri
+                    tokenUri = AuthRoutes.AuthFullPath(new Uri(ServerToUse.GetAuthServerUri()
                         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                     var secretKey = _serverManager.GetSecretKey(out _, _serverIndex)!;
@@ -84,7 +84,7 @@ public sealed class ServerHubTokenProvider : IDisposable, IMediatorSubscriber
                 }
                 else
                 {
-                    tokenUri = AuthRoutes.AuthWithOauthFullPath(new Uri(ServerToUse.ServerUri
+                    tokenUri = AuthRoutes.AuthWithOauthFullPath(new Uri(ServerToUse.GetAuthServerUri()
                         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenUri.ToString());
@@ -103,7 +103,7 @@ public sealed class ServerHubTokenProvider : IDisposable, IMediatorSubscriber
             {
                 _logger.LogDebug("GetNewToken: Renewal");
 
-                tokenUri = AuthRoutes.RenewTokenFullPath(new Uri(ServerToUse.ServerUri
+                tokenUri = AuthRoutes.RenewTokenFullPath(new Uri(ServerToUse.GetAuthServerUri()
                     .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                     .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                 HttpRequestMessage request = new(HttpMethod.Get, tokenUri.ToString());
@@ -275,7 +275,7 @@ public sealed class ServerHubTokenProvider : IDisposable, IMediatorSubscriber
                 return false;
         }
 
-        var tokenUri = AuthRoutes.RenewOAuthTokenFullPath(new Uri(currentServer.ServerUri
+        var tokenUri = AuthRoutes.RenewOAuthTokenFullPath(new Uri(currentServer.GetAuthServerUri()
             .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
             .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenUri.ToString());
