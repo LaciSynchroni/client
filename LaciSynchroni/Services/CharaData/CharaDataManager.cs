@@ -70,23 +70,8 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
                 // Don't do anything if an unrelated server connected
                 return;
             }
-            _connectCts?.Cancel();
-            _connectCts?.Dispose();
-            _connectCts = new();
-            _ownCharaData.Clear();
-            _metaInfoCache.Clear();
-            _sharedWithYouData.Clear();
-            _updateDtos.Clear();
-            Initialized = false;
-            MaxCreatableCharaData = string.IsNullOrEmpty(msg.Connection.User.Alias)
-                ? msg.Connection.ServerInfo.MaxCharaData
-                : msg.Connection.ServerInfo.MaxCharaDataVanity;
-            if (_configService.Current.DownloadMcdDataOnConnection)
-            {
-                var token = _connectCts.Token;
-                _ = GetAllData(msg.serverIndex, token);
-                _ = GetAllSharedData(msg.serverIndex, token);
-            }
+            var token = _connectCts.Token;
+            _ = SelectServer(msg.serverIndex, token, _configService.Current.DownloadMcdDataOnConnection);
         });
         syncMediator.Subscribe<DisconnectedMessage>(this, (msg) =>
         {
@@ -343,7 +328,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         DistributeMetaInfo();
     }
 
-    public void DownloadMetaInfo(int serverIndex, string importCode, bool store = true)
+    public void DownloadMetaInfo(string importCode, bool store = true)
     {
         DownloadMetaInfoTask = Task.Run(async () =>
         {
@@ -353,7 +338,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
                 {
                     LastDownloadedMetaInfo = null;
                 }
-                var metaInfo = await _apiController.CharaDataGetMetainfo(serverIndex, importCode).ConfigureAwait(false);
+                var metaInfo = await _apiController.CharaDataGetMetainfo(_dataServerIndex, importCode).ConfigureAwait(false);
                 _sharedMetaInfoTimeoutTasks[importCode] = Task.Delay(TimeSpan.FromSeconds(10));
                 if (metaInfo == null)
                 {
@@ -375,9 +360,35 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         });
     }
 
-    public async Task GetAllData(int serverIndex, CancellationToken cancelToken)
+    public async Task SelectServer(int serverIndex, CancellationToken cancellation, bool downloadData = true)
     {
+        Logger.LogInformation("Swapping selected server for Chara Data Manager to {ServerIndex}", serverIndex);
         _dataServerIndex = serverIndex;
+        await _connectCts.CancelAsync().ConfigureAwait(false);
+        _connectCts.Dispose();
+        _connectCts = new();
+        _ownCharaData.Clear();
+        _metaInfoCache.Clear();
+        _sharedWithYouData.Clear();
+        _updateDtos.Clear();
+        Initialized = false;
+        var connectionDto = _apiController.GetConnectionDto(serverIndex);
+        if (connectionDto != null)
+        {
+            MaxCreatableCharaData = string.IsNullOrEmpty(connectionDto.User.Alias)
+                ? connectionDto.ServerInfo.MaxCharaData
+                : connectionDto.ServerInfo.MaxCharaDataVanity;
+        }
+
+        if (downloadData)
+        {
+            await GetAllData(cancellation).ConfigureAwait(false);
+            await GetAllSharedData(cancellation).ConfigureAwait(false);
+        }
+    }
+
+    public async Task GetAllData(CancellationToken cancelToken)
+    {
         foreach (var data in _ownCharaData)
         {
             _metaInfoCache.Remove(data.Key, out _);
@@ -386,7 +397,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         UiBlockingComputation = GetAllDataTask = Task.Run(async () =>
         {
             _getAllDataCts = _getAllDataCts.CancelRecreate();
-            var result = await _apiController.CharaDataGetOwn(serverIndex).ConfigureAwait(false);
+            var result = await _apiController.CharaDataGetOwn(_dataServerIndex).ConfigureAwait(false);
 
             Initialized = true;
 
@@ -419,11 +430,11 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         GetAllDataTask = null;
     }
 
-    public async Task GetAllSharedData(int serverIndex, CancellationToken token)
+    public async Task GetAllSharedData(CancellationToken token)
     {
         Logger.LogDebug("Getting Shared with You Data");
 
-        UiBlockingComputation = GetSharedWithYouTask = _apiController.CharaDataGetShared(serverIndex);
+        UiBlockingComputation = GetSharedWithYouTask = _apiController.CharaDataGetShared(_dataServerIndex);
         _sharedWithYouData.Clear();
 
         GetSharedWithYouTimeoutTask = Task.Run(async () =>
@@ -442,7 +453,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         var result = await GetSharedWithYouTask.ConfigureAwait(false);
         foreach (var grouping in result.GroupBy(r => r.Uploader))
         {
-            var pair = _pairManager.GetPairByUID(serverIndex, grouping.Key.UID);
+            var pair = _pairManager.GetPairByUID(_dataServerIndex, grouping.Key.UID);
             if (pair?.IsPaused ?? false) continue;
             List<CharaDataMetaInfoExtendedDto> newList = new();
             foreach (var item in grouping)

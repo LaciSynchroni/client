@@ -597,7 +597,7 @@ internal sealed partial class CharaDataHubUi
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Download your Character Data from Server"))
             {
-                _ = _charaDataManager.GetAllData(_selectedServerIndex, _disposalCts.Token);
+                _ = _charaDataManager.GetAllData(_disposalCts.Token);
             }
         }
         if (_charaDataManager.DataGetTimeoutTask != null && !_charaDataManager.DataGetTimeoutTask.IsCompleted)
