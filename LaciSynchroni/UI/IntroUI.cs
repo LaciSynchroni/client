@@ -215,7 +215,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             using (_uiShared.UidFont.Push())
                 ImGui.TextUnformatted("Service Registration");
             ImGui.Separator();
-            UiSharedService.TextWrapped("To be able to use Laci Synchroni you will have to configure an service. You can either use the default service, or configure a custom one.");
+            UiSharedService.TextWrapped("To be able to use Laci Synchroni you will have to configure a service. You can either use the default service, or configure a custom one.");
             bool hasChosen = _useCustomService || _useDefaultService;
             if (!hasChosen)
             {
