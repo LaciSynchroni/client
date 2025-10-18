@@ -42,7 +42,7 @@ public class ServerConfigurationManager
 
     public IEnumerable<int> ServerIndexes => _serverConfigService.Current.ServerStorage.Select((_, i) => i);
 
-    public bool AnyServerConfigured => _serverTagConfig.Current.ServerTagStorage.Count > 0;
+    public bool AnyServerConfigured => _serverConfigService.Current.ServerStorage.Count > 0;
     public bool SendCensusData
     {
         get
@@ -274,6 +274,13 @@ public class ServerConfigurationManager
 
     internal void AddServer(ServerStorage serverStorage)
     {
+        _serverConfigService.Current.ServerStorage.Add(serverStorage);
+        Save();
+    }
+    
+    internal void SetFirstServer(ServerStorage serverStorage)
+    {
+        _serverConfigService.Current.ServerStorage.Clear();
         _serverConfigService.Current.ServerStorage.Add(serverStorage);
         Save();
     }
