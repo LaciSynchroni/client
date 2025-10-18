@@ -251,5 +251,14 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
         }
         _syncClients.Clear();
     }
+
+    public ConnectionDto? GetConnectionDto(ServerIndex serverIndex)
+    {
+        if (!IsServerConnected(serverIndex))
+        {
+            return null;
+        }
+        return _syncClients[serverIndex].ConnectionDto;
+    }
 }
 #pragma warning restore MA0040

@@ -200,7 +200,7 @@ internal partial class CharaDataHubUi
         {
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Update Data Shared With You"))
             {
-                _ = _charaDataManager.GetAllSharedData(_selectedServerIndex, _disposalCts.Token).ContinueWith(u => UpdateFilteredItems());
+                _ = _charaDataManager.GetAllSharedData(_disposalCts.Token).ContinueWith(u => UpdateFilteredItems());
             }
         }
         if (_charaDataManager.GetSharedWithYouTimeoutTask != null && !_charaDataManager.GetSharedWithYouTimeoutTask.IsCompleted)

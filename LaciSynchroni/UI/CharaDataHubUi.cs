@@ -116,7 +116,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _serverSelector = new ServerSelectorSmall(index =>
         {
             _selectedServerIndex = index;
-            _ = _charaDataManager.GetAllData(_selectedServerIndex, _disposalCts.Token);
+            _ = _charaDataManager.SelectServer(_selectedServerIndex, _disposalCts.Token);
         }, _apiController.ConnectedServerIndexes.FirstOrDefault());
     }
 
@@ -478,7 +478,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                                 {
                                     if (_uiSharedService.IconButton(FontAwesomeIcon.ArrowsSpin))
                                     {
-                                        _charaDataManager.DownloadMetaInfo(_selectedServerIndex, favorite.Key, false);
+                                        _charaDataManager.DownloadMetaInfo(favorite.Key, false);
                                         UpdateFilteredItems();
                                     }
                                 }
@@ -565,7 +565,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                         {
                             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Get Info from Sharing Code"))
                             {
-                                _charaDataManager.DownloadMetaInfo(_selectedServerIndex, _importCode);
+                                _charaDataManager.DownloadMetaInfo(_importCode);
                             }
                         }
                         GposeMetaInfoAction((meta) =>
@@ -635,7 +635,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                         {
                             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowCircleDown, "Download your Character Data"))
                             {
-                                _ = _charaDataManager.GetAllData(_selectedServerIndex, _disposalCts.Token);
+                                _ = _charaDataManager.GetAllData(_disposalCts.Token);
                             }
                         }
                         if (_charaDataManager.DataGetTimeoutTask != null && !_charaDataManager.DataGetTimeoutTask.IsCompleted)
