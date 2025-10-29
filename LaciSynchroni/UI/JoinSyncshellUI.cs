@@ -96,7 +96,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("Syncshell Server");
             ImGui.SameLine(200);
-            _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 400);
+            _serverSelector.Draw(_serverConfigurationManager.GetServerInfo(), _apiController.ConnectedServerIndexes, 400);
 
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted("Syncshell ID");

@@ -1364,7 +1364,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 {
                     if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
                     {
-                        _serverConfigurationManager.DeleteServer(selectedServer);
+                        _serverConfigurationManager.DeleteServer(_lastSelectedServerIndex);
                         _lastSelectedServerIndex = _serverConfigurationManager.ServerIndexes.LastOrDefault(0);
                         // If, after deletion, no more server is left, bounce to intro UI again
                         if (!_serverConfigurationManager.AnyServerConfigured)
@@ -1891,30 +1891,32 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
     private void DrawMultiServerConnectButton(int serverId, string serverName)
     {
-        bool isConnectingOrConnected = _apiController.IsServerConnected(serverId);
-        var color = UiSharedService.GetBoolColor(!isConnectingOrConnected);
-        var connectedIcon = isConnectingOrConnected ? FontAwesomeIcon.Unlink : FontAwesomeIcon.Link;
+        bool isConnected = _apiController.IsServerConnected(serverId);
+        bool isConnecting = _apiController.IsServerConnecting(serverId);
+        bool isDisconnectable = isConnecting || isConnected;
+        var color = UiSharedService.GetBoolColor(!isDisconnectable);
+        var connectedIcon = isDisconnectable ? FontAwesomeIcon.Unlink : FontAwesomeIcon.Link;
 
         using (ImRaii.PushColor(ImGuiCol.Text, color))
         {
             if (_uiShared.IconButton(connectedIcon, serverId.ToString()))
             {
-                if (_apiController.IsServerConnected(serverId))
+                if (isDisconnectable)
                 {
-                    _serverConfigurationManager.GetServerByIndex(_lastSelectedServerIndex).FullPause = true;
+                    _serverConfigurationManager.GetServerByIndex(serverId).FullPause = true;
                     _serverConfigurationManager.Save();
                     _ = _apiController.PauseConnectionAsync(serverId);
                 }
                 else
                 {
-                    _serverConfigurationManager.GetServerByIndex(_lastSelectedServerIndex).FullPause = false;
+                    _serverConfigurationManager.GetServerByIndex(serverId).FullPause = false;
                     _serverConfigurationManager.Save();
                     _ = _apiController.CreateConnectionsAsync(serverId);
                 }
             }
         }
 
-        UiSharedService.AttachToolTip(isConnectingOrConnected ?
+        UiSharedService.AttachToolTip(isConnected ?
            "Disconnect from " + serverName :
            "Connect to " + serverName);
     }

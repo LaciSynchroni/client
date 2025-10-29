@@ -193,7 +193,7 @@ public class TopTabMenu
 
     private void DrawAddPair(float availableXWidth, float spacingX)
     {
-        _pairTabServerSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, availableXWidth);
+        _pairTabServerSelector.Draw(_serverConfigurationManager.GetServerInfo(), _apiController.ConnectedServerIndexes, availableXWidth);
         UiSharedService.AttachToolTip("Server to use for pair actions");
 
         var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.UserPlus, "Add");

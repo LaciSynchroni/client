@@ -853,49 +853,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         return true;
     }
 
-    public int DrawServiceSelection(int currentServerIndex)
-    {
-        string[] comboEntries = _serverConfigurationManager.GetServerNames();
-
-        if (_serverSelectionIndex == -1)
-        {
-            // Flip to first server
-            _serverSelectionIndex = 0;
-        }
-        bool isCurrent = _serverSelectionIndex == currentServerIndex;
-        for (int i = 0; i < comboEntries.Length; i++)
-        {
-            if (isCurrent)
-                comboEntries[i] += " [Current]";
-        }
-
-        var buttonSize = ImGui.CalcTextSize("Select Service").X;
-
-        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - buttonSize - ImGui.GetStyle().ItemSpacing.X);
-        if (ImGui.BeginCombo("Select Service", comboEntries[_serverSelectionIndex]))
-        {
-            for (int i = 0; i < comboEntries.Length; i++)
-            {
-                bool isSelected = _serverSelectionIndex == i;
-                if (ImGui.Selectable(comboEntries[i], isSelected))
-                {
-                    _serverSelectionIndex = i;
-                }
-
-                if (isSelected)
-                {
-                    ImGui.SetItemDefaultFocus();
-                }
-            }
-
-            ImGui.EndCombo();
-        }
-
-        DrawAddCustomService();
-
-        return _serverSelectionIndex;
-    }
-
     public void DrawAddCustomService()
     {
         ImGuiHelpers.ScaledDummy(5);

@@ -3,7 +3,6 @@ using LaciSynchroni.Common.Routes;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
-using LaciSynchroni.WebAPI;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -40,9 +39,21 @@ public class ServerConfigurationManager
         _syncMediator = syncMediator;
     }
 
-    public IEnumerable<int> ServerIndexes => _serverConfigService.Current.ServerStorage.Select((_, i) => i);
+    public IEnumerable<ServerInfoDto> ServerInfo => _serverConfigService.Current.ServerStorage
+        .Select((v, index) =>
+        {
+            if (v.Deleted)
+            {
+                return null;
+            }
 
-    public bool AnyServerConfigured => _serverConfigService.Current.ServerStorage.Count > 0;
+            return new ServerInfoDto { Id = index, Name = v.ServerName, Uri = v.ServerUri, HubUri = v.ServerHubUri, FullPause = v.FullPause};
+        })
+        .Where(dto => dto != null)!;
+
+    public IEnumerable<int> ServerIndexes => ServerInfo.Select(s => s.Id);
+    public bool AnyServerConfigured => _serverConfigService.Current.ServerStorage.Exists(server => !server.Deleted);
+    
     public bool SendCensusData
     {
         get
@@ -163,11 +174,6 @@ public class ServerConfigurationManager
         return null;
     }
 
-    public string[] GetServerApiUrls()
-    {
-        return _serverConfigService.Current.ServerStorage.Select(v => v.ServerUri).ToArray();
-    }
-
     public string GetServerNameByIndex(int index)
     {
         return GetServerByIndex(index).ServerName;
@@ -198,26 +204,7 @@ public class ServerConfigurationManager
 
     public List<ServerInfoDto> GetServerInfo()
     {
-        var items = _serverConfigService.Current.ServerStorage
-            .Select((v, index) => new ServerInfoDto
-            {
-                Id = index,
-                Name = v.ServerName,
-                Uri = v.ServerUri,
-                HubUri = v.ServerHubUri
-            }).ToList();
-        return items;
-    }
-
-    public string[] GetServerNames()
-    {
-        return _serverConfigService.Current.ServerStorage.Select(v => v.ServerName).ToArray();
-    }
-
-    public bool HasValidConfig()
-    {
-        return _serverConfigService.Current.ServerStorage.Count > 0 &&
-               _serverConfigService.Current.ServerStorage.Exists(server => server.Authentications.Count >= 1);
+        return ServerInfo.ToList();
     }
 
     public void Save()
@@ -327,9 +314,11 @@ public class ServerConfigurationManager
         return false;
     }
 
-    internal void DeleteServer(ServerStorage selectedServer)
+    internal void DeleteServer(int serverIndex)
     {
-        _serverConfigService.Current.ServerStorage.Remove(selectedServer);
+        // Mark the server for deletion. We can't change the index of a server at runtime because
+        // the API controller will not realize the index of a server has actually changed.
+        _serverConfigService.Current.ServerStorage[serverIndex].Deleted = true;
         Save();
     }
 
@@ -357,11 +346,6 @@ public class ServerConfigurationManager
     internal HashSet<string> GetServerAvailablePairTags(int serverIndex)
     {
         return GetTagStorageForIndex(serverIndex).ServerAvailablePairTags;
-    }
-
-    internal Dictionary<string, List<string>> GetUidServerPairedUserTags(int serverIndex)
-    {
-        return GetTagStorageForIndex(serverIndex).UidServerPairedUserTags;
     }
 
     internal HashSet<string> GetUidsForTag(int serverIndex, string tag)
@@ -550,6 +534,12 @@ public class ServerConfigurationManager
     public void SetTransportType(int serverIndex, HttpTransportType httpTransportType)
     {
         GetServerByIndex(serverIndex).HttpTransportType = httpTransportType;
+        Save();
+    }
+
+    public void RemoveDeletedServers()
+    {
+        _serverConfigService.Current.ServerStorage.RemoveAll(server => server.Deleted);
         Save();
     }
 }

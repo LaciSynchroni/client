@@ -153,16 +153,16 @@ public sealed class CommandManagerService : IDisposable
 
     private async Task ToggleAllServers()
     {
-        foreach (int serverIndex in _serverConfigurationManager.ServerIndexes)
+        foreach (var server in _serverConfigurationManager.ServerInfo.Select(s => s.Id))
         {
-            var isConnected = _apiController.IsServerConnected(serverIndex);
+            var isConnected = _apiController.IsServerConnected(server);
             if (isConnected)
             {
-                await _apiController.PauseConnectionAsync(serverIndex).ConfigureAwait(false);
+                await _apiController.PauseConnectionAsync(server).ConfigureAwait(false);
             }
             else
             {
-                await _apiController.CreateConnectionsAsync(serverIndex).ConfigureAwait(false);
+                await _apiController.CreateConnectionsAsync(server).ConfigureAwait(false);
             }
         }
     }

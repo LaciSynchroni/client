@@ -60,7 +60,7 @@ public class CreateSyncshellUI : WindowMediatorSubscriberBase
 
         if (_lastCreatedGroup == null)
         {
-            _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, 300f);
+            _serverSelector.Draw(_serverConfigurationManager.GetServerInfo(), _apiController.ConnectedServerIndexes, 300f);
             UiSharedService.AttachToolTip("Server to create the Syncshell for. Only connected servers can be selected.");
             ImGui.SameLine();
             var maxGroupsCreateable = _apiController.GetMaxGroupsCreatedByUser(_serverIndexForCreation);

@@ -47,7 +47,6 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
     private readonly CharacterAnalyzer _characterAnalyzer;
     private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
-    private readonly ServerConfigService _serverConfigService;
     private Dictionary<ObjectKind, Dictionary<string, CharacterAnalyzer.FileDataEntry>>? _cachedAnalysis;
     private bool _hasUpdate = false;
     private List<IDrawFolder> _drawFolders;
@@ -65,7 +64,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, SyncConfigService configService, ApiController apiController, PairManager pairManager,
         ServerConfigurationManager serverConfigManager, SyncMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
-        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService, ServerConfigService serverConfigService)
+        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService)
         : base(logger, mediator, "###LaciSynchroniMainUI", performanceCollectorService)
     {
         _uiSharedService = uiShared;
@@ -81,7 +80,6 @@ public class CompactUi : WindowMediatorSubscriberBase
         _ipcManager = ipcManager;
         _characterAnalyzer = characterAnalyzer;
         _playerPerformanceConfigService = playerPerformanceConfigService;
-        _serverConfigService = serverConfigService;
         _tabMenu = new TopTabMenu(Mediator, _apiController, _pairManager, _uiSharedService, _serverConfigManager);
 
         CheckForCharacterAnalysis();

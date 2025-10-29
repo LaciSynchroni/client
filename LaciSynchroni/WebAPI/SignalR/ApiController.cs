@@ -220,15 +220,19 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
         // Fire and forget the auto connect. if something goes wrong, it'll be displayed in UI
         _ = Task.Run(async () =>
         {
-            foreach (int serverIndex in _serverConfigManager.ServerIndexes)
+            foreach (var server in _serverConfigManager.ServerInfo)
             {
-                var server = _serverConfigManager.GetServerByIndex(serverIndex);
                 // When you manually disconnect a service it gets full paused. In that case, the user explicitly asked for it
                 // not to be connected, so we'll just leave it
                 // Manually connecting once triggers auto connects again!
                 if (!server.FullPause)
                 {
-                    await GetOrCreateForServer(serverIndex).DalamudUtilOnLogIn().ConfigureAwait(false);
+                    Logger.LogInformation("Auto-login to {ServerName}", server.Name);
+                    await GetOrCreateForServer(server.Id).DalamudUtilOnLogIn().ConfigureAwait(false);
+                }
+                else
+                {
+                    Logger.LogInformation("No Auto-login to {ServerName} - full pause on", server.Name);
                 }
             }
         });

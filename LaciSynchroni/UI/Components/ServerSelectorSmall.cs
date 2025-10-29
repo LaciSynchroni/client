@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using LaciSynchroni.Services.ServerConfiguration;
 
 namespace LaciSynchroni.UI.Components
 {
@@ -11,7 +12,7 @@ namespace LaciSynchroni.UI.Components
     {
         private int _currentServerIndex = currentServerIndex;
 
-        public void Draw(string[] availableServers, int[] connectedServers, float width)
+        public void Draw(List<ServerInfoDto> availableServers, int[] connectedServers, float width)
         {
             if (connectedServers.Length <= 0)
             {
@@ -24,22 +25,21 @@ namespace LaciSynchroni.UI.Components
                 ChangeSelectedIndex(connectedServers[0]);
             }
             
-            var selectedServer = availableServers[_currentServerIndex];
+            var selectedServer = availableServers.First(dto => dto.Id == _currentServerIndex);
             ImGui.SetNextItemWidth(width);
-            if (ImGui.BeginCombo("", selectedServer))
+            if (ImGui.BeginCombo("", selectedServer.Name))
             {
-                for (var i = 0; i < availableServers.Length; i++)
+                foreach (var server in availableServers)
                 {
-                    var serverName = availableServers[i];
-                    var isSelected = _currentServerIndex == i;
-                    var isConnected = connectedServers.Contains(i);
-                    if (ImGui.Selectable(serverName, isSelected, isConnected ? ImGuiSelectableFlags.None : ImGuiSelectableFlags.Disabled))
+                    var isSelected = _currentServerIndex == server.Id;
+                    var isConnected = connectedServers.Contains(server.Id);
+                    if (ImGui.Selectable(server.Name, isSelected, isConnected ? ImGuiSelectableFlags.None : ImGuiSelectableFlags.Disabled))
                     {
-                        ChangeSelectedIndex(i);
+                        ChangeSelectedIndex(server.Id);
                     }
                     if (!isConnected)
                     {
-                        UiSharedService.AttachToolTip($"You are currently not connected to {serverName} service.");
+                        UiSharedService.AttachToolTip($"You are currently not connected to {server.Name} service.");
                     }
                     if (isSelected)
                     {

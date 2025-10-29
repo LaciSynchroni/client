@@ -90,6 +90,8 @@ public class LaciPlugin : MediatorSubscriberBase, IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        _serverConfigurationManager.RemoveDeletedServers();
+        
         var pluginName = _dalamudUtil.GetPluginName();
         var version = Assembly.GetExecutingAssembly().GetName().Version!;
         var versionString = string.Create(CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}");
@@ -145,7 +147,7 @@ public class LaciPlugin : MediatorSubscriberBase, IHostedService
             _runtimeServiceScope = _serviceScopeFactory.CreateScope();
             _runtimeServiceScope.ServiceProvider.GetRequiredService<UiService>();
             _runtimeServiceScope.ServiceProvider.GetRequiredService<CommandManagerService>();
-            if (!_syncConfigService.Current.HasValidSetup() || !_serverConfigurationManager.HasValidConfig())
+            if (!_syncConfigService.Current.HasValidSetup() || !_serverConfigurationManager.AnyServerConfigured)
             {
                 Mediator.Publish(new SwitchToIntroUiMessage());
                 return;

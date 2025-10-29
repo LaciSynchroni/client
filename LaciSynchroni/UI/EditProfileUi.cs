@@ -83,7 +83,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     protected override void DrawInternal()
     {
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        _serverSelector.Draw(_serverManager.GetServerNames(), _apiController.ConnectedServerIndexes, windowWidth - spacing);
+        _serverSelector.Draw(_serverManager.GetServerInfo(), _apiController.ConnectedServerIndexes, windowWidth - spacing);
         _uiSharedService.BigText("Current Profile (as saved on server)");
 
         // We draw the profile editor for the current server only

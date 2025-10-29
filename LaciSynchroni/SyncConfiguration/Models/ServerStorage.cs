@@ -19,6 +19,7 @@ public class ServerStorage
     public string? OAuthToken { get; set; } = null;
     public HttpTransportType HttpTransportType { get; set; } = HttpTransportType.WebSockets;
     public bool ForceWebSockets { get; set; } = false;
+    public bool Deleted { get; set; } = false;
     
     // Function prevents it from being serialized
     public string GetAuthServerUri()

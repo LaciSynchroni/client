@@ -198,7 +198,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         }
 
         var availableWidth = ImGui.GetWindowContentRegionMax().X;
-        _serverSelector.Draw(_serverConfigurationManager.GetServerNames(), _apiController.ConnectedServerIndexes, availableWidth);
+        _serverSelector.Draw(_serverConfigurationManager.GetServerInfo(), _apiController.ConnectedServerIndexes, availableWidth);
 
         using var disabled = ImRaii.Disabled(_disableUI);
 
