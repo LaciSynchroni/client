@@ -53,6 +53,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiShared;
     private readonly IProgress<(int, int, FileCacheEntity)> _validationProgress;
+    private readonly ConcurrentPairLockService _concurrentPairLockService;
     private (int, int, FileCacheEntity) _currentProgress;
     private bool _deleteAccountPopupModalShown = false;
     private bool _deleteFilesPopupModalShown = false;
@@ -84,7 +85,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         FileCacheManager fileCacheManager,
         FileCompactor fileCompactor, ApiController apiController,
         IpcManager ipcManager, CacheMonitor cacheMonitor,
-        DalamudUtilService dalamudUtilService, HttpClient httpClient) : base(logger, mediator, $"{dalamudUtilService.GetPluginName()} Settings", performanceCollector)
+        DalamudUtilService dalamudUtilService, HttpClient httpClient, ConcurrentPairLockService concurrentPairLockService) : base(logger, mediator, $"{dalamudUtilService.GetPluginName()} Settings", performanceCollector)
     {
         _configService = configService;
         _pairManager = pairManager;
@@ -99,6 +100,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _cacheMonitor = cacheMonitor;
         _dalamudUtilService = dalamudUtilService;
         _httpClient = httpClient;
+        _concurrentPairLockService = concurrentPairLockService;
         _fileCompactor = fileCompactor;
         _uiShared = uiShared;
         AllowClickthrough = false;
@@ -563,6 +565,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
         _uiShared.DrawHelpText("Having modified game files will still mark your logs with UNSUPPORTED and you will not receive support, message shown or not." + UiSharedService.TooltipSeparator
             + "Keeping LOD enabled can lead to more crashes. Use at your own risk.");
+
+        DrawRenderLocks();
     }
 
     private void DrawFileStorageSettings()
@@ -2088,6 +2092,59 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _uiShared.CreateTabItem("Service Settings", DrawServerConfiguration);
                 _uiShared.CreateTabItem("Debug", DrawDebug);
             }
+        }
+    }
+
+    private void DrawRenderLocks()
+    {
+        _uiShared.BigText("Debug - Render Locks");
+        UiSharedService.TextWrapped(
+            "Render locks are utilized in scenarios where you have more than one server connected. " +
+            "One render lock should exist for each target Laci draws on.");
+        UiSharedService.TextWrapped(
+            "To force swap a lock for debug purposes, release the lock here. Then, pause and enable the pair" +
+            "for the server you want to lock to exist for.");
+        
+        var currentLocks = _concurrentPairLockService.GetCurrentRenderLocks().ToList();
+        if (currentLocks.Count <= 0)
+        {
+            UiSharedService.TextWrapped("No locks to display. Locks will only establish when a pair is actually visible to you.");
+        }
+        else
+        {
+            if (ImGui.BeginTable("LockDisplay", 4, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
+            {
+                ImGui.TableSetupColumn("Character Name", ImGuiTableColumnFlags.None, 2);
+                ImGui.TableSetupColumn("Character Ident Hash (Shortened)", ImGuiTableColumnFlags.None, 4);
+                ImGui.TableSetupColumn("Server Name", ImGuiTableColumnFlags.None, 5);
+                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.None, 2);
+                ImGui.TableHeadersRow();
+                currentLocks.ForEach(DrawRenderLockRow);
+                ImGui.EndTable();
+            }
+        }
+    }
+
+    private void DrawRenderLockRow(ConcurrentPairLockService.LockData lockData)
+    {
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0);
+        // Shorten the actual character name in case someone screenshots this - rest is shown on hover
+        ImGui.TextUnformatted(AnonymityUtils.ShortenPlayerName(lockData.CharName));
+        UiSharedService.AttachToolTip(lockData.CharName);
+                    
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(lockData.PlayerHash.Substring(0, 15));
+        
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(_serverConfigurationManager.GetServerNameByIndex(lockData.Index));
+
+        ImGui.TableNextColumn();
+        // It might be useful to allow force releases of locks for debugging purpose, for example to explicitly flip a lock
+        // from one server to the next
+        if (_uiShared.IconTextButton(FontAwesomeIcon.Stop, "Release lock"))
+        {
+            _concurrentPairLockService.ReleaseRenderLock(lockData.PlayerHash, lockData.Index);
         }
     }
 

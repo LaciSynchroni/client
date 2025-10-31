@@ -8,16 +8,17 @@ namespace LaciSynchroni.Services
 
     public class ConcurrentPairLockService
     {
-        private readonly ConcurrentDictionary<PlayerNameHash, ServerIndex> _renderLocks = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<PlayerNameHash, LockData> _renderLocks = new(StringComparer.Ordinal);
         private readonly Lock _resourceLock = new();
 
-        public int GetRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex)
+        public int GetRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex, string? characterName)
         {
             if (serverIndex is null || playerNameHash.IsNullOrWhitespace()) return -1;
 
             lock (_resourceLock)
             {
-                return _renderLocks.GetOrAdd(playerNameHash, serverIndex.Value);
+                var lockData = new LockData(characterName ?? "", playerNameHash, serverIndex.Value);
+                return _renderLocks.GetOrAdd(playerNameHash, lockData).Index;
             }
         }
 
@@ -27,9 +28,16 @@ namespace LaciSynchroni.Services
 
             lock (_resourceLock)
             {
-                ServerIndex existingServerIndex = _renderLocks.GetValueOrDefault(playerNameHash, -1);
+                ServerIndex existingServerIndex = _renderLocks.GetValueOrDefault(playerNameHash)?.Index ?? -1;
                 return (serverIndex == existingServerIndex) && _renderLocks.Remove(playerNameHash, out _);
             }
         }
+
+        public ICollection<LockData> GetCurrentRenderLocks()
+        {
+            return _renderLocks.Values;
+        }
+
+        public record LockData(string CharName, PlayerNameHash PlayerHash, ServerIndex Index);
     }
 }

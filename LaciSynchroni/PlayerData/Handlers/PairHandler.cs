@@ -180,7 +180,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             return;
         }
 
-        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex);
+        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName);
         if (renderLockServerIndex != Pair.ServerIndex && renderLockServerIndex > -1)
         {
             Logger.LogInformation(
