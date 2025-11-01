@@ -356,6 +356,16 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.TextColored(ImGuiColors.DalamudRed, notConnectedMessage);
         }
 
+        var icon = FontAwesomeIcon.Satellite;
+        var iconSize = _uiSharedService.GetIconSize(icon);
+        ImGui.SameLine();
+        ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - iconSize.X - ImGui.GetStyle().ItemSpacing.X);
+        if (_uiSharedService.IconButton(icon))
+        {
+            ToggleMultiServerSelect();
+        }
+        
+
         var rectMax = new Vector2(ImGui.GetWindowContentRegionMax().X, ImGui.GetCursorPosY()) + ImGui.GetWindowPos();
 
         DrawServerStatusTooltipAndToggle(rectMin, rectMax);
