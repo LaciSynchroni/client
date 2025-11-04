@@ -47,7 +47,7 @@ public class ServerConfigurationManager
                 return null;
             }
 
-            return new ServerInfoDto { Id = index, Name = v.ServerName, Uri = v.ServerUri, HubUri = v.ServerHubUri, FullPause = v.FullPause};
+            return new ServerInfoDto { Id = index, Name = v.ServerName, Uri = v.ServerUri, HubUri = v.ServerHubUri, Discord = v.DiscordInvite, FullPause = v.FullPause};
         })
         .Where(dto => dto != null)!;
 
