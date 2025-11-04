@@ -24,11 +24,7 @@
     "description": "ToSStrings..ctor"
   },
   "Paragraph4": {
-    "message": "Le créateur de ce plugin a tenté de sécuriser l'application du mieux possible. Cependant, il ne peut pas garantir une protection 100% infaillible. Pour votre sécurité, ne vous synchronisez pas aveuglément et avec n'importe qui.",
-    "description": "ToSStrings..ctor"
-  },
-  "Paragraph5": {
-    "message": "Les fichiers sauvegardés sur le service resteront en ligne tant que des utilisateurs en feront usage. Ils seront effacés automatiquement après une certaine période d'inactivité. Vous pouvez également demander l'effacement de tous les fichiers que vous avez mis en ligne vous-même. Le service en soi ne contient aucune information pouvant identifier quel fichier appartient à quel mod.",
+    "message": "Les créateurs de ce plugin a tenté de sécuriser l'application du mieux possible. Cependant, il ne peut pas garantir une protection 100% infaillible. Pour votre sécurité, ne vous synchronisez pas aveuglément et avec n'importe qui.",
     "description": "ToSStrings..ctor"
   },
   "Paragraph6": {

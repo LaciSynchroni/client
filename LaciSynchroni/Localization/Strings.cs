@@ -14,7 +14,7 @@ public static class Strings
         public readonly string LanguageLabel = Loc.Localize("LanguageLabel", "Language");
 
         public readonly string Paragraph1 = Loc.Localize("Paragraph1",
-            "All of the mod files currently active on your character as well as your current character state will be uploaded to the service you registered yourself at automatically. " +
+            "All of the mod files currently active on your character as well as your current character state will be uploaded to the services you register yourself at automatically. " +
             "The plugin will exclusively upload the necessary mod files and not the whole mod.");
 
         public readonly string Paragraph2 = Loc.Localize("Paragraph2",
@@ -28,13 +28,7 @@ public static class Strings
             "Locally cached mod files will have arbitrary file names to discourage attempts at replicating the original mod.");
 
         public readonly string Paragraph4 = Loc.Localize("Paragraph4",
-            "The plugin creator tried their best to keep you secure. However, there is no guarantee for 100% security. Do not blindly pair your client with everyone.");
-
-        public readonly string Paragraph5 = Loc.Localize("Paragraph5",
-            "Mod files that are saved on the service will remain on the service as long as there are requests for the files from clients. " +
-            "After a period of not being used, the mod files will be automatically deleted. " +
-            "You will also be able to wipe all the files you have personally uploaded on request. " +
-            "The service holds no information about which mod files belong to which mod.");
+            "The plugin creators tried their best to keep you secure. However, there is no guarantee for 100% security. Do not blindly pair your client with everyone.");
 
         public readonly string Paragraph6 = Loc.Localize("Paragraph6",
             "This service is provided as-is. In case of abuse, contact the owner of the affected server.");
