@@ -171,6 +171,10 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
 
         if (!_pendingServer.UseOAuth2)
         {
+            if (_pendingServer.SecretKeys.Count == 0)
+            {
+                _pendingServer.SecretKeys.Add(0, new SecretKey() { FriendlyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})", Key = "" });
+            }
             _pendingServer.SecretKeys[0].Key = DrawServerTextbox("Secret Key:", _pendingServer.SecretKeys[0].Key, 64, ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase);
         }
 
