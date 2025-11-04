@@ -858,7 +858,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGuiHelpers.ScaledDummy(5);
         if (ImGui.TreeNode("Add New Service"))
         {
-            TextWrapped("To be able to use Laci Synchroni you will have to configure a service. You can either use a Laci configuration link, or enter the URI manually below.");
+            TextWrapped("You can either use a Laci configuration link, or enter the URI manually below to add a new service.");
 
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
