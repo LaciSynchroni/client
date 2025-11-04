@@ -241,6 +241,12 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<ServerConfigurationManager>(),
                 s.GetRequiredService<UiSharedService>(),
                 s.GetRequiredService<DalamudUtilService>(),
+                s.GetRequiredService<PerformanceCollectorService>(),
+                s.GetRequiredService<HttpClient>()));
+            collection.AddScoped<WindowMediatorSubscriberBase, RulesUI>((s) => new RulesUI(
+                s.GetRequiredService<ILogger<ServerJoinConfirmationUI>>(),
+                s.GetRequiredService<SyncMediator>(),
+                s.GetRequiredService<UiSharedService>(),
                 s.GetRequiredService<PerformanceCollectorService>()));
             collection.AddScoped<WindowMediatorSubscriberBase, EventViewerUI>();
             collection.AddScoped<WindowMediatorSubscriberBase, CharaDataHubUi>();

@@ -207,6 +207,16 @@ public class ServerConfigurationManager
         return ServerInfo.ToList();
     }
 
+    public string[] GetServerNames()
+    {
+        return _serverConfigService.Current.ServerStorage.Select(v => v.ServerName).ToArray();
+    }
+
+    public bool HasValidConfig()
+    {
+        return _serverConfigService.Current.ServerStorage.Count > 0;
+    }
+
     public void Save()
     {
         var caller = new StackTrace().GetFrame(1)?.GetMethod()?.ReflectedType?.Name ?? "Unknown";

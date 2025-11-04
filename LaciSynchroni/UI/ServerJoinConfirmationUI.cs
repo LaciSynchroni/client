@@ -1,16 +1,20 @@
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Bindings.ImGui;
+using Dalamud.Utility;
+using LaciSynchroni.Common.Dto.Server;
 using LaciSynchroni.Interop.Ipc;
 using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
 using Microsoft.Extensions.Logging;
-using NotificationMessage = LaciSynchroni.Services.Mediator.NotificationMessage;
+using System;
+using System.Text.Json;
 using System.Threading;
+using NotificationMessage = LaciSynchroni.Services.Mediator.NotificationMessage;
 
 namespace LaciSynchroni.UI;
 
@@ -23,34 +27,42 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
     private readonly ILogger<ServerJoinConfirmationUI> _logger;
     private readonly DalamudUtilService _dalamudUtil;
-    
+    private readonly HttpClient _httpClient;
+
     private ServerStorage? _pendingServer = null;
     private int _addedServerIndex = -1;
     private bool _isAuthenticating = false;
     private CancellationTokenSource _authCts = new();
-    
+
+    private Task<HttpResponseMessage> _serverInfoTask;
+    private bool _hasReceivedServerInfo = false;
+    private string _serverRules;
+    private bool _hasAcceptedRules;
+
     // OAuth flow state
     private Task<Uri?>? _oauthCheckTask;
     private Task<string?>? _oauthTokenTask;
     private Task<Dictionary<string, string>>? _oauthUidsTask;
 
     public ServerJoinConfirmationUI(
-        ILogger<ServerJoinConfirmationUI> logger, 
+        ILogger<ServerJoinConfirmationUI> logger,
         SyncMediator mediator,
         ServerConfigurationManager serverConfigurationManager,
         UiSharedService uiSharedService,
         DalamudUtilService dalamudUtil,
-        PerformanceCollectorService performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService,
+        HttpClient httpClient)
         : base(logger, mediator, "Add Laci Synchroni Server###LaciSynchroniServerJoinConfirmation", performanceCollectorService)
     {
         _logger = logger;
         _serverConfigurationManager = serverConfigurationManager;
         _uiSharedService = uiSharedService;
         _dalamudUtil = dalamudUtil;
-        
+        _httpClient = httpClient;
+
         SizeConstraints = new()
         {
-            MinimumSize = new(600, 400),
+            MinimumSize = new(600, 500),
             MaximumSize = new(800, 700)
         };
 
@@ -58,6 +70,12 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
 
         // Subscribe to server join requests
         Mediator.Subscribe<ServerJoinRequestMessage>(this, HandleServerJoinRequest);
+        Mediator.Subscribe<RulesAcceptedMessage>(this, HandleRulesAccepted);
+    }
+
+    private void HandleRulesAccepted(RulesAcceptedMessage message)
+    {
+        _hasAcceptedRules = true;
     }
 
     private void HandleServerJoinRequest(ServerJoinRequestMessage message)
@@ -69,6 +87,12 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         _oauthTokenTask = null;
         _oauthUidsTask = null;
         IsOpen = true;
+        _hasReceivedServerInfo = false;
+        _hasAcceptedRules = false;
+
+        var uri = new Uri(_pendingServer.ServerUri);
+
+        _serverInfoTask = Task.Run(async () => await _httpClient.GetAsync(new UriBuilder(uri.Scheme.Equals("wss") ? Uri.UriSchemeHttps : Uri.UriSchemeHttp, uri!.Host, uri.Port == -1 ? 443 : uri.Port, "/clientconfiguration/get").Uri).ConfigureAwait(false));
     }
 
     public override void OnOpen()
@@ -101,40 +125,72 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             ImGui.TextUnformatted("Add New Server");
         ImGui.Separator();
 
-        UiSharedService.ColorTextWrapped(
-            "You have clicked a link to add a new Laci Synchroni server. " +
-            "Please review the server information below and click 'Add Server' to continue.",
-            ImGuiColors.HealerGreen);
-
         ImGuiHelpers.ScaledDummy(5f);
 
         ImGui.TextUnformatted("Server Information:");
+        DrawServerLabel("Server URI:", _pendingServer.ServerUri);
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(2f);
 
-        // Display server details
-        DrawServerDetail("Server Name:", _pendingServer.ServerName);
-        DrawServerDetail("Server URI:", _pendingServer.ServerUri);
-        
-        if (_pendingServer.UseAdvancedUris)
+        if (!_serverInfoTask.IsCompleted)
         {
-            if (!string.IsNullOrEmpty(_pendingServer.ServerHubUri))
+            DrawServerLabel("Fetching server info...", "");
+            return;
+        }
+
+        if (_serverInfoTask.IsFaulted || !_serverInfoTask.Result.IsSuccessStatusCode)
+        {
+            UiSharedService.ColorTextWrapped(
+                "Failed to connect and fetch server info. You will have to configure the necessary settings manually.",
+                ImGuiColors.DalamudYellow);
+        }
+        else
+        {
+            UiSharedService.ColorTextWrapped(
+                "Server info was loaded successfully. " +
+                "Please review the server information below and click 'Add Server' to continue.",
+                ImGuiColors.HealerGreen);
+            if (!_hasReceivedServerInfo)
             {
-                DrawServerDetail("Hub URI:", _pendingServer.ServerHubUri);
-            }
-            if (!string.IsNullOrEmpty(_pendingServer.AuthUri))
-            {
-                DrawServerDetail("Auth URI:", _pendingServer.AuthUri);
+                var config = JsonSerializer.Deserialize<ConfigurationDto>(_serverInfoTask.Result.Content.ReadAsStream());
+                _pendingServer.ServerName = config.ServerName;
+                _pendingServer.UseOAuth2 = config.IsOAuthEnabled ?? true;
+                _pendingServer.ServerHubUri = config.HubUri?.ToString() ?? "";
+                _pendingServer.UseAdvancedUris = !_pendingServer.ServerHubUri.IsNullOrEmpty() || !_pendingServer.AuthUri.IsNullOrEmpty();
+                _pendingServer.BypassVersionCheck = config.BypassVersionCheck ?? false;
+                _pendingServer.DiscordInvite = config.DiscordInvite ?? "";
+                _serverRules = config.ServerRules ?? "";
+                _hasReceivedServerInfo = true;
             }
         }
-        
-        DrawServerDetail("Authentication:", _pendingServer.UseOAuth2 ? "OAuth2 (Discord)" : "Secret Key");
-        
+
+        _pendingServer.ServerName = DrawServerTextbox("Server Name:", _pendingServer.ServerName);
+
+
+        _pendingServer.UseOAuth2 = DrawServerCheckbox("Use OAuth2 (Discord):", _pendingServer.UseOAuth2);
+
+        if (!_pendingServer.UseOAuth2)
+        {
+            _pendingServer.SecretKeys[0].Key = DrawServerTextbox("Secret Key:", _pendingServer.SecretKeys[0].Key, 64, ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase);
+        }
+
+        _pendingServer.UseAdvancedUris = DrawServerCheckbox("Use Advanced URIs:", _pendingServer.UseAdvancedUris);
+
+        if (_pendingServer.UseAdvancedUris)
+        {
+            _pendingServer.ServerHubUri = DrawServerTextbox("Hub URI:", _pendingServer.ServerHubUri);
+            _pendingServer.AuthUri = DrawServerTextbox("Auth URI:", _pendingServer.AuthUri ?? "");
+        }
+
+        _pendingServer.DiscordInvite = DrawServerTextbox("Discord Invite:", _pendingServer.DiscordInvite);
+
+        _pendingServer.BypassVersionCheck = DrawServerCheckbox("Bypass Version Check:", _pendingServer.BypassVersionCheck);
+
         if (_pendingServer.BypassVersionCheck)
         {
             ImGuiHelpers.ScaledDummy(2f);
             UiSharedService.ColorTextWrapped(
-                "This server link has version check bypass enabled. This may cause unexpected behavior if the server is not compatible.",
+                "This server has version check bypass enabled. This may cause unexpected behavior if the server is not compatible.",
                 ImGuiColors.DalamudYellow);
         }
 
@@ -148,43 +204,57 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             var buttonWidth = 100f * ImGuiHelpers.GlobalScale;
             var spacing = 10f * ImGuiHelpers.GlobalScale;
             var totalWidth = (buttonWidth * 2) + spacing;
-            
+
             ImGui.SetCursorPosX((ImGui.GetWindowWidth() - totalWidth) / 2);
 
-            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Add Server"))
+            if (!_serverRules.IsNullOrEmpty() && !_hasAcceptedRules)
             {
-                try
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.File, "View Server Rules"))
                 {
-                    _serverConfigurationManager.AddServer(_pendingServer);
-                    _addedServerIndex = _serverConfigurationManager.GetServerInfo().Count - 1;
-                    _logger.LogInformation("Added server via link: {ServerName} at index {Index}", _pendingServer.ServerName, _addedServerIndex);
-                    
-                    // If OAuth server, start authentication flow
-                    if (_pendingServer.UseOAuth2)
-                    {
-                        _isAuthenticating = true;
-                        _oauthCheckTask = _serverConfigurationManager.CheckDiscordOAuth(_pendingServer.ServerUri);
-                    }
-                    else
-                    {
-                        Mediator.Publish(new NotificationMessage(
-                            "Server Added", 
-                            $"Successfully added '{_pendingServer.ServerName}'. Configure your secret key in Settings.",
-                            NotificationType.Info));
-                        
-                        _pendingServer = null;
-                        IsOpen = false;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to add server: {ServerName}", _pendingServer.ServerName);
-                    Mediator.Publish(new NotificationMessage(
-                        "Error", 
-                        "Failed to add server. Please try again or add it manually in Settings.",
-                        NotificationType.Error));
+                    Mediator.Publish(new RulesViewRequestMessage(_serverRules));
                 }
             }
+            else
+            {
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Add Server"))
+                {
+                    try
+                    {
+                        _serverConfigurationManager.AddServer(_pendingServer);
+                        _addedServerIndex = _serverConfigurationManager.GetServerInfo().Count - 1;
+                        _logger.LogInformation("Added server via link: {ServerName} at index {Index}", _pendingServer.ServerName, _addedServerIndex);
+
+                        // If OAuth server, start authentication flow
+                        if (_pendingServer.UseOAuth2)
+                        {
+                            _isAuthenticating = true;
+                            _oauthCheckTask = _serverConfigurationManager.CheckDiscordOAuth(_pendingServer.ServerUri);
+                        }
+                        else
+                        {
+                            Mediator.Publish(new NotificationMessage(
+                                "Server Added",
+                                $"Successfully added '{_pendingServer.ServerName}'.",
+                                NotificationType.Info));
+                            _serverConfigurationManager.AddCurrentCharacterToServer(_addedServerIndex);
+                            // Just assume the user has seen the census popup, since the popup itself is disabled.
+                            _serverConfigurationManager.ShownCensusPopup = true;
+                            _serverConfigurationManager.Save();
+                            _pendingServer = null;
+                            IsOpen = false;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to add server: {ServerName}", _pendingServer.ServerName);
+                        Mediator.Publish(new NotificationMessage(
+                            "Error",
+                            "Failed to add server. Please try again or add it manually in Settings.",
+                            NotificationType.Error));
+                    }
+                }
+            }
+
 
             ImGui.SameLine();
 
@@ -199,20 +269,20 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         if (_isAuthenticating)
         {
             DrawOAuthFlow();
-            
+
             // Show cancel button during OAuth, but hide it when we reach the final success state
             // (when all OAuth tasks are complete and successful)
             bool showCancelButton = !(_oauthUidsTask?.IsCompleted == true && _oauthUidsTask.Result?.Count > 0);
-            
+
             if (showCancelButton)
             {
                 ImGuiHelpers.ScaledDummy(3f);
                 ImGui.Separator();
                 ImGuiHelpers.ScaledDummy(2f);
-                
+
                 var buttonWidth = 100f * ImGuiHelpers.GlobalScale;
                 ImGui.SetCursorPosX((ImGui.GetWindowWidth() - buttonWidth) / 2);
-                
+
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Times, "Cancel"))
                 {
                     _authCts.Cancel();
@@ -223,7 +293,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         }
     }
 
-    private void DrawServerDetail(string label, string value)
+    private void DrawServerLabel(string label, string value)
     {
         ImGui.AlignTextToFramePadding();
         ImGui.TextUnformatted(label);
@@ -232,6 +302,24 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         {
             ImGui.TextUnformatted(value);
         }
+    }
+
+    private bool DrawServerCheckbox(string label, bool value)
+    {
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted(label);
+        ImGui.SameLine(150 * ImGuiHelpers.GlobalScale);
+        ImGui.Checkbox($"###{label}", ref value);
+        return value;
+    }
+
+    private string DrawServerTextbox(string label, string value, int maxLength = 512, ImGuiInputTextFlags flags = ImGuiInputTextFlags.None)
+    {
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted(label);
+        ImGui.SameLine(150 * ImGuiHelpers.GlobalScale);
+        ImGui.InputText($"###{label}", ref value, maxLength, flags);
+        return value;
     }
 
     private void DrawOAuthFlow()
@@ -276,7 +364,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             ImGuiHelpers.ScaledDummy(2f);
             UiSharedService.TextWrapped("Click the button below to authenticate with Discord. A browser window will open.");
             ImGuiHelpers.ScaledDummy(2f);
-            
+
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.ArrowRight, "Authenticate with Discord"))
             {
                 var server = _serverConfigurationManager.GetServerByIndex(_addedServerIndex);
@@ -322,14 +410,14 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
 
         if (!_oauthUidsTask.IsCompleted)
         {
-            UiSharedService.ColorTextWrapped("Retrieving your characters...", ImGuiColors.DalamudYellow);
+            UiSharedService.ColorTextWrapped("Retrieving your UIDs...", ImGuiColors.DalamudYellow);
             return;
         }
 
         var uids = _oauthUidsTask.Result;
         if (uids == null || uids.Count == 0)
         {
-            UiSharedService.ColorTextWrapped("No characters found. You may need to register your characters on the server website first.", ImGuiColors.DalamudRed);
+            UiSharedService.ColorTextWrapped("No UIDs found. You may need to register UIDs on the server Discord first.", ImGuiColors.DalamudRed);
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Check, "Finish"))
             {
                 _pendingServer = null;
@@ -346,8 +434,8 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             var currentCid = _dalamudUtil.GetCIDAsync().GetAwaiter().GetResult();
 
             // Check if already assigned
-            var existingAuth = addedServer.Authentications.FirstOrDefault(a => 
-                string.Equals(a.CharacterName, currentCharName, StringComparison.Ordinal) && 
+            var existingAuth = addedServer.Authentications.FirstOrDefault(a =>
+                string.Equals(a.CharacterName, currentCharName, StringComparison.Ordinal) &&
                 a.WorldId == currentWorldId);
 
             if (existingAuth == null)
@@ -366,7 +454,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
 
                 UiSharedService.ColorTextWrapped($"Successfully configured!", ImGuiColors.HealerGreen);
                 UiSharedService.TextWrapped($"Your character '{currentCharName}' has been assigned UID: {firstUid.Key}");
-                
+
                 if (uids.Count > 1)
                 {
                     ImGuiHelpers.ScaledDummy(2f);
@@ -378,7 +466,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
                 // Assign UID to existing auth
                 existingAuth.UID = uids.First().Key;
                 _serverConfigurationManager.Save();
-                
+
                 UiSharedService.ColorTextWrapped($"Successfully configured!", ImGuiColors.HealerGreen);
                 UiSharedService.TextWrapped($"Your character '{currentCharName}' has been assigned UID: {existingAuth.UID}");
             }
@@ -388,17 +476,17 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             }
 
             ImGuiHelpers.ScaledDummy(3f);
-            
+
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Check, "Finish & Connect"))
             {
                 // Initiate connection to the newly added server
                 _ = Task.Run(async () => await _uiSharedService.ApiController.CreateConnectionsAsync(_addedServerIndex));
-                
+
                 Mediator.Publish(new NotificationMessage(
-                    "Connecting", 
+                    "Connecting",
                     $"Connecting to '{_pendingServer?.ServerName}'...",
                     NotificationType.Info));
-                
+
                 _pendingServer = null;
                 IsOpen = false;
             }
@@ -407,7 +495,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         {
             _logger.LogError(ex, "Failed to auto-assign character");
             UiSharedService.ColorTextWrapped("Failed to assign character. Please configure manually in Settings.", ImGuiColors.DalamudRed);
-            
+
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Check, "Finish"))
             {
                 _pendingServer = null;
