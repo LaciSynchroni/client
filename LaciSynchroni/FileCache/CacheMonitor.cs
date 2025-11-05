@@ -6,6 +6,7 @@ using LaciSynchroni.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.IO;
 
 namespace LaciSynchroni.FileCache;
 
@@ -165,7 +166,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public void StartPenumbraWatcher(string? penumbraPath)
     {
         PenumbraWatcher?.Dispose();
-        if (string.IsNullOrEmpty(penumbraPath))
+        if (string.IsNullOrEmpty(penumbraPath) || !Directory.Exists(penumbraPath))
         {
             PenumbraWatcher = null;
             Logger.LogWarning("Penumbra is not connected or the path is not set, cannot start FSW for Penumbra.");
