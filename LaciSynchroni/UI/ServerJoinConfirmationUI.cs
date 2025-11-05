@@ -38,6 +38,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
     private bool _hasReceivedServerInfo = false;
     private string _serverRules;
     private bool _hasAcceptedRules;
+    private bool _isSecretKeyValid = true;
 
     // OAuth flow state
     private Task<Uri?>? _oauthCheckTask;
@@ -178,6 +179,13 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             _pendingServer.SecretKeys[0].Key = DrawServerTextbox("Secret Key:", _pendingServer.SecretKeys[0].Key, 64, ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase);
         }
 
+        if (!_isSecretKeyValid)
+        {
+            UiSharedService.ColorTextWrapped(
+                "The secret key must be 64 characters in length.",
+                ImGuiColors.DalamudYellow);
+        }
+
         _pendingServer.UseAdvancedUris = DrawServerCheckbox("Use Advanced URIs:", _pendingServer.UseAdvancedUris);
 
         if (_pendingServer.UseAdvancedUris)
@@ -222,6 +230,11 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
             {
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Add Server"))
                 {
+                    if (!_pendingServer.UseOAuth2 && _pendingServer.SecretKeys[0].Key.Length != 64)
+                    {
+                        _isSecretKeyValid = false;
+                        return;
+                    }
                     try
                     {
                         _serverConfigurationManager.AddServer(_pendingServer);
