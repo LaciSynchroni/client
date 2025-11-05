@@ -1,14 +1,17 @@
 ﻿using Dalamud.Game.Gui.Dtr;
+using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using LaciSynchroni.PlayerData.Pairs;
 using LaciSynchroni.Services.Mediator;
+using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.SyncConfiguration.Configurations;
 using LaciSynchroni.WebAPI;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 
 namespace LaciSynchroni.UI;
@@ -23,12 +26,15 @@ public sealed class DtrEntry : IDisposable, IHostedService
     private readonly ILogger<DtrEntry> _logger;
     private readonly SyncMediator _syncMediator;
     private readonly PairManager _pairManager;
+    private readonly ServerConfigurationManager _serverConfigurationManager;
     private Task? _runTask;
     private string? _text;
     private string? _tooltip;
     private Colors _colors;
 
-    public DtrEntry(ILogger<DtrEntry> logger, IDtrBar dtrBar, ConfigurationServiceBase<SyncConfig> configService, SyncMediator syncMediator, PairManager pairManager, ApiController apiController)
+    public static readonly ImmutableList<string> DtrIcons = ["", "\uE032", "\uE037", "\uE038", "\uE039", "\uE044", .. Enum.GetValues<SeIconChar>().Select(ch => $"{(char)ch}")];
+
+    public DtrEntry(ILogger<DtrEntry> logger, IDtrBar dtrBar, ConfigurationServiceBase<SyncConfig> configService, SyncMediator syncMediator, PairManager pairManager, ApiController apiController, ServerConfigurationManager serverConfigurationManager)
     {
         _logger = logger;
         _dtrBar = dtrBar;
@@ -37,6 +43,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
         _syncMediator = syncMediator;
         _pairManager = pairManager;
         _apiController = apiController;
+        _serverConfigurationManager = serverConfigurationManager;
     }
 
     public void Dispose()
@@ -137,13 +144,15 @@ public sealed class DtrEntry : IDisposable, IHostedService
                 {
                     visiblePairs = _pairManager.GetOnlineUserPairsAcrossAllServers()
                         .Where(x => x.IsVisible)
-                        .Select(x => string.Format("{0} ({1})", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName, x.UserData.AliasOrUID));
+                        .Select(x => string.Format("{0} ({1}{2})", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName, x.UserData.AliasOrUID,
+                                _serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon == null ? "" : $" - {_serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon}"));
                 }
                 else
                 {
                     visiblePairs = _pairManager.GetOnlineUserPairsAcrossAllServers()
                         .Where(x => x.IsVisible)
-                        .Select(x => string.Format("{0}", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName));
+                        .Select(x => string.Format("{0} {1}", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName,
+                                _serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon == null ? "" : $"({_serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon})"));
                 }
 
                 tooltip = $"Laci Synchroni: Connected{Environment.NewLine}----------{Environment.NewLine}{string.Join(Environment.NewLine, visiblePairs)}";

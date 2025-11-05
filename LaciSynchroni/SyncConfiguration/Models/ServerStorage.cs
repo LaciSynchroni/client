@@ -18,6 +18,7 @@ public class ServerStorage
     public bool UseOAuth2 { get; set; } = false;
     public string? OAuthToken { get; set; } = null;
     public HttpTransportType HttpTransportType { get; set; } = HttpTransportType.WebSockets;
+    public char? ServerIcon { get; set; } = null;
     public bool ForceWebSockets { get; set; } = false;
     public bool Deleted { get; set; } = false;
     

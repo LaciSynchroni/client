@@ -1267,6 +1267,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
                 var useAdvancedUris = selectedServer.UseAdvancedUris;
                 var bypassVersionCheck = selectedServer.BypassVersionCheck;
+                var serverIcon = selectedServer.ServerIcon;
+                var serverIconIndex = DtrEntry.DtrIcons.IndexOf($"{serverIcon}");
 
                 if (ImGui.InputText("Service Name", ref serverName, 255))
                 {
@@ -1280,6 +1282,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     _serverConfigurationManager.Save();
                 }
 
+                
+                if (ImGui.Combo("DTR notification icon", ref serverIconIndex, DtrEntry.DtrIcons))
+                {
+                    selectedServer.ServerIcon = DtrEntry.DtrIcons[serverIconIndex].IsNullOrEmpty() ? null : DtrEntry.DtrIcons[serverIconIndex][0];
+                    _serverConfigurationManager.Save();
+                }
                 if (ImGui.Checkbox("Bypass API version check", ref bypassVersionCheck))
                 {
                     selectedServer.BypassVersionCheck = bypassVersionCheck;
