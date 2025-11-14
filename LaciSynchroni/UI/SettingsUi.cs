@@ -1840,7 +1840,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.TableSetupColumn($"Status", ImGuiTableColumnFlags.None, 1);
             ImGui.TableSetupColumn($"Uri", ImGuiTableColumnFlags.None, 2);
             ImGui.TableSetupColumn($"Hub", ImGuiTableColumnFlags.None, 3);
-            ImGui.TableSetupColumn($"Discord", ImGuiTableColumnFlags.None, 1);
             ImGui.TableSetupColumn($"Connection", ImGuiTableColumnFlags.None, 1);
             ImGui.TableHeadersRow();
 
@@ -1878,15 +1877,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
                 ImGui.TableNextColumn();
                 ImGui.Text(string.IsNullOrEmpty(server.HubUri) ? (server.Uri + IServerHub.Path) : server.HubUri);
-
-                ImGui.TableNextColumn();
-                if (!server.Discord.IsNullOrEmpty())
-                {
-                    if (ImGui.Button("Discord"))
-                    {
-                        Util.OpenLink(server.Discord);
-                    }
-                }
 
                 ImGui.TableNextColumn();
                 DrawMultiServerConnectButton(server.Id, server.Name);
@@ -2099,7 +2089,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
 
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Plugin community and Support:");
+        ImGui.TextUnformatted("Community and Support:");
         ImGui.SameLine();
         if (ImGui.Button("Laci Synchroni Discord"))
         {
