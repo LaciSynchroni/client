@@ -44,6 +44,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly ServerConfigurationManager _serverConfigManager;
     private readonly TopTabMenu _tabMenu;
     private readonly TagHandler _tagHandler;
+    private readonly LocalHttpServer _httpServer;
     private readonly UiSharedService _uiSharedService;
     private readonly CharacterAnalyzer _characterAnalyzer;
     private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
@@ -60,11 +61,13 @@ public class CompactUi : WindowMediatorSubscriberBase
     private bool _wasOpen;
     private float _windowContentWidth;
     private bool _showMultiServerSelect = false;
+    private Task? httpServerStartStopTask = null;
 
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, SyncConfigService configService, ApiController apiController, PairManager pairManager,
         ServerConfigurationManager serverConfigManager, SyncMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
-        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService)
+        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService,
+        LocalHttpServer httpServer)
         : base(logger, mediator, "###LaciSynchroniMainUI", performanceCollectorService)
     {
         _uiSharedService = uiShared;
@@ -74,6 +77,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         _serverConfigManager = serverConfigManager;
         _fileTransferManager = fileTransferManager;
         _tagHandler = tagHandler;
+        _httpServer = httpServer;
         _drawEntityFactory = drawEntityFactory;
         _selectGroupForPairUi = selectTagForPairUi;
         _selectPairsForGroupUi = selectPairForTagUi;
@@ -491,6 +495,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
             ImGui.EndTable();
         }
+        DrawLocalHTTPServerEnableButton();
     }
 
     private void DrawServerName(int serverId, string serverName, string serverUri)
@@ -582,10 +587,48 @@ public class CompactUi : WindowMediatorSubscriberBase
                 }
             }
         }
-
         UiSharedService.AttachToolTip(isConnectingOrConnected ?
            "Disconnect from " + serverName :
            "Connect to " + serverName);
+    }
+
+
+
+    private void DrawLocalHTTPServerEnableButton()
+    {
+        var isEnabled = _httpServer.Enabled;
+        var color = UiSharedService.GetBoolColor(!isEnabled);
+        var icon = FontAwesomeIcon.Server;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        {
+            using var disabled = ImRaii.Disabled(httpServerStartStopTask != null && !httpServerStartStopTask.IsCompleted);
+            if (_uiSharedService.IconButton(icon, "localhttpserverstartstop"))
+            {
+                if (isEnabled)
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(false));
+                }
+                else
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(true));
+                }
+            }
+        }
+        UiSharedService.AttachToolTip(isEnabled ?
+           "Disable quick connect server" :
+           "Enable quick connect server");
+
+        ImGui.SameLine();
+        if (isEnabled)
+        {
+            UiSharedService.ColorText("Quick Connect listener is active!", ImGuiColors.ParsedGreen);
+        }
+        else
+        {
+            UiSharedService.ColorText("Quick Connect listener is inactive!", ImGuiColors.DalamudRed);
+        }
+
     }
 
     private void DrawOnlineUsers(int serverId)

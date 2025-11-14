@@ -30,19 +30,11 @@ public partial class IntroUi : WindowMediatorSubscriberBase
     private int _currentLanguage;
     private bool _readFirstPage;
 
-    private string _secretKey = string.Empty;
     private string _timeoutLabel = string.Empty;
     private Task? _timeoutTask;
     private string[]? _tosParagraphs;
-    private bool _useOAuthLogin = true;
-    private bool _useCustomService;
-    private bool _useDefaultService;
-    
-    private string _customServerName = string.Empty;
+
     private string _customServerUri = string.Empty;
-    private string _customServerHub= string.Empty;
-    private bool _hasAddedCustomService = false;
-    private bool _isConnectingCustomService;
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, SyncConfigService configService,
         CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, SyncMediator syncMediator,
@@ -212,6 +204,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         }
         else if (!_serverConfigurationManager.AnyServerConfigured)
         {
+            Mediator.Publish(new HttpServerToggleMessage(true));
             using (_uiShared.UidFont.Push())
                 ImGui.TextUnformatted("Service Registration");
             ImGui.Separator();
@@ -241,6 +234,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         else
         {
             Mediator.Publish(new SwitchToMainUiMessage());
+            Mediator.Publish(new HttpServerToggleMessage(false));
             IsOpen = false;
         }
     }
@@ -253,55 +247,6 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         }
 
         _tosParagraphs = [Strings.ToS.Paragraph1, Strings.ToS.Paragraph2, Strings.ToS.Paragraph3, Strings.ToS.Paragraph4, Strings.ToS.Paragraph6];
-    }
-    
-    public void DrawAddCustomService()
-    {
-        ImGuiHelpers.ScaledDummy(5);
-        UiSharedService.TextWrapped("Please fill out the values below to use a custom service. If you don't know what to put here, please ask your service provider!");
-        ImGui.SetNextItemWidth(250);
-        ImGui.InputText("Custom Service Name", ref _customServerName, 255);
-        ImGui.SetNextItemWidth(250);
-        ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
-        ImGui.SetNextItemWidth(250);
-        ImGui.InputText("Custom Service Hub (Optional, only fill if prompted)", ref _customServerHub, 255);
-
-        if (ImGui.Button("Use as custom service"))
-        {
-            _serverConfigurationManager.SetFirstServer(new ServerStorage()
-            {
-                ServerName = _customServerName,
-                ServerUri = _customServerUri,
-                UseAdvancedUris = !_customServerHub.IsNullOrWhitespace(),
-                ServerHubUri = _customServerHub,
-                UseOAuth2 = true
-            });
-            _hasAddedCustomService = true;
-            _customServerName = string.Empty;
-            _customServerUri = string.Empty;
-            _customServerHub = string.Empty;
-
-        }
-        ImGui.SameLine();
-        if (ImGui.Button("Use default service instead"))
-        {
-            SwitchToDefaultService();
-        }
-    }
-
-    private void SwitchToDefaultService()
-    {
-        _serverConfigurationManager.SetFirstServer(new ServerStorage() { ServerName = ApiController.MainServer, ServerUri = ApiController.MainServiceUri, UseOAuth2 = true });
-        _useCustomService = false;
-        _useDefaultService = true;
-        _uiShared.ResetOAuthTasksState();
-    }
-
-    private void SwitchToCustomService()
-    {
-        _useCustomService = true;
-        _useDefaultService = false;
-        _uiShared.ResetOAuthTasksState();
     }
 
     [GeneratedRegex("^([A-F0-9]{2})+")]

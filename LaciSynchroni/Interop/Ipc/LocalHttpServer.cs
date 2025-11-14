@@ -2,8 +2,10 @@ using LaciSynchroni.Common.Data;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
+using LaciSynchroni.UI;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Data;
 using System.Net;
 using System.Web;
 using NotificationMessage = LaciSynchroni.Services.Mediator.NotificationMessage;
@@ -22,8 +24,10 @@ public class LocalHttpServer : IHostedService, IMediatorSubscriber
     private HttpListener? _listener;
     private CancellationTokenSource? _cts;
     private Task? _listenerTask;
-    
-    public SyncMediator Mediator { get; init; }
+
+    public bool Enabled => _listener?.IsListening ?? false;
+
+    public SyncMediator Mediator => _mediator;
 
     public LocalHttpServer(
         ILogger<LocalHttpServer> logger,
@@ -33,7 +37,29 @@ public class LocalHttpServer : IHostedService, IMediatorSubscriber
         _logger = logger;
         _serverConfigurationManager = serverConfigurationManager;
         _mediator = mediator;
-        Mediator = mediator;
+
+        Mediator.Subscribe<HttpServerToggleMessage>(this, HandleToggleRequest);
+
+        // this feels terrible but it does the job of immediately stopping it
+        Mediator.Publish(new HttpServerToggleMessage(false));
+    }
+
+    private void HandleToggleRequest(HttpServerToggleMessage message)
+    {
+        if (message.enable && !Enabled)
+        {
+            _ = Task.Run(async () =>
+            {
+                await StartAsync(default).ConfigureAwait(false);
+            });
+        }
+        else if (!message.enable && Enabled)
+        {
+            _ = Task.Run(async () =>
+            {
+                await StopAsync(default).ConfigureAwait(false);
+            });
+        }
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -224,3 +250,7 @@ public class LocalHttpServer : IHostedService, IMediatorSubscriber
 /// </summary>
 public record ServerJoinRequestMessage(ServerStorage ServerStorage) : MessageBase;
 
+/// <summary>
+/// Message published when the state of the 
+/// </summary>
+public record HttpServerToggleMessage(bool enable) : MessageBase;
