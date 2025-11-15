@@ -3,6 +3,7 @@ using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
 using LaciSynchroni.UI;
+using LaciSynchroni.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -16,27 +17,28 @@ namespace LaciSynchroni.Interop.Ipc;
 /// Local HTTP server that listens for server join requests via browser links
 /// Inspired by Heliosphere's implementation
 /// </summary>
-public class LocalHttpServer : IHostedService, IMediatorSubscriber
+public class LocalHttpServer : DisposableMediatorSubscriberBase, IHostedService
 {
+    private enum HttpServerStates
+    {
+
+    }
     private readonly ILogger<LocalHttpServer> _logger;
     private readonly ServerConfigurationManager _serverConfigurationManager;
-    private readonly SyncMediator _mediator;
     private HttpListener? _listener;
-    private CancellationTokenSource? _cts;
-    private Task? _listenerTask;
+    private CancellationTokenSource _cts = new();
+    private CancellationToken _cancellationToken => _cts.Token;
+    private Task _listenerTask;
 
     public bool Enabled => _listener?.IsListening ?? false;
-
-    public SyncMediator Mediator => _mediator;
 
     public LocalHttpServer(
         ILogger<LocalHttpServer> logger,
         ServerConfigurationManager serverConfigurationManager,
-        SyncMediator mediator)
+        SyncMediator mediator) : base(logger, mediator)
     {
         _logger = logger;
         _serverConfigurationManager = serverConfigurationManager;
-        _mediator = mediator;
 
         Mediator.Subscribe<HttpServerToggleMessage>(this, HandleToggleRequest);
 
@@ -48,33 +50,35 @@ public class LocalHttpServer : IHostedService, IMediatorSubscriber
     {
         if (message.enable && !Enabled)
         {
+            _cts = new();
             _ = Task.Run(async () =>
             {
-                await StartAsync(default).ConfigureAwait(false);
+                await StartAsync(_cancellationToken).ConfigureAwait(false);
             });
         }
         else if (!message.enable && Enabled)
         {
             _ = Task.Run(async () =>
             {
-                await StopAsync(default).ConfigureAwait(false);
+                await StopAsync(_cancellationToken).ConfigureAwait(false);
             });
         }
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
+            await StopAsync(cancellationToken);
+            _cts = new();
             _listener = new HttpListener();
             _listener.Prefixes.Add($"{PluginHttpServerData.Hostname}:{PluginHttpServerData.Port}/");
             _listener.Start();
             
-            _cts = new CancellationTokenSource();
-            _listenerTask = Task.Run(() => ListenAsync(_cts.Token), _cts.Token);
+            _listenerTask = Task.Run(() => ListenAsync(_cancellationToken), _cancellationToken);
             
             _logger.LogInformation("Local HTTP server started on port {Port}", PluginHttpServerData.Port);
-            _logger.LogInformation("Server join links: {Prefix}:{Port}/laci/join?name=...&uri=...", PluginHttpServerData.Hostname, PluginHttpServerData.Port);
+            _logger.LogInformation("Server join links: {Prefix}:{Port}/laci/join?&uri=...&secretkey=...", PluginHttpServerData.Hostname, PluginHttpServerData.Port);
         }
         catch (HttpListenerException ex)
         {
@@ -84,18 +88,14 @@ public class LocalHttpServer : IHostedService, IMediatorSubscriber
         {
             _logger.LogError(ex, "Unexpected error starting HTTP server");
         }
-        
-        return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            _cts?.Cancel();
-            _listener?.Stop();
+            _cts.CancelDispose();
             _listener?.Close();
-            _listenerTask?.Wait(TimeSpan.FromSeconds(2));
             
             _logger.LogInformation("Local HTTP server stopped");
         }
@@ -103,8 +103,6 @@ public class LocalHttpServer : IHostedService, IMediatorSubscriber
         {
             _logger.LogWarning(ex, "Error stopping HTTP server");
         }
-        
-        return Task.CompletedTask;
     }
 
     private async Task ListenAsync(CancellationToken token)
