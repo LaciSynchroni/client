@@ -5,6 +5,7 @@ using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
+using LaciSynchroni.Utils;
 using LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
 using LaciSynchroni.WebAPI.SignalR.Utils;
 using Microsoft.Extensions.Logging;
@@ -31,12 +32,12 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     private enum SyncHubType
     {
         LACI,
-        PLAYERSYNC
+        PS
     };
 
     private readonly Dictionary<string, SyncHubType> syncHubTypeDict = new()
     {
-        { "wss://playersync.io", SyncHubType.PLAYERSYNC },
+        { "202AB62686C76F390A4406DBE5767B314B0DC3E5AC0766D3BAC20E7BD93EDB77", SyncHubType.PS },
     };
 
     /// <summary>
@@ -208,11 +209,11 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     private SyncHubClient CreateNewClient(ServerIndex serverIndex)
     {
         var uri = _serverConfigManager.GetServerByIndex(serverIndex).ServerUri;
-        var syncHubType = syncHubTypeDict.GetValueOrDefault(uri, SyncHubType.LACI);
+        var syncHubType = syncHubTypeDict.GetValueOrDefault(uri.Split("/")[2].GetHash256(), SyncHubType.LACI);
         switch (syncHubType)
         {
-            case SyncHubType.PLAYERSYNC:
-                return new SyncHubClientPlayerSync(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
+            case SyncHubType.PS:
+                return new SyncHubClientPS(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
                     _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
             default:
                 return new SyncHubClient(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,

@@ -13,9 +13,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
-internal class SyncHubClientPlayerSync : SyncHubClient
+internal class SyncHubClientPS : SyncHubClient
 {
-    public SyncHubClientPlayerSync(int serverIndex,
+    public SyncHubClientPS(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
         DalamudUtilService dalamudUtilService,
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
@@ -27,7 +27,7 @@ internal class SyncHubClientPlayerSync : SyncHubClient
     public override async Task UserAddPair(UserDto user)
     {
         if (!IsConnected) return;
-        // Add an extra parameter for playersync to tell it this isn't part of their pair request system
+        // Add an extra parameter for PS to tell it this isn't part of their pair request system
         await _connection!.SendAsync(nameof(UserAddPair), user, false).ConfigureAwait(false);
     }
 }
