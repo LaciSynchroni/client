@@ -26,7 +26,6 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
     private SemaphoreSlim _downloadSemaphore;
     private int CurrentlyUsedDownloadSlots => _availableDownloadSlots - _downloadSemaphore.CurrentCount;
 
-    public List<FileTransfer> ForbiddenTransfers { get; } = [];
     public HttpRequestHeaders DefaultRequestHeaders => _httpClient.DefaultRequestHeaders;
 
     public FileTransferOrchestrator(ILogger<FileTransferOrchestrator> logger, SyncConfigService syncConfig,
