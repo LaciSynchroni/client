@@ -616,8 +616,8 @@ public class CompactUi : WindowMediatorSubscriberBase
             }
         }
         UiSharedService.AttachToolTip(isEnabled ?
-           "Disable quick connect server" :
-           "Enable quick connect server");
+           "Disable quick connect server." :
+           "Enable quick connect server. This only needs to be activated if you are trying to join a server using a quick connect link provided by them.");
 
         ImGui.SameLine();
         if (isEnabled)
