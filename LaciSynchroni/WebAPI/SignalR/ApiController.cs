@@ -209,7 +209,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     private SyncHubClient CreateNewClient(ServerIndex serverIndex)
     {
         var uri = _serverConfigManager.GetServerByIndex(serverIndex).ServerUri;
-        var syncHubType = syncHubTypeDict.GetValueOrDefault(uri.Split("/")[2].GetHash256(), SyncHubType.LACI);
+        var syncHubType = syncHubTypeDict.GetValueOrDefault(new Uri(uri).Host, SyncHubType.LACI);
         switch (syncHubType)
         {
             case SyncHubType.PS:
