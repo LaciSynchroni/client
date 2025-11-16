@@ -5,6 +5,7 @@ using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
+using LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
 using LaciSynchroni.WebAPI.SignalR.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -26,6 +27,17 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     private readonly MultiConnectTokenService _multiConnectTokenService;
     private readonly SyncConfigService _syncConfigService;
     private readonly HttpClient _httpClient;
+
+    private enum SyncHubType
+    {
+        LACI,
+        PLAYERSYNC
+    };
+
+    private readonly Dictionary<string, SyncHubType> syncHubTypeDict = new()
+    {
+        { "wss://playersync.io", SyncHubType.PLAYERSYNC },
+    };
 
     /// <summary>
     /// In preparation for multi-connect, all the SignalR connection functionality
@@ -195,8 +207,17 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
 
     private SyncHubClient CreateNewClient(ServerIndex serverIndex)
     {
-        return new SyncHubClient(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
-            _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
+        var uri = _serverConfigManager.GetServerByIndex(serverIndex).ServerUri;
+        var syncHubType = syncHubTypeDict.GetValueOrDefault(uri, SyncHubType.LACI);
+        switch (syncHubType)
+        {
+            case SyncHubType.PLAYERSYNC:
+                return new SyncHubClientPlayerSync(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
+                    _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
+            default:
+                return new SyncHubClient(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
+                    _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
+        }
     }
 
     private SyncHubClient? GetClientForServer(ServerIndex serverIndex)

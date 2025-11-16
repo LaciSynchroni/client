@@ -47,7 +47,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
 
     // SignalR hub connection, one is maintained per server
-    private HubConnection? _connection;
+    protected HubConnection? _connection;
     private bool _isDisposed = false;
     private bool _initialized;
     private bool _naggedAboutLod = false;

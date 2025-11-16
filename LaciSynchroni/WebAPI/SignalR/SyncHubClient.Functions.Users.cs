@@ -27,7 +27,7 @@ public partial class SyncHubClient
         }
     }
 
-    public async Task UserAddPair(UserDto user)
+    public virtual async Task UserAddPair(UserDto user)
     {
         if (!IsConnected) return;
         await _connection!.SendAsync(nameof(UserAddPair), user).ConfigureAwait(false);
