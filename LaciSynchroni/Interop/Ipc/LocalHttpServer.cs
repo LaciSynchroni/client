@@ -97,7 +97,7 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
         }
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -113,12 +113,13 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
             _logger.LogWarning(ex, "Error stopping HTTP server");
             State = HttpServerState.ERROR;
         }
+        return Task.CompletedTask;
     }
 
     protected override void Dispose(bool disposing)
     {
         base.Dispose(true);
-
+        _ = StopAsync(_cancellationToken);
     }
 
     private async Task ListenAsync(CancellationToken token)
