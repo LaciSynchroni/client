@@ -24,11 +24,7 @@
     "description": "ToSStrings..ctor"
   },
   "Paragraph4": {
-    "message": "Der Ersteller des Plugins hat sein Bestes getan, um deine Sicherheit zu gewährleisten. Es gibt jedoch keine Garantie für 100%ige Sicherheit. Teile deinen Identifikationscode nicht blind mit jedem.",
-    "description": "ToSStrings..ctor"
-  },
-  "Paragraph5": {
-    "message": "Moddateien, die auf dem Service gespeichert sind, verbleiben auf dem Service, solange es Anforderungen für diese Dateien gibt. Nach einer Zeitspanne in der die Dateien nicht verwendet wurden, werden diese automatisch gelöscht. Du hast auch die Möglichkeit manuell alle Dateien auf dem Service zu löschen. Der Service hat keine Informationen welche Moddateien zu welcher Modifikation gehören.",
+    "message": "Die Ersteller des Plugins hat sein Bestes getan, um deine Sicherheit zu gewährleisten. Es gibt jedoch keine Garantie für 100%ige Sicherheit. Teile deinen Identifikationscode nicht blind mit jedem.",
     "description": "ToSStrings..ctor"
   },
   "Paragraph6": {

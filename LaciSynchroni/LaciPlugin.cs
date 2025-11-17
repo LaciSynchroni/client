@@ -1,4 +1,5 @@
 ﻿using LaciSynchroni.FileCache;
+using LaciSynchroni.Interop.Ipc;
 using LaciSynchroni.PlayerData.Pairs;
 using LaciSynchroni.PlayerData.Services;
 using LaciSynchroni.Services;
@@ -128,7 +129,7 @@ public class LaciPlugin : MediatorSubscriberBase, IHostedService
     private void DalamudUtilOnLogOut()
     {
         Logger.LogDebug("Client logout");
-
+        Mediator.Publish(new HttpServerToggleMessage(false));
         _runtimeServiceScope?.Dispose();
     }
 
