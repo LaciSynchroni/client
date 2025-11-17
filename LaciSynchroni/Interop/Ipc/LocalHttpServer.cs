@@ -17,20 +17,23 @@ namespace LaciSynchroni.Interop.Ipc;
 /// Local HTTP server that listens for server join requests via browser links
 /// Inspired by Heliosphere's implementation
 /// </summary>
-public class LocalHttpServer : DisposableMediatorSubscriberBase, IHostedService
+public class LocalHttpServer : DisposableMediatorSubscriberBase
 {
-    private enum HttpServerStates
+    public enum HttpServerState
     {
-
+        STOPPED,
+        STARTING,
+        STARTED,
+        ERROR,
     }
+
     private readonly ILogger<LocalHttpServer> _logger;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private HttpListener? _listener;
     private CancellationTokenSource _cts = new();
     private CancellationToken _cancellationToken => _cts.Token;
-    private Task _listenerTask;
 
-    public bool Enabled => _listener?.IsListening ?? false;
+    public HttpServerState State { get; private set; }
 
     public LocalHttpServer(
         ILogger<LocalHttpServer> logger,
@@ -42,13 +45,12 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase, IHostedService
 
         Mediator.Subscribe<HttpServerToggleMessage>(this, HandleToggleRequest);
 
-        // this feels terrible but it does the job of immediately stopping it
-        Mediator.Publish(new HttpServerToggleMessage(false));
+        State = HttpServerState.STOPPED;
     }
 
     private void HandleToggleRequest(HttpServerToggleMessage message)
     {
-        if (message.enable && !Enabled)
+        if (message.enable && State is HttpServerState.STOPPED or HttpServerState.ERROR)
         {
             _cts = new();
             _ = Task.Run(async () =>
@@ -56,7 +58,7 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase, IHostedService
                 await StartAsync(_cancellationToken).ConfigureAwait(false);
             });
         }
-        else if (!message.enable && Enabled)
+        else if (!message.enable && State is HttpServerState.STARTED or HttpServerState.ERROR)
         {
             _ = Task.Run(async () =>
             {
@@ -70,23 +72,28 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase, IHostedService
         try
         {
             await StopAsync(cancellationToken);
+            State = HttpServerState.STARTING;
             _cts = new();
             _listener = new HttpListener();
             _listener.Prefixes.Add($"{PluginHttpServerData.Hostname}:{PluginHttpServerData.Port}/");
             _listener.Start();
             
-            _listenerTask = Task.Run(() => ListenAsync(_cancellationToken), _cancellationToken);
-            
+            Task.Run(() => ListenAsync(_cancellationToken), _cancellationToken);
+
+            State = HttpServerState.STARTED;
+
             _logger.LogInformation("Local HTTP server started on port {Port}", PluginHttpServerData.Port);
             _logger.LogInformation("Server join links: {Prefix}:{Port}/laci/join?&uri=...&secretkey=...", PluginHttpServerData.Hostname, PluginHttpServerData.Port);
         }
         catch (HttpListenerException ex)
         {
             _logger.LogWarning(ex, "Failed to start HTTP server on port {Port}. Server join links will not work.", PluginHttpServerData.Port);
+            State = HttpServerState.ERROR;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error starting HTTP server");
+            State = HttpServerState.ERROR;
         }
     }
 
@@ -96,13 +103,22 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase, IHostedService
         {
             _cts.CancelDispose();
             _listener?.Close();
-            
+
+            State = HttpServerState.STOPPED;
+
             _logger.LogInformation("Local HTTP server stopped");
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error stopping HTTP server");
+            State = HttpServerState.ERROR;
         }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(true);
+
     }
 
     private async Task ListenAsync(CancellationToken token)
