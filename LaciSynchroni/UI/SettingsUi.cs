@@ -566,7 +566,18 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.DrawHelpText("Having modified game files will still mark your logs with UNSUPPORTED and you will not receive support, message shown or not." + UiSharedService.TooltipSeparator
             + "Keeping LOD enabled can lead to more crashes. Use at your own risk.");
 
+        bool useExtendedUploadTimeout = _configService.Current.DebugExtendedUploadTimeout;
+        if (ImGui.Checkbox("Use extended upload timeout.", ref useExtendedUploadTimeout))
+        {
+            _configService.Current.DebugExtendedUploadTimeout = useExtendedUploadTimeout;
+            _configService.Save();
+        }
+        _uiShared.DrawHelpText("Unless you have been asked to enable this, please leave it unchecked." + UiSharedService.TooltipSeparator
+            + "This may cause communication issues with servers. Any change to this setting requires a plugin restart.");
+
         DrawRenderLocks();
+
+
     }
 
     private void DrawFileStorageSettings()
