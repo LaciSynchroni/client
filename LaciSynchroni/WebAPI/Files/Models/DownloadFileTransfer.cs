@@ -9,7 +9,8 @@ public class DownloadFileTransfer : FileTransfer
     }
 
     public override bool CanBeTransferred => Dto.FileExists && !Dto.IsForbidden && Dto.Size > 0;
-    public Uri DownloadUri => new(Dto.Url);
+    public Uri DownloadUri => new(string.IsNullOrEmpty(Dto.DirectDownloadUrl) ? (string.IsNullOrEmpty(Dto.CDNDownloadUrl) ? Dto.Url : Dto.CDNDownloadUrl) : Dto.DirectDownloadUrl);
+    public bool IsDirectDownload => !string.IsNullOrEmpty(Dto.DirectDownloadUrl) || !string.IsNullOrEmpty(Dto.CDNDownloadUrl);
     public override long Total
     {
         set

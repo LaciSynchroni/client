@@ -90,12 +90,8 @@ public partial class SyncHubClient
 
     private async Task<bool> VerifyClientVersion(ConnectionDto connectionDto)
     {
-        if (ServerToUse.BypassVersionCheck)
-        {
-            return true;
-        }
         var currentClientVer = Assembly.GetExecutingAssembly().GetName().Version!;
-        if (connectionDto.ServerVersion != IServerHub.ApiVersion)
+        if (connectionDto.ServerVersion != ApiVersion)
         {
             if (connectionDto.CurrentClientVersion > currentClientVer)
             {

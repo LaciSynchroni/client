@@ -26,6 +26,8 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
     private SemaphoreSlim _downloadSemaphore;
     private int CurrentlyUsedDownloadSlots => _availableDownloadSlots - _downloadSemaphore.CurrentCount;
 
+    public HttpRequestHeaders DefaultRequestHeaders => _httpClient.DefaultRequestHeaders;
+
     public FileTransferOrchestrator(ILogger<FileTransferOrchestrator> logger, SyncConfigService syncConfig,
         SyncMediator mediator, HttpClient httpClient, MultiConnectTokenService multiConnectTokenService) : base(logger, mediator)
     {
@@ -98,27 +100,27 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
     }
 
     public async Task<HttpResponseMessage> SendRequestAsync(int serverIndex, HttpMethod method, Uri uri,
-        CancellationToken? ct = null, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
+        CancellationToken? ct = null, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead, bool withAuthToken = true)
     {
         using var requestMessage = new HttpRequestMessage(method, uri);
-        return await SendRequestInternalAsync(serverIndex, requestMessage, ct, httpCompletionOption).ConfigureAwait(false);
+        return await SendRequestInternalAsync(serverIndex, requestMessage, ct, httpCompletionOption, withAuthToken).ConfigureAwait(false);
     }
 
-    public async Task<HttpResponseMessage> SendRequestAsync<T>(int serverIndex, HttpMethod method, Uri uri, T content, CancellationToken ct) where T : class
+    public async Task<HttpResponseMessage> SendRequestAsync<T>(int serverIndex, HttpMethod method, Uri uri, T content, CancellationToken ct, bool withAuthToken = true) where T : class
     {
         using var requestMessage = new HttpRequestMessage(method, uri);
         if (content is not ByteArrayContent)
             requestMessage.Content = JsonContent.Create(content);
         else
             requestMessage.Content = content as ByteArrayContent;
-        return await SendRequestInternalAsync(serverIndex, requestMessage, ct).ConfigureAwait(false);
+        return await SendRequestInternalAsync(serverIndex, requestMessage, ct, withAuthToken: withAuthToken).ConfigureAwait(false);
     }
 
-    public async Task<HttpResponseMessage> SendRequestStreamAsync(int serverIndex, HttpMethod method, Uri uri, ProgressableStreamContent content, CancellationToken ct)
+    public async Task<HttpResponseMessage> SendRequestStreamAsync(int serverIndex, HttpMethod method, Uri uri, ProgressableStreamContent content, CancellationToken ct, bool withAuthToken = true)
     {
         using var requestMessage = new HttpRequestMessage(method, uri);
         requestMessage.Content = content;
-        return await SendRequestInternalAsync(serverIndex, requestMessage, ct).ConfigureAwait(false);
+        return await SendRequestInternalAsync(serverIndex, requestMessage, ct, withAuthToken: withAuthToken).ConfigureAwait(false);
     }
 
     public async Task WaitForDownloadSlotAsync(CancellationToken token)
@@ -161,10 +163,13 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
     }
 
     private async Task<HttpResponseMessage> SendRequestInternalAsync(ServerIndex serverIndex, HttpRequestMessage requestMessage,
-        CancellationToken? ct = null, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
+        CancellationToken? ct = null, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead, bool withAuthToken = true)
     {
-        var token = await _multiConnectTokenService.GetCachedToken(serverIndex).ConfigureAwait(false);
-        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (withAuthToken)
+        {
+            var token = await _multiConnectTokenService.GetCachedToken(serverIndex).ConfigureAwait(false);
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
 
         if (requestMessage.Content != null && requestMessage.Content is not StreamContent && requestMessage.Content is not ByteArrayContent)
         {
