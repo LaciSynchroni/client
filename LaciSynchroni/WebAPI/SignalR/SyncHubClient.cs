@@ -65,6 +65,8 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     protected bool IsConnected => _serverState == ServerState.Connected;
     public string UID => ConnectionDto?.User.UID ?? string.Empty;
 
+    protected int ApiVersion = 33;
+
     private ServerStorage ServerToUse => _serverConfigurationManager.GetServerByIndex(ServerIndex);
 
     public SyncHubClient(int serverIndex,
@@ -399,7 +401,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         {
             InitializeApiHooks();
             ConnectionDto = await GetConnectionDtoAsync(publishConnected: false).ConfigureAwait(false);
-            if (ConnectionDto.ServerVersion != IServerHub.ApiVersion && !ServerToUse.BypassVersionCheck)
+            if (ConnectionDto.ServerVersion != ApiVersion)
             {
                 await StopConnectionAsync(ServerState.VersionMisMatch).ConfigureAwait(false);
                 return;

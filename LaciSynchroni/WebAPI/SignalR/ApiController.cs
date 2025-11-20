@@ -32,12 +32,14 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     private enum SyncHubType
     {
         LACI,
-        PS
+        PS,
+        LL
     };
 
     private readonly Dictionary<string, SyncHubType> syncHubTypeDict = new()
     {
         { "202AB62686C76F390A4406DBE5767B314B0DC3E5AC0766D3BAC20E7BD93EDB77", SyncHubType.PS },
+        { "00BC5CD676E5ED9C2DAF1EDE81878D9ABA8E57EE48ECFD1B3376BD055E9D82AC", SyncHubType.LL },
     };
 
     /// <summary>
@@ -209,11 +211,14 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
     private SyncHubClient CreateNewClient(ServerIndex serverIndex)
     {
         var uri = _serverConfigManager.GetServerByIndex(serverIndex).ServerUri;
-        var syncHubType = syncHubTypeDict.GetValueOrDefault(new Uri(uri).Host, SyncHubType.LACI);
+        var syncHubType = syncHubTypeDict.GetValueOrDefault(new Uri(uri).Host.GetHash256(), SyncHubType.LACI);
         switch (syncHubType)
         {
             case SyncHubType.PS:
                 return new SyncHubClientPS(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
+                    _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
+            case SyncHubType.LL:
+                return new SyncHubClientLL(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
                     _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
             default:
                 return new SyncHubClient(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
