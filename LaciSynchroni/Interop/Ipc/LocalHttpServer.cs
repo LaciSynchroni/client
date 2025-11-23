@@ -119,7 +119,10 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
     protected override void Dispose(bool disposing)
     {
         base.Dispose(true);
-        _ = StopAsync(_cancellationToken);
+        if (State == HttpServerState.STARTED)
+        {
+            _ = StopAsync(_cancellationToken);
+        }
     }
 
     private async Task ListenAsync(CancellationToken token)
