@@ -25,6 +25,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
     private readonly DalamudUtilService _dalamudUtil;
     private readonly FileDownloadManager _downloadManager;
+    private readonly FileTransferOrchestrator _transferOrchestrator;
     private readonly FileCacheManager _fileDbManager;
     private readonly GameObjectHandlerFactory _gameObjectHandlerFactory;
     private readonly IpcManager _ipcManager;
@@ -54,7 +55,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         DalamudUtilService dalamudUtil, IHostApplicationLifetime lifetime,
         FileCacheManager fileDbManager, SyncMediator mediator,
         PlayerPerformanceService playerPerformanceService,
-        ServerConfigurationManager serverConfigManager, ConcurrentPairLockService concurrentPairLockService) : base(logger, mediator)
+        ServerConfigurationManager serverConfigManager, ConcurrentPairLockService concurrentPairLockService,
+        FileTransferOrchestrator transferOrchestrator) : base(logger, mediator)
     {
         Pair = pair;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -67,6 +69,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
         _concurrentPairLockService = concurrentPairLockService;
+        _transferOrchestrator = transferOrchestrator;
         _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, Pair.UserData.UID).ConfigureAwait(false).GetAwaiter().GetResult();
         _serverInfo = _serverConfigManager.GetServerByIndex(Pair.ServerIndex);
 
@@ -74,7 +77,10 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
         {
             _downloadCancellationTokenSource?.CancelDispose();
+            _applicationCancellationTokenSource = _applicationCancellationTokenSource?.CancelRecreate();
             _charaHandler?.Invalidate();
+			// Release render lock on zone switch to prevent stale ownership blocking other servers
+			_concurrentPairLockService.ReleaseRenderLock(PlayerNameHash, Pair.ServerIndex);
             IsVisible = false;
         });
         Mediator.Subscribe<PenumbraInitializedMessage>(this, (_) =>
@@ -452,7 +458,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
                 toDownloadReplacements = TryCalculateModdedDictionary(applicationBase, charaData, out moddedPaths, downloadToken);
 
-                if (toDownloadReplacements.TrueForAll(c => _downloadManager.ForbiddenTransfers.Exists(f => string.Equals(f.Hash, c.Hash, StringComparison.Ordinal))))
+                if (toDownloadReplacements.TrueForAll(c => _transferOrchestrator.ForbiddenTransfers.Exists(f => string.Equals(f.Hash, c.Hash, StringComparison.Ordinal))))
                 {
                     break;
                 }
@@ -531,9 +537,15 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
             Logger.LogDebug("[{applicationId}] Application finished", _applicationId);
         }
-        catch (Exception ex)
+		catch (OperationCanceledException)
+		{
+			// Release render lock when an application is cancelled so another server can take over
+			_concurrentPairLockService.ReleaseRenderLock(PlayerNameHash, Pair.ServerIndex);
+			Logger.LogDebug("[{applicationId}] Application cancelled", _applicationId);
+		}
+		catch (Exception ex)
         {
-            if (ex is AggregateException aggr && aggr.InnerExceptions.Any(e => e is ArgumentNullException))
+            if (ex is AggregateException aggr && aggr.InnerExceptions.Any(e => e is ArgumentNullException || e is NullReferenceException))
             {
                 IsVisible = false;
                 _forceApplyMods = true;
@@ -544,6 +556,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             {
                 Logger.LogWarning(ex, "[{applicationId}] Cancelled", _applicationId);
             }
+			// On failures, release render lock to avoid stale ownership
+			_concurrentPairLockService.ReleaseRenderLock(PlayerNameHash, Pair.ServerIndex);
         }
     }
 
@@ -589,6 +603,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             _charaHandler.Invalidate();
             _downloadCancellationTokenSource?.CancelDispose();
             _downloadCancellationTokenSource = null;
+			// Release render lock when the player is no longer visible
+			_concurrentPairLockService.ReleaseRenderLock(PlayerNameHash, Pair.ServerIndex);
             Logger.LogTrace("{this} visibility changed, now: {visi}", this, IsVisible);
         }
     }
@@ -614,7 +630,17 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             await _ipcManager.PetNames.SetPlayerData(PlayerCharacter, _cachedData.PetNamesData).ConfigureAwait(false);
         });
 
-        _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, _charaHandler.GetGameObject()!.ObjectIndex).GetAwaiter().GetResult();
+		// Only the render-lock owner should assign the temp collection to avoid a non-owner overwriting
+		// an already-populated collection with an empty one (which would render the target vanilla).
+		var lockOwner = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName);
+		if (lockOwner == Pair.ServerIndex)
+		{
+			_ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, _charaHandler.GetGameObject()!.ObjectIndex).GetAwaiter().GetResult();
+		}
+		else
+		{
+			Logger.LogTrace("Skipping temp collection assignment for {this} - render lock is owned by server {owner}", this, lockOwner);
+		}
     }
 
     private async Task RevertCustomizationDataAsync(ObjectKind objectKind, string name, Guid applicationId, CancellationToken cancelToken)

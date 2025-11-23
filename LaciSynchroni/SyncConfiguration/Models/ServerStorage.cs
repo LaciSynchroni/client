@@ -15,7 +15,6 @@ public class ServerStorage
     public string ServerHubUri { get; set; } = string.Empty;
     public string DiscordInvite { get; set; } = string.Empty;
     public bool UseAdvancedUris { get; set; } = false;
-    public bool BypassVersionCheck { get; set; } = false;
     public bool UseOAuth2 { get; set; } = false;
     public string? OAuthToken { get; set; } = null;
     public HttpTransportType HttpTransportType { get; set; } = HttpTransportType.WebSockets;

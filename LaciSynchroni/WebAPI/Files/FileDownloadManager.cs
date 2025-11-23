@@ -10,6 +10,7 @@ using LaciSynchroni.WebAPI.Files.Models;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 
 namespace LaciSynchroni.WebAPI.Files;
 
@@ -45,8 +46,6 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
     public List<DownloadFileTransfer> CurrentDownloads { get; private set; } = [];
 
-    public List<FileTransfer> ForbiddenTransfers => _orchestrator.ForbiddenTransfers;
-
     public bool IsDownloading => !CurrentDownloads.Any();
 
     public static void MungeBuffer(Span<byte> buffer)
@@ -69,6 +68,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         try
         {
             await DownloadFilesInternal(serverIndex, gameObject, fileReplacementDto, ct).ConfigureAwait(false);
+            await DirectDownloadFilesInternal(serverIndex, gameObject, fileReplacementDto, ct).ConfigureAwait(false);
         }
         catch
         {
@@ -230,10 +230,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
         foreach (var dto in downloadFileInfoFromService.Where(c => c.IsForbidden))
         {
-            if (!_orchestrator.ForbiddenTransfers.Exists(f => string.Equals(f.Hash, dto.Hash, StringComparison.Ordinal)))
-            {
-                _orchestrator.ForbiddenTransfers.Add(new DownloadFileTransfer(dto, serverIndex));
-            }
+            _orchestrator.TryAddForbiddenTransfer(new DownloadFileTransfer(dto, serverIndex));
         }
 
         CurrentDownloads = downloadFileInfoFromService.Distinct().Select(d => new DownloadFileTransfer(d, serverIndex))
@@ -244,7 +241,10 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
     private async Task DownloadFilesInternal(int serverIndex, GameObjectHandler gameObjectHandler, List<FileReplacementData> fileReplacement, CancellationToken ct)
     {
-        var downloadGroups = CurrentDownloads.GroupBy(f => f.DownloadUri.Host + ":" + f.DownloadUri.Port, StringComparer.Ordinal);
+        var downloadGroups = CurrentDownloads.Where(p => !p.IsDirectDownload).GroupBy(f => f.DownloadUri.Host + ":" + f.DownloadUri.Port, StringComparer.Ordinal);
+
+        if (!downloadGroups.Any())
+            return;
 
         foreach (var downloadGroup in downloadGroups)
         {
@@ -373,6 +373,234 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         Logger.LogDebug("Download end: {id}", gameObjectHandler);
 
         ClearDownload();
+    }
+
+    private async Task DirectDownloadFilesInternal(int serverIndex, GameObjectHandler gameObjectHandler, List<FileReplacementData> fileReplacement, CancellationToken ct)
+    {
+        // Separate out the files with direct download URLs
+        var directDownloads = CurrentDownloads.Where(download => download.IsDirectDownload && !string.IsNullOrEmpty(download.DownloadUri.AbsoluteUri)).ToList();
+        if(!directDownloads.Any())
+            return;
+
+        // Create download status trackers for the direct downloads
+        foreach (var directDownload in directDownloads)
+        {
+            _downloadStatus[directDownload.DownloadUri.AbsoluteUri!] = new FileDownloadStatus()
+            {
+                DownloadStatus = DownloadStatus.Initializing,
+                TotalBytes = directDownload.Total,
+                TotalFiles = 1,
+                TransferredBytes = 0,
+                TransferredFiles = 0
+            };
+        }
+
+        Logger.LogInformation("Downloading {Direct} files directly.", directDownloads.Count);
+        Mediator.Publish(new DownloadStartedMessage(gameObjectHandler, _downloadStatus));
+
+        // Start downloading each of the direct downloads
+        var directDownloadsTask = directDownloads.Count == 0 ? Task.CompletedTask : Parallel.ForEachAsync(directDownloads, new ParallelOptions()
+        {
+            MaxDegreeOfParallelism = directDownloads.Count,
+            CancellationToken = ct,
+        },
+        async (directDownload, token) =>
+        {
+            var directDownloadAbsoluteUri = directDownload.DownloadUri.AbsoluteUri;
+            if (!_downloadStatus.TryGetValue(directDownloadAbsoluteUri, out var downloadTracker))
+                return;
+
+            Progress<long> progress = new((bytesDownloaded) =>
+            {
+                try
+                {
+                    if (!_downloadStatus.TryGetValue(directDownloadAbsoluteUri, out FileDownloadStatus? value)) return;
+                    value.TransferredBytes += bytesDownloaded;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Could not set download progress");
+                }
+            });
+
+            var tempFilename = _fileDbManager.GetCacheFilePath(directDownload.Hash, "bin");
+
+            try
+            {
+                downloadTracker.DownloadStatus = DownloadStatus.WaitingForSlot;
+                await _orchestrator.WaitForDownloadSlotAsync(token).ConfigureAwait(false);
+
+                // Download the compressed file directly
+                downloadTracker.DownloadStatus = DownloadStatus.Downloading;
+                Logger.LogDebug("{Hash} Beginning direct download of file from {Url}", directDownload.Hash, directDownloadAbsoluteUri);
+                await DownloadFileThrottled(serverIndex,directDownload.DownloadUri, tempFilename, progress, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                Logger.LogDebug("{Hash}: Detected cancellation of direct download, discarding file.", directDownload.Hash);
+                _orchestrator.ReleaseDownloadSlot();
+                File.Delete(tempFilename);
+                Logger.LogError(ex, "{Hash}: Error during direct download.", directDownload.Hash);
+                ClearDownload();
+                return;
+            }
+            catch (Exception ex)
+            {
+                _orchestrator.ReleaseDownloadSlot();
+                File.Delete(tempFilename);
+                Logger.LogError(ex, "{Hash}: Error during direct download.", directDownload.Hash);
+                ClearDownload();
+                return;
+            }
+
+            downloadTracker.TransferredFiles = 1;
+            downloadTracker.DownloadStatus = DownloadStatus.Decompressing;
+
+            try
+            {
+                var fileExtension = fileReplacement.First(f => string.Equals(f.Hash, directDownload.Hash, StringComparison.OrdinalIgnoreCase)).GamePaths[0].Split(".")[^1];
+                var finalFilename = _fileDbManager.GetCacheFilePath(directDownload.Hash, fileExtension);
+                Logger.LogDebug("Decompressing direct download {Hash} from {CompressedFile} to {FinalFile}", directDownload.Hash, tempFilename, finalFilename);
+                byte[] compressedBytes = await File.ReadAllBytesAsync(tempFilename).ConfigureAwait(false);
+                var decompressedBytes = LZ4Wrapper.Unwrap(compressedBytes);
+                await _fileCompactor.WriteAllBytesAsync(finalFilename, decompressedBytes, CancellationToken.None).ConfigureAwait(false);
+                PersistFileToStorage(directDownload.Hash, finalFilename);
+                Logger.LogDebug("Finished direct download of {Hash}.", directDownload.Hash);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "{Hash} Exception downloading from {Url}", directDownload.Hash, directDownloadAbsoluteUri);
+            }
+            finally
+            {
+                _orchestrator.ReleaseDownloadSlot();
+                File.Delete(tempFilename);
+            }
+        });
+
+        // Wait for all the batches and direct downloads to complete
+        await directDownloadsTask.ConfigureAwait(false);
+
+        Logger.LogDebug("Download end: {Id}", gameObjectHandler);
+
+        ClearDownload();
+    }
+
+    private async Task DownloadFileThrottled(int serverIndex, Uri requestUrl, string destinationFilename, IProgress<long> progress, CancellationToken ct)
+    {
+        HttpResponseMessage response = null!;
+        try
+        {
+            response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, requestUrl, ct, HttpCompletionOption.ResponseHeadersRead, withAuthToken: false).ConfigureAwait(false);
+
+            var headersBuilder = new StringBuilder();
+            if (response.RequestMessage != null)
+            {
+                headersBuilder.AppendLine("DefaultRequestHeaders:");
+                foreach (var header in _orchestrator.DefaultRequestHeaders)
+                {
+                    foreach (var value in header.Value)
+                    {
+                        headersBuilder.AppendLine($"\"{header.Key}\": \"{value}\"");
+                    }
+                }
+                headersBuilder.AppendLine("RequestMessage.Headers:");
+                foreach (var header in response.RequestMessage.Headers)
+                {
+                    foreach (var value in header.Value)
+                    {
+                        headersBuilder.AppendLine($"\"{header.Key}\": \"{value}\"");
+                    }
+                }
+                if (response.RequestMessage.Content != null)
+                {
+                    headersBuilder.AppendLine("RequestMessage.Content.Headers:");
+                    foreach (var header in response.RequestMessage.Content.Headers)
+                    {
+                        foreach (var value in header.Value)
+                        {
+                            headersBuilder.AppendLine($"\"{header.Key}\": \"{value}\"");
+                        }
+                    }
+                }
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Dump some helpful debugging info
+                string responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                Logger.LogWarning("Unsuccessful status code for {RequestUrl} is {StatusCode}, request headers: \n{Headers}\n, response text: \n\"{ResponseText}\"", requestUrl, response.StatusCode, headersBuilder.ToString(), responseText);
+
+                // Raise an exception etc
+                response.EnsureSuccessStatusCode();
+            }
+            else
+            {
+                Logger.LogDebug("Successful response for {RequestUrl} is {StatusCode}, request headers: \n{Headers}", requestUrl, response.StatusCode, headersBuilder.ToString());
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "Error during download of {RequestUrl}, HttpStatusCode: {Code}", requestUrl, ex.StatusCode);
+            if (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
+            {
+                throw new InvalidDataException($"Http error {ex.StatusCode} (cancelled: {ct.IsCancellationRequested}): {requestUrl}", ex);
+            }
+
+            return;
+        }
+
+        ThrottledStream? stream = null;
+        try
+        {
+            var fileStream = File.Create(destinationFilename);
+            await using (fileStream.ConfigureAwait(false))
+            {
+                var bufferSize = response.Content.Headers.ContentLength > 1024 * 1024 ? 65536 : 8196;
+                var buffer = new byte[bufferSize];
+
+                var bytesRead = 0;
+                var limit = _orchestrator.DownloadLimitPerSlot();
+                Logger.LogTrace("Starting Download with a speed limit of {Limit} to {TempPath}", limit, destinationFilename);
+                stream = new ThrottledStream(await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false), limit);
+                _activeDownloadStreams.Add(stream);
+
+                while ((bytesRead = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct).ConfigureAwait(false);
+
+                    progress.Report(bytesRead);
+                }
+
+                Logger.LogDebug("{RequestUrl} downloaded to {TempPath}", requestUrl, destinationFilename);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                if (!destinationFilename.IsNullOrEmpty())
+                    File.Delete(destinationFilename);
+            }
+            catch
+            {
+                // ignore if file deletion fails
+            }
+            throw;
+        }
+        finally
+        {
+            if (stream != null)
+            {
+                _activeDownloadStreams.Remove(stream);
+                await stream.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     private async Task<List<DownloadFileDto>> FilesGetSizes(int serverIndex, List<string> hashes, CancellationToken ct)

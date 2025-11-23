@@ -566,7 +566,18 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.DrawHelpText("Having modified game files will still mark your logs with UNSUPPORTED and you will not receive support, message shown or not." + UiSharedService.TooltipSeparator
             + "Keeping LOD enabled can lead to more crashes. Use at your own risk.");
 
+        bool useExtendedUploadTimeout = _configService.Current.DebugExtendedUploadTimeout;
+        if (ImGui.Checkbox("Use extended upload timeout.", ref useExtendedUploadTimeout))
+        {
+            _configService.Current.DebugExtendedUploadTimeout = useExtendedUploadTimeout;
+            _configService.Save();
+        }
+        _uiShared.DrawHelpText("Unless you have been asked to enable this, please leave it unchecked." + UiSharedService.TooltipSeparator
+            + "This may cause communication issues with servers. Any change to this setting requires a plugin restart.");
+
         DrawRenderLocks();
+
+
     }
 
     private void DrawFileStorageSettings()
@@ -1266,7 +1277,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 var serverUri = selectedServer.ServerUri;
                 var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
                 var useAdvancedUris = selectedServer.UseAdvancedUris;
-                var bypassVersionCheck = selectedServer.BypassVersionCheck;
                 var serverIcon = selectedServer.ServerIcon;
                 var serverIconIndex = DtrEntry.DtrIcons.IndexOf($"{serverIcon}");
 
@@ -1288,12 +1298,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     selectedServer.ServerIcon = DtrEntry.DtrIcons[serverIconIndex].IsNullOrEmpty() ? null : DtrEntry.DtrIcons[serverIconIndex][0];
                     _serverConfigurationManager.Save();
                 }
-                if (ImGui.Checkbox("Bypass API version check", ref bypassVersionCheck))
-                {
-                    selectedServer.BypassVersionCheck = bypassVersionCheck;
-                    _serverConfigurationManager.Save();
-                }
-                _uiShared.DrawHelpText("This will bypass the API version check during the initial connection attempt. Use this only if you know the service is actually compatible, otherwise, unexpected errors may occur");
 
                 if (ImGui.Checkbox("Advanced URIs", ref useAdvancedUris))
                 {

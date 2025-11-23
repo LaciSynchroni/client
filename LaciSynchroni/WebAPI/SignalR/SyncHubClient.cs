@@ -47,7 +47,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
 
     // SignalR hub connection, one is maintained per server
-    private HubConnection? _connection;
+    protected HubConnection? _connection;
     private bool _isDisposed = false;
     private bool _initialized;
     private bool _naggedAboutLod = false;
@@ -64,6 +64,8 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
     protected bool IsConnected => _serverState == ServerState.Connected;
     public string UID => ConnectionDto?.User.UID ?? string.Empty;
+
+    protected int ApiVersion = 33;
 
     private ServerStorage ServerToUse => _serverConfigurationManager.GetServerByIndex(ServerIndex);
 
@@ -233,7 +235,9 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
     private async Task<string?> FindHubUrl()
     {
-        var configuredHubUri = ServerToUse.ServerHubUri.Replace("wss://", "https://").Replace("ws://", "http://");
+        var configuredHubUri = ServerToUse.UseAdvancedUris
+            ? ServerToUse.ServerHubUri.Replace("wss://", "https://").Replace("ws://", "http://")
+            : string.Empty;
         var baseUri = ServerToUse.ServerUri.Replace("wss://", "https://").Replace("ws://", "http://");
         if (baseUri.EndsWith("/", StringComparison.Ordinal))
         {
@@ -397,7 +401,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         {
             InitializeApiHooks();
             ConnectionDto = await GetConnectionDtoAsync(publishConnected: false).ConfigureAwait(false);
-            if (ConnectionDto.ServerVersion != IServerHub.ApiVersion && !ServerToUse.BypassVersionCheck)
+            if (ConnectionDto.ServerVersion != ApiVersion)
             {
                 await StopConnectionAsync(ServerState.VersionMisMatch).ConfigureAwait(false);
                 return;

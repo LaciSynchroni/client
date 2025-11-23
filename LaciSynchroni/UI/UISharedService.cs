@@ -60,7 +60,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private string _customServerName = "";
     private string _customServerUri = "";
     private bool _useAdvancedUris = false;
-    private bool _bypassApiVersionCheck = false;
     private string _serverHubUri = "";
     private Task<Uri?>? _discordOAuthCheck;
     private Task<string?>? _discordOAuthGetCode;
@@ -862,6 +861,12 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
+            ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
+            if (_useAdvancedUris)
+            {
+                ImGui.SetNextItemWidth(250);
+                ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
+            }
 
             if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
             {
