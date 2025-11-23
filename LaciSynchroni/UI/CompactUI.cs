@@ -622,7 +622,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         switch (_httpServer.State)
         {
             case LocalHttpServer.HttpServerState.STOPPED:
-                UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.TankBlue);
+                UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.ParsedGrey);
                 break;
             case LocalHttpServer.HttpServerState.STARTING:
                 UiSharedService.ColorTextWrapped("Quick Connect listener is starting!", ImGuiColors.DalamudYellow);
