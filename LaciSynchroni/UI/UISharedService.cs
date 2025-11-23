@@ -863,12 +863,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
-            ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
-            if (_useAdvancedUris)
-            {
-                ImGui.SetNextItemWidth(250);
-                ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
-            }
+
             DrawLocalHTTPServerEnableButton(_httpServer);
             if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
             {
