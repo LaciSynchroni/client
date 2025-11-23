@@ -857,8 +857,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGuiHelpers.ScaledDummy(5);
         if (ImGui.TreeNode("Add New Service"))
         {
-            ImGui.SetNextItemWidth(250);
-            ImGui.InputText("Custom Service Name", ref _customServerName, 255);
+            TextWrapped("You can either use a Laci configuration link, or enter the URI manually below to add a new service.");
+
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
             ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
@@ -868,21 +868,22 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
             }
 
-            if (IconTextButton(FontAwesomeIcon.Plus, "Add Custom Service")
-                && !string.IsNullOrEmpty(_customServerUri)
-                && !string.IsNullOrEmpty(_customServerName))
+            if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
             {
-                _serverConfigurationManager.AddServer(new ServerStorage()
+                var normalizedUri = _customServerUri.TrimEnd('/');
+                if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
                 {
-                    ServerName = _customServerName,
-                    ServerUri = _customServerUri,
-                    UseAdvancedUris = _useAdvancedUris,
-                    ServerHubUri = _serverHubUri,
-                    UseOAuth2 = true
-                });
-                _customServerName = string.Empty;
-                _customServerUri = string.Empty;
-                _configService.Save();
+                    normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                }
+                var newServer = new ServerStorage
+                {
+                    ServerUri = normalizedUri,
+                    UseOAuth2 = true,
+                    UseAdvancedUris = false,
+                };
+
+                // Publish message to show confirmation UI
+                Mediator.Publish(new ServerJoinRequestMessage(newServer));
             }
             ImGui.TreePop();
         }

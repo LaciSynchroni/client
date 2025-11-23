@@ -44,6 +44,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly ServerConfigurationManager _serverConfigManager;
     private readonly TopTabMenu _tabMenu;
     private readonly TagHandler _tagHandler;
+    private readonly LocalHttpServer _httpServer;
     private readonly UiSharedService _uiSharedService;
     private readonly CharacterAnalyzer _characterAnalyzer;
     private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
@@ -64,7 +65,8 @@ public class CompactUi : WindowMediatorSubscriberBase
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, SyncConfigService configService, ApiController apiController, PairManager pairManager,
         ServerConfigurationManager serverConfigManager, SyncMediator mediator, FileUploadManager fileTransferManager,
         TagHandler tagHandler, DrawEntityFactory drawEntityFactory, SelectTagForPairUi selectTagForPairUi, SelectPairForTagUi selectPairForTagUi,
-        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService)
+        PerformanceCollectorService performanceCollectorService, IpcManager ipcManager, CharacterAnalyzer characterAnalyzer, PlayerPerformanceConfigService playerPerformanceConfigService,
+        LocalHttpServer httpServer)
         : base(logger, mediator, "###LaciSynchroniMainUI", performanceCollectorService)
     {
         _uiSharedService = uiShared;
@@ -74,6 +76,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         _serverConfigManager = serverConfigManager;
         _fileTransferManager = fileTransferManager;
         _tagHandler = tagHandler;
+        _httpServer = httpServer;
         _drawEntityFactory = drawEntityFactory;
         _selectGroupForPairUi = selectTagForPairUi;
         _selectPairsForGroupUi = selectPairForTagUi;
@@ -491,6 +494,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
             ImGui.EndTable();
         }
+        DrawLocalHTTPServerEnableButton();
     }
 
     private void DrawServerName(int serverId, string serverName, string serverUri)
@@ -582,10 +586,54 @@ public class CompactUi : WindowMediatorSubscriberBase
                 }
             }
         }
-
         UiSharedService.AttachToolTip(isConnectingOrConnected ?
            "Disconnect from " + serverName :
            "Connect to " + serverName);
+    }
+
+
+
+    private void DrawLocalHTTPServerEnableButton()
+    {
+        var isEnabled = _httpServer.State == LocalHttpServer.HttpServerState.STARTED;
+        var color = UiSharedService.GetBoolColor(!isEnabled);
+        var icon = FontAwesomeIcon.Server;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        {
+            using var disabled = ImRaii.Disabled(_httpServer.State == LocalHttpServer.HttpServerState.STARTING);
+            if (_uiSharedService.IconButton(icon, "localhttpserverstartstop"))
+            {
+                if (isEnabled)
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(false));
+                }
+                else
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(true));
+                }
+            }
+        }
+        UiSharedService.AttachToolTip(isEnabled ?
+           "Disable quick connect server." :
+           "Enable quick connect server. This only needs to be activated if you are trying to join a server using a quick connect link provided by them.");
+
+        ImGui.SameLine();
+        switch (_httpServer.State)
+        {
+            case LocalHttpServer.HttpServerState.STOPPED:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.TankBlue);
+                break;
+            case LocalHttpServer.HttpServerState.STARTING:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is starting!", ImGuiColors.DalamudYellow);
+                break;
+            case LocalHttpServer.HttpServerState.STARTED:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is active!", ImGuiColors.ParsedGreen);
+                break;
+            case LocalHttpServer.HttpServerState.ERROR:
+                UiSharedService.ColorTextWrapped("An error occurred starting the Quick Connect listener, please try again, or report it in our Discord if it happens repeatedly.", ImGuiColors.DalamudRed);
+                break;
+        }
     }
 
     private void DrawOnlineUsers(int serverId)

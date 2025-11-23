@@ -146,6 +146,9 @@ public sealed class Plugin : IDalamudPlugin
                 pluginInterface,
                 s.GetRequiredService<CharaDataManager>(),
                 s.GetRequiredService<SyncMediator>()));
+            collection.AddSingleton((s) => new LocalHttpServer(s.GetRequiredService<ILogger<LocalHttpServer>>(),
+                s.GetRequiredService<ServerConfigurationManager>(),
+                s.GetRequiredService<SyncMediator>()));
             collection.AddSingleton<SelectPairForTagUi>();
             collection.AddSingleton((s) => new EventAggregator(pluginInterface.ConfigDirectory.FullName,
                 s.GetRequiredService<ILogger<EventAggregator>>(), s.GetRequiredService<SyncMediator>()));
@@ -239,6 +242,19 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddScoped<WindowMediatorSubscriberBase, DataAnalysisUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, JoinSyncshellUI>();
             collection.AddScoped<WindowMediatorSubscriberBase, CreateSyncshellUI>();
+            collection.AddScoped<WindowMediatorSubscriberBase, ServerJoinConfirmationUI>((s) => new ServerJoinConfirmationUI(
+                s.GetRequiredService<ILogger<ServerJoinConfirmationUI>>(),
+                s.GetRequiredService<SyncMediator>(),
+                s.GetRequiredService<ServerConfigurationManager>(),
+                s.GetRequiredService<UiSharedService>(),
+                s.GetRequiredService<DalamudUtilService>(),
+                s.GetRequiredService<PerformanceCollectorService>(),
+                s.GetRequiredService<HttpClient>()));
+            collection.AddScoped<WindowMediatorSubscriberBase, RulesUI>((s) => new RulesUI(
+                s.GetRequiredService<ILogger<ServerJoinConfirmationUI>>(),
+                s.GetRequiredService<SyncMediator>(),
+                s.GetRequiredService<UiSharedService>(),
+                s.GetRequiredService<PerformanceCollectorService>()));
             collection.AddScoped<WindowMediatorSubscriberBase, EventViewerUI>();
             collection.AddScoped<WindowMediatorSubscriberBase, CharaDataHubUi>();
 
