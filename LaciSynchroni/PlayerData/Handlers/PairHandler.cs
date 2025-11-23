@@ -25,6 +25,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
     private readonly DalamudUtilService _dalamudUtil;
     private readonly FileDownloadManager _downloadManager;
+    private readonly FileTransferOrchestrator _transferOrchestrator;
     private readonly FileCacheManager _fileDbManager;
     private readonly GameObjectHandlerFactory _gameObjectHandlerFactory;
     private readonly IpcManager _ipcManager;
@@ -54,7 +55,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         DalamudUtilService dalamudUtil, IHostApplicationLifetime lifetime,
         FileCacheManager fileDbManager, SyncMediator mediator,
         PlayerPerformanceService playerPerformanceService,
-        ServerConfigurationManager serverConfigManager, ConcurrentPairLockService concurrentPairLockService) : base(logger, mediator)
+        ServerConfigurationManager serverConfigManager, ConcurrentPairLockService concurrentPairLockService,
+        FileTransferOrchestrator transferOrchestrator) : base(logger, mediator)
     {
         Pair = pair;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -67,6 +69,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
         _concurrentPairLockService = concurrentPairLockService;
+        _transferOrchestrator = transferOrchestrator;
         _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, Pair.UserData.UID).ConfigureAwait(false).GetAwaiter().GetResult();
         _serverInfo = _serverConfigManager.GetServerByIndex(Pair.ServerIndex);
 
@@ -455,7 +458,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
                 toDownloadReplacements = TryCalculateModdedDictionary(applicationBase, charaData, out moddedPaths, downloadToken);
 
-                if (toDownloadReplacements.TrueForAll(c => _downloadManager.ForbiddenTransfers.Exists(f => string.Equals(f.Hash, c.Hash, StringComparison.Ordinal))))
+                if (toDownloadReplacements.TrueForAll(c => _transferOrchestrator.ForbiddenTransfers.Exists(f => string.Equals(f.Hash, c.Hash, StringComparison.Ordinal))))
                 {
                     break;
                 }
