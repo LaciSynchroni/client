@@ -46,6 +46,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private readonly CacheMonitor _cacheMonitor;
     private readonly SyncConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
+    private readonly LocalHttpServer _httpServer;
     private readonly IpcManager _ipcManager;
     private readonly Dalamud.Localization _localization;
     private readonly IDalamudPluginInterface _pluginInterface;
@@ -81,7 +82,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         SyncConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
         ITextureProvider textureProvider,
         Dalamud.Localization localization,
-        ServerConfigurationManager serverManager, MultiConnectTokenService multiConnectTokenService, SyncMediator mediator) : base(logger, mediator)
+        ServerConfigurationManager serverManager, MultiConnectTokenService multiConnectTokenService, SyncMediator mediator, LocalHttpServer httpServer) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
         _apiController = apiController;
@@ -119,6 +120,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         });
         GameFont = _pluginInterface.UiBuilder.FontAtlas.NewGameFontHandle(new(GameFontFamilyAndSize.Axis12));
         IconFont = _pluginInterface.UiBuilder.IconFontFixedWidthHandle;
+        _httpServer = httpServer;
     }
 
     public static string DoubleNewLine => Environment.NewLine + Environment.NewLine;
@@ -867,7 +869,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 ImGui.SetNextItemWidth(250);
                 ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
             }
-
+            DrawLocalHTTPServerEnableButton(_httpServer);
             if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
             {
                 var normalizedUri = _customServerUri.TrimEnd('/');
@@ -885,6 +887,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 // Publish message to show confirmation UI
                 Mediator.Publish(new ServerJoinRequestMessage(newServer));
             }
+
             ImGui.TreePop();
         }
         ImGuiHelpers.ScaledDummy(5);
@@ -1062,6 +1065,48 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         }
     }
 
+    public void DrawLocalHTTPServerEnableButton(LocalHttpServer _httpServer)
+    {
+        var isEnabled = _httpServer.State == LocalHttpServer.HttpServerState.STARTED;
+        var color = UiSharedService.GetBoolColor(!isEnabled);
+        var icon = FontAwesomeIcon.Server;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        {
+            using var disabled = ImRaii.Disabled(_httpServer.State == LocalHttpServer.HttpServerState.STARTING);
+            if (IconButton(icon, "localhttpserverstartstop"))
+            {
+                if (isEnabled)
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(false));
+                }
+                else
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(true));
+                }
+            }
+        }
+        UiSharedService.AttachToolTip(isEnabled ?
+           "Disable quick connect server." :
+           "Enable quick connect server. This only needs to be activated if you are trying to join a server using a quick connect link provided by them.");
+
+        ImGui.SameLine();
+        switch (_httpServer.State)
+        {
+            case LocalHttpServer.HttpServerState.STOPPED:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.ParsedGrey);
+                break;
+            case LocalHttpServer.HttpServerState.STARTING:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is starting!", ImGuiColors.DalamudYellow);
+                break;
+            case LocalHttpServer.HttpServerState.STARTED:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is active!", ImGuiColors.ParsedGreen);
+                break;
+            case LocalHttpServer.HttpServerState.ERROR:
+                UiSharedService.ColorTextWrapped("An error occurred starting the Quick Connect listener, please try again, or report it in our Discord if it happens repeatedly.", ImGuiColors.DalamudRed);
+                break;
+        }
+    }
     public IDalamudTextureWrap LoadImage(byte[] imageData)
     {
         return _textureProvider.CreateFromImageAsync(imageData).Result;
