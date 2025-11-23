@@ -56,6 +56,11 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
             _ = Task.Run(async () =>
             {
                 await StartAsync(_cancellationToken).ConfigureAwait(false);
+                await Task.Delay(10 * 60 * 1000, _cancellationToken);
+                if (_serverConfigurationManager.ServerIndexes.Any() && !_cancellationToken.IsCancellationRequested)
+                {
+                    await StopAsync(_cancellationToken);
+                }
             });
         }
         else if (!message.enable && State is HttpServerState.STARTED or HttpServerState.ERROR)
@@ -99,6 +104,10 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        if (State == HttpServerState.STOPPED)
+        {
+            return Task.CompletedTask;
+        }
         try
         {
             _cts.CancelDispose();
