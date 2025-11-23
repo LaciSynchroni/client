@@ -202,22 +202,25 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
 
-            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
+            using (ImRaii.Disabled(!Uri.IsWellFormedUriString(_customServerUri, UriKind.Absolute)))
             {
-                var normalizedUri = _customServerUri.TrimEnd('/');
-                if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
                 {
-                    normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
-                }
-                var newServer = new ServerStorage
-                {
-                    ServerUri = normalizedUri,
-                    UseOAuth2 = true,
-                    UseAdvancedUris = false,
-                };
+                    var normalizedUri = _customServerUri.TrimEnd('/');
+                    if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                    {
+                        normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                    }
+                    var newServer = new ServerStorage
+                    {
+                        ServerUri = normalizedUri,
+                        UseOAuth2 = true,
+                        UseAdvancedUris = false,
+                    };
 
-                // Publish message to show confirmation UI
-                Mediator.Publish(new ServerJoinRequestMessage(newServer));
+                    // Publish message to show confirmation UI
+                    Mediator.Publish(new ServerJoinRequestMessage(newServer));
+                }
             }
         }
         else
