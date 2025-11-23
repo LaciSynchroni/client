@@ -865,24 +865,26 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
 
             DrawLocalHTTPServerEnableButton(_httpServer);
-            if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
+            using (ImRaii.Disabled(!Uri.IsWellFormedUriString(_customServerUri, UriKind.Absolute)))
             {
-                var normalizedUri = _customServerUri.TrimEnd('/');
-                if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
                 {
-                    normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                    var normalizedUri = _customServerUri.TrimEnd('/');
+                    if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                    {
+                        normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                    }
+                    var newServer = new ServerStorage
+                    {
+                        ServerUri = normalizedUri,
+                        UseOAuth2 = true,
+                        UseAdvancedUris = false,
+                    };
+
+                    // Publish message to show confirmation UI
+                    Mediator.Publish(new ServerJoinRequestMessage(newServer));
                 }
-                var newServer = new ServerStorage
-                {
-                    ServerUri = normalizedUri,
-                    UseOAuth2 = true,
-                    UseAdvancedUris = false,
-                };
-
-                // Publish message to show confirmation UI
-                Mediator.Publish(new ServerJoinRequestMessage(newServer));
             }
-
             ImGui.TreePop();
         }
         ImGuiHelpers.ScaledDummy(5);
