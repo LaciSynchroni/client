@@ -123,7 +123,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         }
 
         using (_uiSharedService.UidFont.Push())
-            ImGui.TextUnformatted("Server Registration");
+            ImGui.TextUnformatted("Service Registration");
         ImGui.Separator();
 
         ImGuiHelpers.ScaledDummy(5f);
