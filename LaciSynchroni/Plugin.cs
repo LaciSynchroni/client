@@ -181,15 +181,22 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton((s) => new NotificationService(s.GetRequiredService<ILogger<NotificationService>>(),
                 s.GetRequiredService<SyncMediator>(), s.GetRequiredService<DalamudUtilService>(),
                 notificationManager, chatGui, s.GetRequiredService<SyncConfigService>()));
+            collection.AddSingleton((s) => new SyncConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) =>
             {
                 var httpClient = new HttpClient();
                 var ver = Assembly.GetExecutingAssembly().GetName().Version!;
                 var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
+                var config = s.GetRequiredService<SyncConfigService>();
+                if (config.Current.DebugExtendedUploadTimeout)
+                {
+                    httpClient.Timeout = new TimeSpan(0, 10, 0);
+                    pluginLog.Warning("Extended upload timeout set!");
+                }
                 httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, versionString));
                 return httpClient;
             });
-            collection.AddSingleton((s) => new SyncConfigService(pluginInterface.ConfigDirectory.FullName));
+
             collection.AddSingleton((s) => new ServerConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new NotesConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new ServerTagConfigService(pluginInterface.ConfigDirectory.FullName));
