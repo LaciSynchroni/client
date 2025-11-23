@@ -1085,7 +1085,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         }
         UiSharedService.AttachToolTip(isEnabled ?
            "Disable quick connect server." :
-           "Enable quick connect server. This only needs to be activated if you are trying to join a server using a quick connect link provided by them.");
+           "Enable quick connect server. This allows a new service to be added by clicking a link provided by a Laci server. ONLY TURN THIS ON TEMPORARILY WHEN ADDING A NEW SERVER.");
 
         ImGui.SameLine();
         switch (_httpServer.State)
