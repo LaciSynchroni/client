@@ -139,6 +139,11 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
                 // Expected when shutting down
                 break;
             }
+            catch (ObjectDisposedException) when (token.IsCancellationRequested)
+            {
+                // Expected when shutting down
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in HTTP listener loop");
