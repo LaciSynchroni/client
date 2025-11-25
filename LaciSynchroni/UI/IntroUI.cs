@@ -27,6 +27,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly UiSharedService _uiShared;
+    private readonly LocalHttpServer _httpServer;
     private int _currentLanguage;
     private bool _readFirstPage;
 
@@ -38,13 +39,14 @@ public partial class IntroUi : WindowMediatorSubscriberBase
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, SyncConfigService configService,
         CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, SyncMediator syncMediator,
-        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService) : base(logger, syncMediator, "Laci Synchroni Setup", performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService, LocalHttpServer httpServer) : base(logger, syncMediator, "Laci Synchroni Setup", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;
         _cacheMonitor = fileCacheManager;
         _serverConfigurationManager = serverConfigurationManager;
         _dalamudUtilService = dalamudUtilService;
+        _httpServer = httpServer;
         IsOpen = false;
         ShowCloseButton = false;
         RespectCloseHotkey = false;
@@ -197,27 +199,48 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             using (_uiShared.UidFont.Push())
                 ImGui.TextUnformatted("Service Registration");
             ImGui.Separator();
-            UiSharedService.TextWrapped("To be able to use Laci Synchroni you will have to configure a service. You can either use a Laci configuration link, or enter the URI manually below.");
+            UiSharedService.TextWrapped("To be able to use Laci Synchroni you will have to configure a service.\r\nIf the service you are trying to connect to is a Laci service, quick connect through the Discord bot should be available.\r\nIf quick connect is not available you can enter the service URI manually below.\r\nIf the service is not a Laci service, you will have to find the relevant URLs and configure them.");
+            ImGui.Separator();
+            switch (_httpServer.State)
+            {
+                case LocalHttpServer.HttpServerState.STOPPED:
+                    UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.ParsedGrey);
+                    break;
+                case LocalHttpServer.HttpServerState.STARTING:
+                    UiSharedService.ColorTextWrapped("The Quick Connect listener is starting up!", ImGuiColors.DalamudYellow);
+                    break;
+                case LocalHttpServer.HttpServerState.STARTED:
+                    UiSharedService.ColorTextWrapped("The Quick Connect listener is on, and you can use Laci configuration links to set up a server!", ImGuiColors.ParsedGreen);
+                    break;
+                case LocalHttpServer.HttpServerState.ERROR:
+                    UiSharedService.ColorTextWrapped("An error occurred starting the Quick Connect listener, see /xllog for the error, or set up a server manually in the section below.", ImGuiColors.DalamudRed);
+                    break;
+            }
+            ImGui.Separator();
+            UiSharedService.TextWrapped("You can also connect a service manually. Enter the Service URI (e.g. wss://example.com) below. It will automatically retrieve the server configuration, if available.");
 
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
 
-            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
+            using (ImRaii.Disabled(!Uri.IsWellFormedUriString(_customServerUri, UriKind.Absolute)))
             {
-                var normalizedUri = _customServerUri.TrimEnd('/');
-                if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
                 {
-                    normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
-                }
-                var newServer = new ServerStorage
-                {
-                    ServerUri = normalizedUri,
-                    UseOAuth2 = true,
-                    UseAdvancedUris = false,
-                };
+                    var normalizedUri = _customServerUri.TrimEnd('/');
+                    if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                    {
+                        normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                    }
+                    var newServer = new ServerStorage
+                    {
+                        ServerUri = normalizedUri,
+                        UseOAuth2 = true,
+                        UseAdvancedUris = false,
+                    };
 
-                // Publish message to show confirmation UI
-                Mediator.Publish(new ServerJoinRequestMessage(newServer));
+                    // Publish message to show confirmation UI
+                    Mediator.Publish(new ServerJoinRequestMessage(newServer));
+                }
             }
         }
         else

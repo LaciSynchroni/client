@@ -56,6 +56,11 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
             _ = Task.Run(async () =>
             {
                 await StartAsync(_cancellationToken).ConfigureAwait(false);
+                await Task.Delay(10 * 60 * 1000, _cancellationToken);
+                if (_serverConfigurationManager.ServerIndexes.Any() && !_cancellationToken.IsCancellationRequested)
+                {
+                    await StopAsync(_cancellationToken);
+                }
             });
         }
         else if (!message.enable && State is HttpServerState.STARTED or HttpServerState.ERROR)
@@ -99,6 +104,10 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        if (State == HttpServerState.STOPPED)
+        {
+            return Task.CompletedTask;
+        }
         try
         {
             _cts.CancelDispose();
@@ -119,7 +128,10 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
     protected override void Dispose(bool disposing)
     {
         base.Dispose(true);
-        _ = StopAsync(_cancellationToken);
+        if (State == HttpServerState.STARTED)
+        {
+            _ = StopAsync(_cancellationToken);
+        }
     }
 
     private async Task ListenAsync(CancellationToken token)
@@ -132,6 +144,11 @@ public class LocalHttpServer : DisposableMediatorSubscriberBase
                 _ = Task.Run(() => HandleRequestAsync(context), token);
             }
             catch (HttpListenerException) when (token.IsCancellationRequested)
+            {
+                // Expected when shutting down
+                break;
+            }
+            catch (ObjectDisposedException) when (token.IsCancellationRequested)
             {
                 // Expected when shutting down
                 break;

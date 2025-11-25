@@ -123,7 +123,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         }
 
         using (_uiSharedService.UidFont.Push())
-            ImGui.TextUnformatted("Add New Server");
+            ImGui.TextUnformatted("Service Registration");
         ImGui.Separator();
 
         ImGuiHelpers.ScaledDummy(5f);
@@ -158,7 +158,6 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
                 _pendingServer.UseOAuth2 = config.IsOAuthEnabled ?? true;
                 _pendingServer.ServerHubUri = config.HubUri?.ToString() ?? "";
                 _pendingServer.UseAdvancedUris = !_pendingServer.ServerHubUri.IsNullOrEmpty() || !_pendingServer.AuthUri.IsNullOrEmpty();
-                _pendingServer.BypassVersionCheck = config.BypassVersionCheck ?? false;
                 _pendingServer.DiscordInvite = config.DiscordInvite ?? "";
                 _serverRules = config.ServerRules ?? "";
                 _hasReceivedServerInfo = true;
@@ -195,16 +194,6 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
         }
 
         _pendingServer.DiscordInvite = DrawServerTextbox("Discord Invite:", _pendingServer.DiscordInvite);
-
-        _pendingServer.BypassVersionCheck = DrawServerCheckbox("Bypass Version Check:", _pendingServer.BypassVersionCheck);
-
-        if (_pendingServer.BypassVersionCheck)
-        {
-            ImGuiHelpers.ScaledDummy(2f);
-            UiSharedService.ColorTextWrapped(
-                "This server has version check bypass enabled. This may cause unexpected behavior if the server is not compatible.",
-                ImGuiColors.DalamudYellow);
-        }
 
         ImGuiHelpers.ScaledDummy(5f);
         ImGui.Separator();

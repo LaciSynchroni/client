@@ -46,6 +46,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private readonly CacheMonitor _cacheMonitor;
     private readonly SyncConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
+    private readonly LocalHttpServer _httpServer;
     private readonly IpcManager _ipcManager;
     private readonly Dalamud.Localization _localization;
     private readonly IDalamudPluginInterface _pluginInterface;
@@ -81,7 +82,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         SyncConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
         ITextureProvider textureProvider,
         Dalamud.Localization localization,
-        ServerConfigurationManager serverManager, MultiConnectTokenService multiConnectTokenService, SyncMediator mediator) : base(logger, mediator)
+        ServerConfigurationManager serverManager, MultiConnectTokenService multiConnectTokenService, SyncMediator mediator, LocalHttpServer httpServer) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
         _apiController = apiController;
@@ -119,6 +120,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         });
         GameFont = _pluginInterface.UiBuilder.FontAtlas.NewGameFontHandle(new(GameFontFamilyAndSize.Axis12));
         IconFont = _pluginInterface.UiBuilder.IconFontFixedWidthHandle;
+        _httpServer = httpServer;
     }
 
     public static string DoubleNewLine => Environment.NewLine + Environment.NewLine;
@@ -861,29 +863,27 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
             ImGui.SetNextItemWidth(250);
             ImGui.InputText("Custom Service URI", ref _customServerUri, 255);
-            ImGui.Checkbox("Advanced URIs", ref _useAdvancedUris);
-            if (_useAdvancedUris)
-            {
-                ImGui.SetNextItemWidth(250);
-                ImGui.InputText("Service Hub URI", ref _serverHubUri, 255);
-            }
 
-            if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
+            DrawLocalHTTPServerEnableButton(_httpServer);
+            using (ImRaii.Disabled(!Uri.IsWellFormedUriString(_customServerUri, UriKind.Absolute)))
             {
-                var normalizedUri = _customServerUri.TrimEnd('/');
-                if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                if (IconTextButton(FontAwesomeIcon.Plus, "Configure server"))
                 {
-                    normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                    var normalizedUri = _customServerUri.TrimEnd('/');
+                    if (normalizedUri.EndsWith("/hub", StringComparison.OrdinalIgnoreCase))
+                    {
+                        normalizedUri = normalizedUri.Substring(0, normalizedUri.Length - 4).TrimEnd('/');
+                    }
+                    var newServer = new ServerStorage
+                    {
+                        ServerUri = normalizedUri,
+                        UseOAuth2 = true,
+                        UseAdvancedUris = false,
+                    };
+
+                    // Publish message to show confirmation UI
+                    Mediator.Publish(new ServerJoinRequestMessage(newServer));
                 }
-                var newServer = new ServerStorage
-                {
-                    ServerUri = normalizedUri,
-                    UseOAuth2 = true,
-                    UseAdvancedUris = false,
-                };
-
-                // Publish message to show confirmation UI
-                Mediator.Publish(new ServerJoinRequestMessage(newServer));
             }
             ImGui.TreePop();
         }
@@ -1062,6 +1062,48 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         }
     }
 
+    public void DrawLocalHTTPServerEnableButton(LocalHttpServer _httpServer)
+    {
+        var isEnabled = _httpServer.State == LocalHttpServer.HttpServerState.STARTED;
+        var color = UiSharedService.GetBoolColor(!isEnabled);
+        var icon = FontAwesomeIcon.Server;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        {
+            using var disabled = ImRaii.Disabled(_httpServer.State == LocalHttpServer.HttpServerState.STARTING);
+            if (IconButton(icon, "localhttpserverstartstop"))
+            {
+                if (isEnabled)
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(false));
+                }
+                else
+                {
+                    Mediator.Publish(new HttpServerToggleMessage(true));
+                }
+            }
+        }
+        UiSharedService.AttachToolTip(isEnabled ?
+           "Disable quick connect server." :
+           "Enable quick connect server. This allows a new service to be added by clicking a link provided by a Laci server. ONLY TURN THIS ON TEMPORARILY WHEN ADDING A NEW SERVER.");
+
+        ImGui.SameLine();
+        switch (_httpServer.State)
+        {
+            case LocalHttpServer.HttpServerState.STOPPED:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.ParsedGrey);
+                break;
+            case LocalHttpServer.HttpServerState.STARTING:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is starting!", ImGuiColors.DalamudYellow);
+                break;
+            case LocalHttpServer.HttpServerState.STARTED:
+                UiSharedService.ColorTextWrapped("Quick Connect listener is active!", ImGuiColors.ParsedGreen);
+                break;
+            case LocalHttpServer.HttpServerState.ERROR:
+                UiSharedService.ColorTextWrapped("An error occurred starting the Quick Connect listener, please try again, or report it in our Discord if it happens repeatedly.", ImGuiColors.DalamudRed);
+                break;
+        }
+    }
     public IDalamudTextureWrap LoadImage(byte[] imageData)
     {
         return _textureProvider.CreateFromImageAsync(imageData).Result;

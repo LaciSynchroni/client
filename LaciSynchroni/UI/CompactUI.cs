@@ -494,7 +494,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
             ImGui.EndTable();
         }
-        DrawLocalHTTPServerEnableButton();
+        _uiSharedService.DrawLocalHTTPServerEnableButton(_httpServer);
     }
 
     private void DrawServerName(int serverId, string serverName, string serverUri)
@@ -589,51 +589,6 @@ public class CompactUi : WindowMediatorSubscriberBase
         UiSharedService.AttachToolTip(isConnectingOrConnected ?
            "Disconnect from " + serverName :
            "Connect to " + serverName);
-    }
-
-
-
-    private void DrawLocalHTTPServerEnableButton()
-    {
-        var isEnabled = _httpServer.State == LocalHttpServer.HttpServerState.STARTED;
-        var color = UiSharedService.GetBoolColor(!isEnabled);
-        var icon = FontAwesomeIcon.Server;
-
-        using (ImRaii.PushColor(ImGuiCol.Text, color))
-        {
-            using var disabled = ImRaii.Disabled(_httpServer.State == LocalHttpServer.HttpServerState.STARTING);
-            if (_uiSharedService.IconButton(icon, "localhttpserverstartstop"))
-            {
-                if (isEnabled)
-                {
-                    Mediator.Publish(new HttpServerToggleMessage(false));
-                }
-                else
-                {
-                    Mediator.Publish(new HttpServerToggleMessage(true));
-                }
-            }
-        }
-        UiSharedService.AttachToolTip(isEnabled ?
-           "Disable quick connect server." :
-           "Enable quick connect server. This only needs to be activated if you are trying to join a server using a quick connect link provided by them.");
-
-        ImGui.SameLine();
-        switch (_httpServer.State)
-        {
-            case LocalHttpServer.HttpServerState.STOPPED:
-                UiSharedService.ColorTextWrapped("Quick Connect listener is inactive!", ImGuiColors.TankBlue);
-                break;
-            case LocalHttpServer.HttpServerState.STARTING:
-                UiSharedService.ColorTextWrapped("Quick Connect listener is starting!", ImGuiColors.DalamudYellow);
-                break;
-            case LocalHttpServer.HttpServerState.STARTED:
-                UiSharedService.ColorTextWrapped("Quick Connect listener is active!", ImGuiColors.ParsedGreen);
-                break;
-            case LocalHttpServer.HttpServerState.ERROR:
-                UiSharedService.ColorTextWrapped("An error occurred starting the Quick Connect listener, please try again, or report it in our Discord if it happens repeatedly.", ImGuiColors.DalamudRed);
-                break;
-        }
     }
 
     private void DrawOnlineUsers(int serverId)
