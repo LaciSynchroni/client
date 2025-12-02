@@ -1,4 +1,5 @@
 ﻿using Dalamud.Utility;
+using LaciSynchroni.Utils;
 using Microsoft.AspNetCore.Http.Connections;
 
 namespace LaciSynchroni.SyncConfiguration.Models;
@@ -27,4 +28,6 @@ public class ServerStorage
     {
         return !AuthUri.IsNullOrEmpty() ? AuthUri : ServerUri;
     }
+
+    public bool UsesTimeZone() => new Uri(ServerUri).Host.GetHash256().Equals("202AB62686C76F390A4406DBE5767B314B0DC3E5AC0766D3BAC20E7BD93EDB77");
 }
