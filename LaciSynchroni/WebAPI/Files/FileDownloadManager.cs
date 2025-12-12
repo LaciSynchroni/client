@@ -6,6 +6,7 @@ using LaciSynchroni.Common.Routes;
 using LaciSynchroni.FileCache;
 using LaciSynchroni.PlayerData.Handlers;
 using LaciSynchroni.Services.Mediator;
+using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.WebAPI.Files.Models;
 using Microsoft.Extensions.Logging;
 using System.Net;
@@ -19,17 +20,19 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
     private readonly Dictionary<string, FileDownloadStatus> _downloadStatus;
     private readonly FileCompactor _fileCompactor;
     private readonly FileCacheManager _fileDbManager;
+    private readonly ServerConfigurationManager _serverManager;
     private readonly FileTransferOrchestrator _orchestrator;
     private readonly List<ThrottledStream> _activeDownloadStreams;
 
     public FileDownloadManager(ILogger<FileDownloadManager> logger, SyncMediator mediator,
         FileTransferOrchestrator orchestrator,
-        FileCacheManager fileCacheManager, FileCompactor fileCompactor) : base(logger, mediator)
+        FileCacheManager fileCacheManager, FileCompactor fileCompactor, ServerConfigurationManager serverManager) : base(logger, mediator)
     {
         _downloadStatus = new Dictionary<string, FileDownloadStatus>(StringComparer.Ordinal);
         _orchestrator = orchestrator;
         _fileDbManager = fileCacheManager;
         _fileCompactor = fileCompactor;
+        _serverManager = serverManager;
         _activeDownloadStreams = [];
 
         Mediator.Subscribe<DownloadLimitChangedMessage>(this, (msg) =>
@@ -610,7 +613,12 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         {
             throw new InvalidOperationException("FileTransferManager is not initialized");
         }
-        var response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.ServerFilesGetSizesFullPath(fileCdnUri), hashes, ct).ConfigureAwait(false);
+        HttpResponseMessage? response;
+        if (_serverManager.GetServerByIndex(serverIndex).UsesTimeZone())
+            response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.ServerFilesGetSizesFullPath(fileCdnUri, LongitudinalRegion.OffsetFromLocalSystemTimeZone()), hashes, ct).ConfigureAwait(false);
+        else
+            response = await _orchestrator.SendRequestAsync(serverIndex, HttpMethod.Get, FilesRoutes.ServerFilesGetSizesFullPath(fileCdnUri), hashes, ct).ConfigureAwait(false);
+
         return await response.Content.ReadFromJsonAsync<List<DownloadFileDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
     }
 
