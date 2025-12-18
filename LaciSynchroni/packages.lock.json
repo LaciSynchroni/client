@@ -1,18 +1,18 @@
 {
   "version": 1,
   "dependencies": {
-    "net9.0-windows7.0": {
+    "net10.0-windows7.0": {
       "DalamudPackager": {
         "type": "Direct",
-        "requested": "[13.1.0, )",
-        "resolved": "13.1.0",
-        "contentHash": "XdoNhJGyFby5M/sdcRhnc5xTop9PHy+H50PTWpzLhJugjB19EDBiHD/AsiDF66RETM+0qKUdJBZrNuebn7qswQ=="
+        "requested": "[14.0.0, )",
+        "resolved": "14.0.0",
+        "contentHash": "9c1q/eAeAs82mkQWBOaCvbt3GIQxAIadz5b/7pCXDIy9nHPtnRc+tDXEvKR+M36Wvi7n+qBTevRupkLUQp6DFA=="
       },
       "DotNet.ReproducibleBuilds": {
         "type": "Direct",
-        "requested": "[1.2.25, )",
-        "resolved": "1.2.25",
-        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
+        "requested": "[1.2.39, )",
+        "resolved": "1.2.39",
+        "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
       "Downloader": {
         "type": "Direct",
@@ -155,8 +155,8 @@
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "3.1.3",
-        "contentHash": "XTy4njgTAf6UVBKFj7c7ad5R0WVKbvAgkbYZy4f00kplzX2T3VOQ34AUke/Vn/QgQZ7ETdd34/IDWS3KBInSGA=="
+        "resolved": "3.1.4",
+        "contentHash": "aVWrDAkCdqxwQsz/q0ldPh2EFn48M99YUzE9OvZjMq2RNLKz4o2z88iGFvSvbMqOWRweRvKPHBJZe22PRqzslQ=="
       },
       "Microsoft.AspNetCore.Connections.Abstractions": {
         "type": "Transitive",
@@ -173,8 +173,7 @@
         "dependencies": {
           "Microsoft.AspNetCore.Http.Connections.Common": "9.0.8",
           "Microsoft.Extensions.Logging.Abstractions": "9.0.8",
-          "Microsoft.Extensions.Options": "9.0.8",
-          "System.Net.ServerSentEvents": "9.0.8"
+          "Microsoft.Extensions.Options": "9.0.8"
         }
       },
       "Microsoft.AspNetCore.Http.Connections.Common": {
@@ -193,8 +192,7 @@
           "Microsoft.AspNetCore.SignalR.Common": "9.0.8",
           "Microsoft.AspNetCore.SignalR.Protocols.Json": "9.0.8",
           "Microsoft.Extensions.DependencyInjection": "9.0.8",
-          "Microsoft.Extensions.Logging": "9.0.8",
-          "System.Threading.Channels": "9.0.8"
+          "Microsoft.Extensions.Logging": "9.0.8"
         }
       },
       "Microsoft.AspNetCore.SignalR.Common": {
@@ -508,20 +506,10 @@
         "resolved": "9.0.8",
         "contentHash": "gebRF3JLLJ76jz1CQpvwezNapZUjFq20JQsaGHzBH0DzlkHBLpdhwkOei9usiOkIGMwU/L0ALWpNe1JE+5/itw=="
       },
-      "System.Net.ServerSentEvents": {
-        "type": "Transitive",
-        "resolved": "9.0.8",
-        "contentHash": "wrpra4YvKXL7VdsQMKPcPxyA8pXK22LcxaKGA8oEndgjLZ1ZSdKXTxEA2cPvvNpMEUBwZlgJ6oZYQ8aJcpapPg=="
-      },
-      "System.Threading.Channels": {
-        "type": "Transitive",
-        "resolved": "9.0.8",
-        "contentHash": "kpvkzWJoHR9os3/4LL5feaTTLD92+XzTqPyYLU2tw2BoJ4MrWCfkjGXtL7MsdpV/20e1+SamCbrPj2L9ptwgBA=="
-      },
       "lacisynchroni.common": {
         "type": "Project",
         "dependencies": {
-          "MessagePack.Annotations": "[3.1.3, )"
+          "MessagePack.Annotations": "[3.1.4, )"
         }
       }
     }
