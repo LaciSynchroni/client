@@ -21,6 +21,6 @@ internal class SyncHubClientLL : SyncHubClient
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
         base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient)
     {
-        ApiVersion = 34;
+        ApiVersion = 35;
     }
 }
