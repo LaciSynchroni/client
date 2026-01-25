@@ -190,7 +190,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             return;
         }
 
-        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName);
+        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName, _serverConfigManager.GetServerPriorityByIndex(Pair.ServerIndex));
         if (renderLockServerIndex != Pair.ServerIndex && renderLockServerIndex > -1)
         {
             Logger.LogInformation(
@@ -485,9 +485,19 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         if (downloadToken.IsCancellationRequested || (appToken?.IsCancellationRequested ?? false)) return;
 
         _applicationCancellationTokenSource = _applicationCancellationTokenSource.CancelRecreate() ?? new CancellationTokenSource();
-        var token = _applicationCancellationTokenSource.Token;
 
-        _applicationTask = ApplyCharacterDataAsync(applicationBase, charaData, updatedData, updateModdedPaths, updateManip, moddedPaths, token);
+        // For now: Check if we still have priority after downloading. If not, end here, since a server with priority has taken over rendering that actor.
+        // Later: Pass cancellation token source to the lock, trigger cancel of everything when the lock gets taken away.
+        if (_concurrentPairLockService.HasRenderLock(PlayerNameHash, Pair.ServerIndex))
+        {
+            var token = _applicationCancellationTokenSource.Token;
+            _applicationTask = ApplyCharacterDataAsync(applicationBase, charaData, updatedData, updateModdedPaths, updateManip, moddedPaths, token);
+        }
+        else
+        {
+            _applicationTask = Task.CompletedTask;
+        }
+   
     }
 
     private async Task ApplyCharacterDataAsync(Guid applicationBase, CharacterData charaData, Dictionary<ObjectKind, HashSet<PlayerChanges>> updatedData, bool updateModdedPaths, bool updateManip,
@@ -632,7 +642,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
 		// Only the render-lock owner should assign the temp collection to avoid a non-owner overwriting
 		// an already-populated collection with an empty one (which would render the target vanilla).
-		var lockOwner = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName);
+		var lockOwner = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName, _serverConfigManager.GetServerPriorityByIndex(Pair.ServerIndex));
 		if (lockOwner == Pair.ServerIndex)
 		{
 			_ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, _charaHandler.GetGameObject()!.ObjectIndex).GetAwaiter().GetResult();

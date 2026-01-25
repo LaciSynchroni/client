@@ -179,6 +179,11 @@ public class ServerConfigurationManager
         return GetServerByIndex(index).ServerName;
     }
     
+    public int GetServerPriorityByIndex(int index)
+    {
+        return GetServerByIndex(index).Priority ?? 0;
+    }
+    
     public ServerStorage GetServerByIndex(int idx)
     {
         return _serverConfigService.Current.ServerStorage[idx];

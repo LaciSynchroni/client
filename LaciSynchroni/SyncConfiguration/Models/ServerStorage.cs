@@ -22,6 +22,7 @@ public class ServerStorage
     public char? ServerIcon { get; set; } = null;
     public bool ForceWebSockets { get; set; } = false;
     public bool Deleted { get; set; } = false;
+    public int? Priority { get; set; } = 0;
     
     // Function prevents it from being serialized
     public string GetAuthServerUri()

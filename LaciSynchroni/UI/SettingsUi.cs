@@ -1278,6 +1278,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
                 var useAdvancedUris = selectedServer.UseAdvancedUris;
                 var serverIcon = selectedServer.ServerIcon;
+                var serverPriority = selectedServer.Priority ?? 0;
                 var serverIconIndex = DtrEntry.DtrIcons.IndexOf($"{serverIcon}");
 
                 if (ImGui.InputText("Service Name", ref serverName, 255))
@@ -1325,6 +1326,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     + "If you run into connection issues with e.g. VPNs, try ServerSentEvents first before trying out LongPolling." + UiSharedService.TooltipSeparator
                     + "Note: if the server does not support a specific Transport Type it will fall through to the next automatically: WebSockets > ServerSentEvents > LongPolling");
 
+                if (ImGui.InputInt("Service Priority", ref serverPriority))
+                {
+                    selectedServer.Priority = serverPriority;
+                    _serverConfigurationManager.Save();
+                }
+                _uiShared.DrawHelpText("If you don't experience issues, do not change this! Allows you to set priority for a service."  + Environment.NewLine + 
+                                       "A service with higher priority will take over synchronisation if more than one service is applicable to synchronise a pair.");
                 if (_dalamudUtilService.IsWine)
                 {
                     bool forceWebSockets = selectedServer.ForceWebSockets;
