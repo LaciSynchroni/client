@@ -190,7 +190,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             return;
         }
 
-        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName, _serverConfigManager.GetServerPriorityByIndex(Pair.ServerIndex));
+        var renderLockServerIndex = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName);
         if (renderLockServerIndex != Pair.ServerIndex && renderLockServerIndex > -1)
         {
             Logger.LogInformation(
@@ -642,7 +642,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
 		// Only the render-lock owner should assign the temp collection to avoid a non-owner overwriting
 		// an already-populated collection with an empty one (which would render the target vanilla).
-		var lockOwner = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName, _serverConfigManager.GetServerPriorityByIndex(Pair.ServerIndex));
+		var lockOwner = _concurrentPairLockService.GetRenderLock(PlayerNameHash, Pair.ServerIndex, PlayerName);
 		if (lockOwner == Pair.ServerIndex)
 		{
 			_ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, _charaHandler.GetGameObject()!.ObjectIndex).GetAwaiter().GetResult();

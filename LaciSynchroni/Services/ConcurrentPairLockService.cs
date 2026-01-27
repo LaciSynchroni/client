@@ -1,4 +1,5 @@
 using Dalamud.Utility;
+using LaciSynchroni.Services.ServerConfiguration;
 using System.Collections.Concurrent;
 
 namespace LaciSynchroni.Services
@@ -6,27 +7,34 @@ namespace LaciSynchroni.Services
     using PlayerNameHash = string;
     using ServerIndex = int;
 
-    public class ConcurrentPairLockService
+    public class ConcurrentPairLockService(ServerConfigurationManager serverConfigurationManager)
     {
         private readonly ConcurrentDictionary<PlayerNameHash, LockData> _renderLocks = new(StringComparer.Ordinal);
         private readonly Lock _resourceLock = new();
 
-        public int GetRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex, string? characterName, int serverPriority)
+        public int GetRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex, string? characterName)
         {
             if (serverIndex is null || playerNameHash.IsNullOrWhitespace()) return -1;
 
             lock (_resourceLock)
             {
-                var newLock = new LockData(characterName ?? "", playerNameHash, serverIndex.Value, serverPriority);
+                var newLock = new LockData(characterName ?? "", playerNameHash, serverIndex.Value);
                 // Check priority system
                 var existingLock = _renderLocks.GetOrAdd(playerNameHash, newLock);
-                if (newLock.HasPriorityOver(existingLock))
+                if (existingLock.Index == newLock.Index)
+                {
+                    // No need to evaluate priorities -> server already has lock
+                    return existingLock.Index;
+                }
+
+                var existingPriority = serverConfigurationManager.GetServerPriorityByIndex(existingLock.Index);
+                var newPriority = serverConfigurationManager.GetServerPriorityByIndex(newLock.Index);
+                if (newPriority > existingPriority)
                 {
                     // The other server has priority. We can't really prevent the ongoing stuff, but we can attempt further attempts to write data
                     _renderLocks[playerNameHash] = newLock;
                     return newLock.Index;
                 }
-
                 return existingLock.Index;
             }
         }
@@ -61,14 +69,6 @@ namespace LaciSynchroni.Services
             return _renderLocks.Values;
         }
 
-        public record LockData(string CharName, PlayerNameHash PlayerHash, ServerIndex Index, int ServerPriority)
-        {
-            public bool HasPriorityOver(LockData other)
-            {
-                // No need to check for same server, since the same server will have the same priority
-                // Note: If priorities were changed without a clean restart, it might be different.
-                return ServerPriority > other.ServerPriority;
-            }
-        }
+        public record LockData(string CharName, PlayerNameHash PlayerHash, ServerIndex Index);
     }
 }
