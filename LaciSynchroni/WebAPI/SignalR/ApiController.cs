@@ -38,7 +38,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
 
     private readonly Dictionary<string, SyncHubType> syncHubTypeDict = new()
     {
-        { "202AB62686C76F390A4406DBE5767B314B0DC3E5AC0766D3BAC20E7BD93EDB77", SyncHubType.PS },
+        { "4ED8C3F82F0AA757C453B68C8F3052EAD7648793A9F8BF85BBBF6696AB7B9B0D", SyncHubType.PS },
         { "00BC5CD676E5ED9C2DAF1EDE81878D9ABA8E57EE48ECFD1B3376BD055E9D82AC", SyncHubType.LL },
     };
 
