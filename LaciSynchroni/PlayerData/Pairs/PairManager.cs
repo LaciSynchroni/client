@@ -9,6 +9,7 @@ using LaciSynchroni.Common.Dto.User;
 using LaciSynchroni.PlayerData.Factories;
 using LaciSynchroni.Services.Events;
 using LaciSynchroni.Services.Mediator;
+using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
 using LaciSynchroni.Utils;
@@ -28,12 +29,13 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     private readonly SyncConfigService _configurationService;
     private readonly IContextMenu _dalamudContextMenu;
     private readonly PairFactory _pairFactory;
+    private readonly ServerConfigurationManager _serverManager;
     private Lazy<List<Pair>> _directPairsInternal;
     private Lazy<Dictionary<GroupFullInfoWithServer, List<Pair>>> _groupPairsInternal;
     private Lazy<Dictionary<Pair, List<GroupFullInfoDto>>> _pairsWithGroupsInternal;
 
     public PairManager(ILogger<PairManager> logger, PairFactory pairFactory,
-        SyncConfigService configurationService, SyncMediator mediator,
+        SyncConfigService configurationService, ServerConfigurationManager serverConfigurationManager, SyncMediator mediator,
         IContextMenu dalamudContextMenu) : base(logger, mediator)
     {
         _pairFactory = pairFactory;
@@ -44,6 +46,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         _directPairsInternal = DirectPairsLazy();
         _groupPairsInternal = GroupPairsLazy();
         _pairsWithGroupsInternal = PairsWithGroupsLazy();
+        _serverManager = serverConfigurationManager;
 
         _dalamudContextMenu.OnMenuOpened += DalamudContextMenuOnOnOpenGameObjectContextMenu;
     }
@@ -203,9 +206,10 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
                           || !_configurationService.Current.ShowOnlineNotificationsOnlyForNamedPairs))
         {
             string? note = pair.GetNote();
+            var serverName = _serverManager.GetServerNameByIndex(pair.ServerIndex);
             var msg = !string.IsNullOrEmpty(note)
-                ? $"{note} ({pair.UserData.AliasOrUID}) is now online"
-                : $"{pair.UserData.AliasOrUID} is now online";
+                ? $"{note} ({pair.UserData.AliasOrUID}) is now online on {serverName}"
+                : $"{pair.UserData.AliasOrUID} is now online on {serverName}";
             Mediator.Publish(
                 new NotificationMessage("User online", msg, NotificationType.Info, TimeSpan.FromSeconds(5)));
         }

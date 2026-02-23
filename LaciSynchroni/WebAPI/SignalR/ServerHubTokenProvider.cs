@@ -123,13 +123,14 @@ public sealed class ServerHubTokenProvider : IDisposable, IMediatorSubscriber
 
             if (ex.StatusCode == HttpStatusCode.Unauthorized)
             {
+                var serverName = ServerToUse.ServerName;
                 if (isRenewal)
                     Mediator.Publish(new NotificationMessage("Error refreshing token",
-                        $"Your authentication token could not be renewed. Try reconnecting to a {_dalamudUtil.GetPluginName()} server manually.",
+                        $"Your authentication token for {serverName} could not be renewed. Try reconnecting to a {_dalamudUtil.GetPluginName()} server manually.",
                         NotificationType.Error));
                 else
                     Mediator.Publish(new NotificationMessage("Error generating token",
-                        $"Your authentication token could not be generated. Check {_dalamudUtil.GetPluginName()} Main UI ({CommandManagerService.CommandName} in chat) to see the error message.",
+                        $"Your authentication token for {serverName} could not be generated. Check {_dalamudUtil.GetPluginName()} Main UI ({CommandManagerService.CommandName} in chat) to see the error message.",
                         NotificationType.Error));
                 Mediator.Publish(new DisconnectedMessage(_serverIndex));
                 throw new SyncAuthFailureException(response);
