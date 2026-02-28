@@ -21,7 +21,7 @@ internal class SyncHubClientPS : SyncHubClient
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
         base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient)
     {
-
+        ApiVersion = 34;
     }
 
     public override async Task UserAddPair(UserDto user)
