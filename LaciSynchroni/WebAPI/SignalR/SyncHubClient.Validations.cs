@@ -60,7 +60,7 @@ public partial class SyncHubClient
             Mediator.Publish(new NotificationMessage(
                 "Multiple Identical Characters detected",
                 "Your Service configuration has multiple characters with the same name and world set up."
-                + $" Delete the duplicates in the character management to be able to connect to a {_dalamudUtil.GetPluginName()} server.",
+                + $" Delete the duplicates in the character management to be able to connect to {ServerToUse.ServerName} service.",
                 NotificationType.Error));
             await StopConnectionAsync(ServerState.MultiChara).ConfigureAwait(false);
             _connectionCancellationTokenSource?.Cancel();
@@ -98,7 +98,7 @@ public partial class SyncHubClient
                 var pluginVersion = string.Create(CultureInfo.InvariantCulture, $"{currentClientVer.Major}.{currentClientVer.Minor}.{currentClientVer.Build}.{currentClientVer.Revision}");
                 var currentClientVersion = string.Create(CultureInfo.InvariantCulture, $"{connectionDto.CurrentClientVersion.Major}.{connectionDto.CurrentClientVersion.Minor}.{connectionDto.CurrentClientVersion.Build}.{connectionDto.CurrentClientVersion.Revision}");
                 Mediator.Publish(new NotificationMessage("Client incompatible",
-                    $"Your client is outdated ({pluginVersion}), current is: {currentClientVersion}. " +
+                    $"Your client for {ServerToUse.ServerName} is outdated ({pluginVersion}), current is: {currentClientVersion}. " +
                     $"This client version is incompatible and will not be able to connect. Please update {_dalamudUtil.GetPluginName()}.",
                     NotificationType.Error));
             }
@@ -165,7 +165,7 @@ public partial class SyncHubClient
             _logger.LogWarning("Multiple secret keys for current character");
             ConnectionDto = null;
             Mediator.Publish(new NotificationMessage("Multiple Identical Characters detected",
-                $"Your Service configuration has multiple characters with the same name and world set up." +
+                $"Your Service configuration for {ServerToUse.ServerName} has multiple characters with the same name and world set up." +
                 $" Delete the duplicates in the character management to be able to connect to a {_dalamudUtil.GetPluginName()} server.",
                 NotificationType.Error));
             await StopConnectionAsync(ServerState.MultiChara).ConfigureAwait(false);
