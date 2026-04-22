@@ -339,8 +339,10 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         _connection = new HubConnectionBuilder()
             .WithUrl(hubUrl, options =>
             {
+                var clientCapabilities = ClientCapabilitiesDto.GetDefault();
                 options.AccessTokenProvider = () => _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct);
                 options.Transports = transportType;
+                options.Headers.Add(ClientCapabilitiesDto.ClientCapabilitiesHeader, clientCapabilities.ToHeaderValue());
             })
             .AddMessagePackProtocol(opt =>
             {
