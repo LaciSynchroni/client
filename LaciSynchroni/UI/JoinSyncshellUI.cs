@@ -109,7 +109,7 @@ internal class JoinSyncshellUI : WindowMediatorSubscriberBase
             ImGui.InputTextWithHint("##syncshellpw", "Password", ref _syncshellPassword, 50, ImGuiInputTextFlags.Password);
 
             // TODO disable when there is no more joins left
-            using (ImRaii.Disabled(string.IsNullOrEmpty(_desiredSyncshellToJoin) || string.IsNullOrEmpty(_syncshellPassword)))
+            using (ImRaii.Disabled(string.IsNullOrEmpty(_desiredSyncshellToJoin)))
             {
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Join Syncshell"))
                 {
