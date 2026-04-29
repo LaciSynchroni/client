@@ -4,6 +4,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
+using Dalamud.Interface.Windowing;
 using Dalamud.Utility;
 using LaciSynchroni.Common.Data.Extensions;
 using LaciSynchroni.Common.Dto.Group;
