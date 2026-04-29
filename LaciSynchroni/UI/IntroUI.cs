@@ -1,9 +1,8 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Utility;
+using Dalamud.Interface.Windowing;
 using LaciSynchroni.FileCache;
 using LaciSynchroni.Interop.Ipc;
 using LaciSynchroni.Localization;
@@ -12,7 +11,6 @@ using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
-using LaciSynchroni.WebAPI;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
 using System.Text.RegularExpressions;

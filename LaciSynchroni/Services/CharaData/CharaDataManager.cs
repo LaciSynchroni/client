@@ -272,7 +272,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
         var obj = await _dalamudUtilService.GetGposeTargetGameObjectAsync().ConfigureAwait(false);
         string targetName = string.Empty;
         bool canApply = _dalamudUtilService.IsInGpose && obj != null
-            && obj.ObjectKind == ObjectKind.Player;
+            && obj.ObjectKind == ObjectKind.Pc;
         if (canApply)
         {
             targetName = obj!.Name.TextValue;

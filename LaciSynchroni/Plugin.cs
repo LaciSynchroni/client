@@ -34,7 +34,7 @@ using System.Reflection;
 namespace LaciSynchroni;
 
 [SuppressMessage("ReSharper", "UnusedType.Global")]
-public sealed class Plugin : IDalamudPlugin
+public sealed class Plugin : IAsyncDalamudPlugin
 {
     private readonly IHost _host;
 
@@ -43,24 +43,6 @@ public sealed class Plugin : IDalamudPlugin
         IGameGui gameGui, IDtrBar dtrBar, IPluginLog pluginLog, ITargetManager targetManager, INotificationManager notificationManager,
         ITextureProvider textureProvider, IContextMenu contextMenu, IGameInteropProvider gameInteropProvider, IGameConfig gameConfig)
     {
-        // TODO: remove this temporary config migration stuff
-        {
-            var configDir = Path.GetFullPath(Path.Combine(pluginInterface.ConfigFile.FullName, "..", pluginInterface.InternalName));
-            var legacyConfigDir = Path.GetFullPath(Path.Combine(configDir, "..", "SinusSynchronous"));
-            if (!Directory.Exists(configDir) && Directory.Exists(legacyConfigDir))
-            {
-                pluginLog.Info($"Found old config at {legacyConfigDir}, copying to {configDir}");
-                CopyFilesRecursively(new DirectoryInfo(legacyConfigDir), new DirectoryInfo(configDir));
-            }
-
-            static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target) {
-                foreach (var dir in source.GetDirectories())
-                    CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
-                foreach (var file in source.GetFiles())
-                    file.CopyTo(Path.Combine(target.FullName, file.Name));
-            }
-        }
-
         var traceDir = Path.Join(pluginInterface.ConfigDirectory.FullName, "tracelog");
         if (!Directory.Exists(traceDir))
             Directory.CreateDirectory(traceDir);
@@ -198,13 +180,13 @@ public sealed class Plugin : IDalamudPlugin
                 return httpClient;
             });
 
-            collection.AddSingleton((s) => new ServerConfigService(pluginInterface.ConfigDirectory.FullName));
-            collection.AddSingleton((s) => new NotesConfigService(pluginInterface.ConfigDirectory.FullName));
-            collection.AddSingleton((s) => new ServerTagConfigService(pluginInterface.ConfigDirectory.FullName));
-            collection.AddSingleton((s) => new TransientConfigService(pluginInterface.ConfigDirectory.FullName));
-            collection.AddSingleton((s) => new XivDataStorageService(pluginInterface.ConfigDirectory.FullName));
-            collection.AddSingleton((s) => new PlayerPerformanceConfigService(pluginInterface.ConfigDirectory.FullName));
-            collection.AddSingleton((s) => new CharaDataConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new ServerConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new NotesConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new ServerTagConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new TransientConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new XivDataStorageService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new PlayerPerformanceConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton(_ => new CharaDataConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton<IConfigService<ISyncConfiguration>>(s => s.GetRequiredService<SyncConfigService>());
             collection.AddSingleton<IConfigService<ISyncConfiguration>>(s => s.GetRequiredService<ServerConfigService>());
             collection.AddSingleton<IConfigService<ISyncConfiguration>>(s => s.GetRequiredService<NotesConfigService>());
@@ -291,12 +273,17 @@ public sealed class Plugin : IDalamudPlugin
         })
         .Build();
 
-        _ = _host.StartAsync();
+        
     }
 
-    public void Dispose()
+    public Task LoadAsync(CancellationToken cancellationToken)
     {
-        _host.StopAsync().GetAwaiter().GetResult();
+        return _host.StartAsync(cancellationToken);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _host.StopAsync().ConfigureAwait(false);
         _host.Dispose();
     }
 }
