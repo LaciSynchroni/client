@@ -168,15 +168,15 @@ public sealed class Plugin : IAsyncDalamudPlugin
             collection.AddSingleton((s) =>
             {
                 var httpClient = new HttpClient();
-                var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-                var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
                 var config = s.GetRequiredService<SyncConfigService>();
+                var clientCapabilities = ClientCapabilitiesDto.GetDefault();
                 if (config.Current.DebugExtendedUploadTimeout)
                 {
                     httpClient.Timeout = new TimeSpan(0, 10, 0);
                     pluginLog.Warning("Extended upload timeout set!");
                 }
-                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, versionString));
+                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, clientCapabilities.ClientVersion));
+                httpClient.DefaultRequestHeaders.Add(ClientCapabilitiesDto.ClientCapabilitiesHeader, clientCapabilities.ToHeaderValue());
                 return httpClient;
             });
 
