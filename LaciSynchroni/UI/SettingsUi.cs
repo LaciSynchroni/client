@@ -1277,6 +1277,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 var serverName = selectedServer.ServerName;
                 var serverUri = selectedServer.ServerUri;
                 var serverHubUri = selectedServer.ServerHubUri ?? selectedServer.ServerUri;
+                var authServerUri = selectedServer.AuthUri ?? "";
                 var useAdvancedUris = selectedServer.UseAdvancedUris;
                 var serverIcon = selectedServer.ServerIcon;
                 var serverIconIndex = DtrEntry.DtrIcons.IndexOf($"{serverIcon}");
@@ -1312,6 +1313,11 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (ImGui.InputText("Service Hub URI", ref serverHubUri, 255))
                     {
                         selectedServer.ServerHubUri = serverHubUri;
+                        _serverConfigurationManager.Save();
+                    }
+                    if (ImGui.InputText("Auth Server URI", ref authServerUri, 255))
+                    {
+                        selectedServer.AuthUri = authServerUri;
                         _serverConfigurationManager.Save();
                     }
                 }

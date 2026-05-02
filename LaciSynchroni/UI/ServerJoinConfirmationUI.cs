@@ -234,7 +234,7 @@ internal class ServerJoinConfirmationUI : WindowMediatorSubscriberBase
                         if (_pendingServer.UseOAuth2)
                         {
                             _isAuthenticating = true;
-                            _oauthCheckTask = _serverConfigurationManager.CheckDiscordOAuth(_pendingServer.ServerUri);
+                            _oauthCheckTask = _serverConfigurationManager.CheckDiscordOAuth(_pendingServer.GetAuthServerUri());
                         }
                         else
                         {
