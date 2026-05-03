@@ -3,6 +3,7 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
 using LaciSynchroni.PlayerData.Pairs;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
@@ -142,17 +143,15 @@ public sealed class DtrEntry : IDisposable, IHostedService
                 IEnumerable<string> visiblePairs;
                 if (_configService.Current.ShowUidInDtrTooltip)
                 {
-                    visiblePairs = _pairManager.GetOnlineUserPairsAcrossAllServers()
-                        .Where(x => x.IsVisible)
-                        .Select(x => string.Format("{0} ({1}{2})", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName, x.UserData.AliasOrUID,
-                                _serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon == null ? "" : $" - {_serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon}"));
+                    visiblePairs = _pairManager.GetVisibleUserPairsAcrossAllServersByCharacter()
+                        .Select(x => string.Format("{0} ({1})", _configService.Current.PreferNoteInDtrTooltip ? x.FirstOrDefault(x => !x.GetNote().IsNullOrEmpty()).GetNote() ?? x[0].PlayerName : x[0].PlayerName,
+                                string.Join("\n    ", x.Select(x => string.Format("{0}{1}", x.UserData.AliasOrUID, _serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon == null ? "" : $" - {_serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon}"))))).ToList();
                 }
                 else
                 {
-                    visiblePairs = _pairManager.GetOnlineUserPairsAcrossAllServers()
-                        .Where(x => x.IsVisible)
-                        .Select(x => string.Format("{0} {1}", _configService.Current.PreferNoteInDtrTooltip ? x.GetNote() ?? x.PlayerName : x.PlayerName,
-                                _serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon == null ? "" : $"({_serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon})"));
+                    visiblePairs = _pairManager.GetVisibleUserPairsAcrossAllServersByCharacter()
+                        .Select(x => string.Format("{0} {1}", _configService.Current.PreferNoteInDtrTooltip ? x.FirstOrDefault(x => !x.GetNote().IsNullOrEmpty()).GetNote() ?? x[0].PlayerName : x[0].PlayerName,
+                                string.Join("", x.Select(x => _serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon == null ? "" : $"{_serverConfigurationManager.GetServerByIndex(x.ServerIndex).ServerIcon}")))).ToList();
                 }
 
                 tooltip = $"Laci Synchroni: Connected{Environment.NewLine}----------{Environment.NewLine}{string.Join(Environment.NewLine, visiblePairs)}";
