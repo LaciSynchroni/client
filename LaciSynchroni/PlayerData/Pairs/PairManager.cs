@@ -1,5 +1,6 @@
 ﻿using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using LaciSynchroni.Common.Data;
 using LaciSynchroni.Common.Data.Comparer;
 using LaciSynchroni.Common.Data.Enum;
@@ -147,8 +148,11 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     public List<Pair> GetOnlineUserPairsAcrossAllServers() => _allClientPairs
         .Where(p => !string.IsNullOrEmpty(p.Value.GetPlayerNameHash())).Select(p => p.Value).ToList();
 
-    public int GetVisibleUserCountAcrossAllServers() => _allClientPairs
-        .Count(p => p.Value.IsVisible);
+    public List<List<Pair>> GetVisibleUserPairsAcrossAllServersByCharacter() => [.. GetOnlineUserPairsAcrossAllServers().Where(p => p.IsVisible)
+        .GroupBy(p => p.GetPlayerNameHash()).Select(p => p.ToList())];
+
+    public int GetVisibleUserCountAcrossAllServers() => _allClientPairs.Where(p => p.Value.IsVisible)
+        .GroupBy(x => x.Value.GetPlayerNameHash()).Count();
 
     public int GetVisibleUserCount(int serverIndex) => _allClientPairs.Where(p=> p.Key.ServerIndex == serverIndex).Count(p => p.Value.IsVisible);
 
