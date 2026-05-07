@@ -53,6 +53,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private readonly GetModDirectory _penumbraResolveModDir;
     private readonly ResolvePlayerPathsAsync _penumbraResolvePaths;
     private readonly GetGameObjectResourcePaths _penumbraResourcePaths;
+    private readonly ApiVersion _penumbraApiVersion;
 
     public IpcCallerPenumbra(ILogger<IpcCallerPenumbra> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
         SyncMediator syncMediator, RedrawManager redrawManager) : base(logger, syncMediator)
@@ -81,6 +82,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         });
         _penumbraConvertTextureFile = new ConvertTextureFile(pi);
         _penumbraResourcePaths = new GetGameObjectResourcePaths(pi);
+        _penumbraApiVersion = new ApiVersion(pi);
 
         _penumbraGameObjectResourcePathResolved = GameObjectResourcePathResolved.Subscriber(pi, ResourceLoaded);
 
@@ -99,31 +101,27 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
 
     public void CheckAPI()
     {
-        bool penumbraAvailable = false;
+        bool apiAvailable = false;
         try
         {
-            var penumbraVersion = (_pi.InstalledPlugins
-                .FirstOrDefault(p => string.Equals(p.InternalName, "Penumbra", StringComparison.OrdinalIgnoreCase))
-                ?.Version ?? new Version(0, 0, 0, 0));
-            penumbraAvailable = penumbraVersion >= new Version(1, 2, 0, 22);
-            try
-            {
-                penumbraAvailable &= _penumbraEnabled.Invoke();
-            }
-            catch
-            {
-                penumbraAvailable = false;
-            }
-            _shownPenumbraUnavailable = _shownPenumbraUnavailable && !penumbraAvailable;
-            APIAvailable = penumbraAvailable;
+            bool pluginAvailable =
+                (_pi.InstalledPlugins
+                    .FirstOrDefault(p => string.Equals(p.InternalName, "Penumbra", StringComparison.OrdinalIgnoreCase))
+                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 6, 1, 6);
+
+            apiAvailable = pluginAvailable &&
+                (_penumbraApiVersion.Invoke() is { Breaking: 5, Features: 15 });
         }
         catch
         {
-            APIAvailable = penumbraAvailable;
+            apiAvailable = false;
         }
         finally
         {
-            if (!penumbraAvailable && !_shownPenumbraUnavailable)
+            APIAvailable = apiAvailable;
+            _shownPenumbraUnavailable = _shownPenumbraUnavailable && !apiAvailable;
+
+            if (!apiAvailable && !_shownPenumbraUnavailable)
             {
                 _shownPenumbraUnavailable = true;
                 _syncMediator.Publish(new NotificationMessage("Penumbra inactive",
