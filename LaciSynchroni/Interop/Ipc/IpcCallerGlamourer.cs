@@ -69,23 +69,31 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         bool apiAvailable = false;
         try
         {
-            bool pluginAvailable =
-                (_pi.InstalledPlugins
-                    .FirstOrDefault(p => string.Equals(p.InternalName, "Glamourer", StringComparison.OrdinalIgnoreCase))
-                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 6, 1, 5);
+            bool versionValid = (_pi.InstalledPlugins
+                .FirstOrDefault(p => string.Equals(p.InternalName, "Glamourer", StringComparison.OrdinalIgnoreCase))
+                ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 3, 0, 10);
+            try
+            {
+                var version = _glamourerApiVersions.Invoke();
+                if (version is { Major: 1, Minor: >= 1 } && versionValid)
+                {
+                    apiAvailable = true;
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+            _shownGlamourerUnavailable = _shownGlamourerUnavailable && !apiAvailable;
 
-            apiAvailable = pluginAvailable &&
-                (_glamourerApiVersions.Invoke() is { Major: 1, Minor: >= 7 });
+            APIAvailable = apiAvailable;
         }
         catch
         {
-            apiAvailable = false;
+            APIAvailable = apiAvailable;
         }
         finally
         {
-            APIAvailable = apiAvailable;
-            _shownGlamourerUnavailable &= !apiAvailable;
-
             if (!apiAvailable && !_shownGlamourerUnavailable)
             {
                 _shownGlamourerUnavailable = true;

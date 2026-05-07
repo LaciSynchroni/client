@@ -11,7 +11,6 @@ namespace LaciSynchroni.Interop.Ipc;
 
 public sealed class IpcCallerCustomize : IIpcCaller
 {
-    private readonly IDalamudPluginInterface _pi;
     private readonly ICallGateSubscriber<(int, int)> _customizePlusApiVersion;
     private readonly ICallGateSubscriber<ushort, (int, Guid?)> _customizePlusGetActiveProfile;
     private readonly ICallGateSubscriber<Guid, (int, string?)> _customizePlusGetProfileById;
@@ -26,7 +25,6 @@ public sealed class IpcCallerCustomize : IIpcCaller
     public IpcCallerCustomize(ILogger<IpcCallerCustomize> logger, IDalamudPluginInterface dalamudPluginInterface,
         DalamudUtilService dalamudUtil, SyncMediator syncMediator)
     {
-        _pi = dalamudPluginInterface;
         _customizePlusApiVersion = dalamudPluginInterface.GetIpcSubscriber<(int, int)>("CustomizePlus.General.GetApiVersion");
         _customizePlusGetActiveProfile = dalamudPluginInterface.GetIpcSubscriber<ushort, (int, Guid?)>("CustomizePlus.Profile.GetActiveProfileIdOnCharacter");
         _customizePlusGetProfileById = dalamudPluginInterface.GetIpcSubscriber<Guid, (int, string?)>("CustomizePlus.Profile.GetByUniqueId");
@@ -117,25 +115,14 @@ public sealed class IpcCallerCustomize : IIpcCaller
 
     public void CheckAPI()
     {
-        bool apiAvailable = false;
         try
         {
-
-            bool pluginAvailable =
-                (_pi.InstalledPlugins
-                    .FirstOrDefault(p => string.Equals(p.InternalName, "CustomizePlus", StringComparison.OrdinalIgnoreCase))
-                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(2, 2, 0, 0);
-
-            apiAvailable = pluginAvailable &&
-                (_customizePlusApiVersion.InvokeFunc() is { Item1: 6, Item2: >= 4 });
+            var version = _customizePlusApiVersion.InvokeFunc();
+            APIAvailable = (version.Item1 == 6 && version.Item2 >= 0);
         }
         catch
         {
-            apiAvailable = false;
-        }
-        finally
-        {
-            APIAvailable = apiAvailable;
+            APIAvailable = false;
         }
     }
 

@@ -10,7 +10,6 @@ namespace LaciSynchroni.Interop.Ipc;
 
 public sealed class IpcCallerHonorific : IIpcCaller
 {
-    private readonly IDalamudPluginInterface _pi;
     private readonly ICallGateSubscriber<(uint major, uint minor)> _honorificApiVersion;
     private readonly ICallGateSubscriber<int, object> _honorificClearCharacterTitle;
     private readonly ICallGateSubscriber<object> _honorificDisposing;
@@ -25,7 +24,6 @@ public sealed class IpcCallerHonorific : IIpcCaller
     public IpcCallerHonorific(ILogger<IpcCallerHonorific> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
         SyncMediator syncMediator)
     {
-        _pi = pi;
         _logger = logger;
         _syncMediator = syncMediator;
         _dalamudUtil = dalamudUtil;
@@ -55,27 +53,6 @@ public sealed class IpcCallerHonorific : IIpcCaller
         catch
         {
             APIAvailable = false;
-        }
-
-        bool apiAvailable = false;
-        try
-        {
-
-            bool pluginAvailable =
-                (_pi.InstalledPlugins
-                    .FirstOrDefault(p => string.Equals(p.InternalName, "Honorific", StringComparison.OrdinalIgnoreCase))
-                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 7, 5, 0);
-
-            apiAvailable = pluginAvailable &&
-                (_honorificApiVersion.InvokeFunc() is { Item1: 3, Item2: >= 2 });
-        }
-        catch
-        {
-            apiAvailable = false;
-        }
-        finally
-        {
-            APIAvailable = apiAvailable;
         }
     }
 

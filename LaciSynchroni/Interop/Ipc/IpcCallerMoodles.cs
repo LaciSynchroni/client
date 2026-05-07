@@ -9,7 +9,6 @@ namespace LaciSynchroni.Interop.Ipc;
 
 public sealed class IpcCallerMoodles : IIpcCaller
 {
-    private readonly IDalamudPluginInterface _pi;
     private readonly ICallGateSubscriber<int> _moodlesApiVersion;
     private readonly ICallGateSubscriber<nint, object> _moodlesOnChange;
     private readonly ICallGateSubscriber<nint, string> _moodlesGetStatus;
@@ -22,7 +21,6 @@ public sealed class IpcCallerMoodles : IIpcCaller
     public IpcCallerMoodles(ILogger<IpcCallerMoodles> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
         SyncMediator syncMediator)
     {
-        _pi = pi;
         _logger = logger;
         _dalamudUtil = dalamudUtil;
         _syncMediator = syncMediator;
@@ -47,25 +45,13 @@ public sealed class IpcCallerMoodles : IIpcCaller
 
     public void CheckAPI()
     {
-        bool apiAvailable = false;
         try
         {
-
-            bool pluginAvailable =
-                (_pi.InstalledPlugins
-                    .FirstOrDefault(p => string.Equals(p.InternalName, "Moodles", StringComparison.OrdinalIgnoreCase))
-                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 1, 3, 1);
-
-            apiAvailable = pluginAvailable &&
-                (_moodlesApiVersion.InvokeFunc() is 4);
+            APIAvailable = _moodlesApiVersion.InvokeFunc() == 4;
         }
         catch
         {
-            apiAvailable = false;
-        }
-        finally
-        {
-            APIAvailable = apiAvailable;
+            APIAvailable = false;
         }
     }
 
