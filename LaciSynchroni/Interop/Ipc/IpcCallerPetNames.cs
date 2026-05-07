@@ -9,6 +9,7 @@ namespace LaciSynchroni.Interop.Ipc;
 
 public sealed class IpcCallerPetNames : IIpcCaller
 {
+    private readonly IDalamudPluginInterface _pi;
     private readonly ILogger<IpcCallerPetNames> _logger;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly SyncMediator _syncMediator;
@@ -26,6 +27,7 @@ public sealed class IpcCallerPetNames : IIpcCaller
     public IpcCallerPetNames(ILogger<IpcCallerPetNames> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
         SyncMediator syncMediator)
     {
+        _pi = pi;
         _logger = logger;
         _dalamudUtil = dalamudUtil;
         _syncMediator = syncMediator;
@@ -51,17 +53,25 @@ public sealed class IpcCallerPetNames : IIpcCaller
 
     public void CheckAPI()
     {
+        bool apiAvailable = false;
         try
         {
-            APIAvailable = _enabled?.InvokeFunc() ?? false;
-            if (APIAvailable)
-            {
-                APIAvailable = _apiVersion?.InvokeFunc() is { Item1: 4, Item2: >= 0 };
-            }
+
+            bool pluginAvailable =
+                (_pi.InstalledPlugins
+                    .FirstOrDefault(p => string.Equals(p.InternalName, "PetRenamer", StringComparison.OrdinalIgnoreCase))
+                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(2, 10, 0, 0);
+
+            apiAvailable = pluginAvailable &&
+                (_apiVersion?.InvokeFunc() is { Item1: 4, Item2: >= 0 });
         }
         catch
         {
-            APIAvailable = false;
+            apiAvailable = false;
+        }
+        finally
+        {
+            APIAvailable = apiAvailable;
         }
     }
 
