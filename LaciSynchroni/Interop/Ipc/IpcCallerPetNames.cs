@@ -60,7 +60,7 @@ public sealed class IpcCallerPetNames : IIpcCaller
             bool pluginAvailable =
                 (_pi.InstalledPlugins
                     .FirstOrDefault(p => string.Equals(p.InternalName, "PetRenamer", StringComparison.OrdinalIgnoreCase))
-                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(2, 10, 0, 0);
+                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(2, 9, 0, 1);
 
             apiAvailable = pluginAvailable &&
                 (_apiVersion?.InvokeFunc() is { Item1: 4, Item2: >= 0 });
