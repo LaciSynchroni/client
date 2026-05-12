@@ -12,6 +12,7 @@ namespace LaciSynchroni.Interop.Ipc;
 
 public sealed class IpcCallerBrio : IIpcCaller
 {
+    private readonly IDalamudPluginInterface _pi;
     private readonly ILogger<IpcCallerBrio> _logger;
     private readonly DalamudUtilService _dalamudUtilService;
 
@@ -33,6 +34,7 @@ public sealed class IpcCallerBrio : IIpcCaller
     public IpcCallerBrio(ILogger<IpcCallerBrio> logger, IDalamudPluginInterface dalamudPluginInterface,
         DalamudUtilService dalamudUtilService)
     {
+        _pi = dalamudPluginInterface;
         _logger = logger;
         _dalamudUtilService = dalamudUtilService;
 
@@ -54,14 +56,25 @@ public sealed class IpcCallerBrio : IIpcCaller
 
     public void CheckAPI()
     {
+        bool apiAvailable = false;
         try
         {
-            var version = _apiVersion.Invoke();
-            APIAvailable = (version.Item1 == 3 && version.Item2 >= 0);
+
+            bool pluginAvailable =
+                (_pi.InstalledPlugins
+                    .FirstOrDefault(p => string.Equals(p.InternalName, "Brio", StringComparison.OrdinalIgnoreCase))
+                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(0, 7, 2, 2);
+
+            apiAvailable = pluginAvailable &&
+                (_apiVersion.Invoke() is { Item1: 3, Item2: >= 0 });
         }
         catch
         {
-            APIAvailable = false;
+            apiAvailable = false;
+        }
+        finally
+        {
+            APIAvailable = apiAvailable;
         }
     }
 
