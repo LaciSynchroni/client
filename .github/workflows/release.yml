@@ -3,8 +3,9 @@ name: Build and release
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+#      - '[0-9]+.[0-9]+.[0-9]+'
       - '[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+      - 'testing_[0-9]+.[0-9]+.[0-9]+.[0-9]+'
 
 defaults:
   run:
@@ -23,10 +24,15 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
-
-      - name: Check if testing version
-        id: get_is_testing
-        run: Write-Output "IS_TESTING=$(([Version]::Parse('${{ github.ref_name }}').Revision -gt 0).ToString().ToLower())" >> $env:GITHUB_OUTPUT
+      
+      - name: Parse version info
+        id: version_info
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $isTesting = $tag.StartsWith('testing_')
+          $version = if ($isTesting) { $tag -replace '^testing_', '' } else { $tag }
+          Write-Output "IS_TESTING=$($isTesting.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          Write-Output "VERSION=$version" >> $env:GITHUB_OUTPUT
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -40,33 +46,33 @@ jobs:
           Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
 
       - name: Build
-        run: dotnet build ./LaciSynchroni/LaciSynchroni.csproj -c Release -o bin /p:ContinuousIntegrationBuild=true /p:Version=${{ github.ref_name }}
+        run: dotnet build ./LaciSynchroni/LaciSynchroni.csproj -c Release -o bin /p:ContinuousIntegrationBuild=true /p:Version=${{ steps.version_info.outputs.VERSION }}
 
       - name: Get packager manifest
         id: load_packager_manifest
         run: Write-Output "MANIFEST_JSON<<EOF`n$(Get-Content -Raw ./bin/LaciSynchroni/LaciSynchroni.json)`nEOF" >> $env:GITHUB_OUTPUT
 
       - name: Rename artifact
-        run: Move-Item -Path ./bin/LaciSynchroni/latest.zip -Destination ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}.zip
+        run: Move-Item -Path ./bin/LaciSynchroni/latest.zip -Destination ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
           upload-release-assets: false
           format: spdx-json
-          file: ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}.zip
-          output-file: ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}_sbom.spdx.json
+          file: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
+          output-file: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}.zip
+          subject-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
 
       - name: Generate SBOM attestation
         uses: actions/attest-sbom@v3
         with:
-          subject-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}.zip
-          sbom-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}_sbom.spdx.json
+          subject-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
+          sbom-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Create release
         id: create_release
@@ -75,10 +81,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: Laci Synchroni ${{ github.ref_name }}
           draft: false
-          prerelease: ${{ steps.get_is_testing.outputs.IS_TESTING }}
+          prerelease: ${{ steps.version_info.outputs.IS_TESTING }}
           files: |
-            ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}.zip
-            ./bin/LaciSynchroni/LaciSynchroni_v${{ github.ref_name }}_sbom.spdx.json
+            ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
+            ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Request Repository Update (Generate App Token, 1/2)
         id: app_token
@@ -100,8 +106,8 @@ jobs:
               event_type: "new-release",
               client_payload: {
                 "tag": "${{ github.ref_name }}",
-                "is_testing": ${{ steps.get_is_testing.outputs.IS_TESTING }},
+                "is_testing": ${{ steps.version_info.outputs.IS_TESTING }},
                 "api_level": "${{ fromJSON(steps.load_packager_manifest.outputs.MANIFEST_JSON).DalamudApiLevel }}",
-                "asset_url": "${{ fromJSON(steps.create_release.outputs.assets)[0].browser_download_url }}"
+                "asset_url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LaciSynchroni_v${{ steps.version_info.outcome.VERSION }}.zip"
               },
             })
