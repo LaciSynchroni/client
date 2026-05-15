@@ -3,7 +3,6 @@ name: Build and release
 on:
   push:
     tags:
-#      - '[0-9]+.[0-9]+.[0-9]+'
       - '[0-9]+.[0-9]+.[0-9]+.[0-9]+'
       - 'testing_[0-9]+.[0-9]+.[0-9]+.[0-9]+'
 
@@ -31,8 +30,8 @@ jobs:
           $tag = '${{ github.ref_name }}'
           $isTesting = $tag.StartsWith('testing_')
           $version = if ($isTesting) { $tag -replace '^testing_', '' } else { $tag }
-          Write-Output "IS_TESTING=$($isTesting.ToString().ToLower())" >> $env:GITHUB_OUTPUT
-          Write-Output "VERSION=$version" >> $env:GITHUB_OUTPUT
+          "IS_TESTING=$($isTesting.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -50,7 +49,11 @@ jobs:
 
       - name: Get packager manifest
         id: load_packager_manifest
-        run: Write-Output "MANIFEST_JSON<<EOF`n$(Get-Content -Raw ./bin/LaciSynchroni/LaciSynchroni.json)`nEOF" >> $env:GITHUB_OUTPUT
+        run: |
+          $json = Get-Content -Raw ./bin/LaciSynchroni/LaciSynchroni.json
+          "MANIFEST_JSON<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $json | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Rename artifact
         run: Move-Item -Path ./bin/LaciSynchroni/latest.zip -Destination ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
@@ -61,7 +64,7 @@ jobs:
           upload-release-assets: false
           format: spdx-json
           path: ./bin/LaciSynchroni
-          output-file: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
+          output-file: ./bin/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
@@ -72,7 +75,7 @@ jobs:
         uses: actions/attest-sbom@v3
         with:
           subject-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
-          sbom-path: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
+          sbom-path: ./bin/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Create release
         id: create_release
@@ -81,10 +84,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: Laci Synchroni ${{ github.ref_name }}
           draft: false
-          prerelease: ${{ steps.version_info.outputs.IS_TESTING }}
+          prerelease: ${{ steps.version_info.outputs.IS_TESTING == 'true' }}
           files: |
             ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
-            ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
+            ./bin/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Request Repository Update (Generate App Token, 1/2)
         id: app_token
@@ -97,17 +100,26 @@ jobs:
 
       - name: Request Repository Update (Trigger Workflow, 2/2)
         uses: actions/github-script@v8
+        env:
+          MANIFEST_JSON: ${{ steps.load_packager_manifest.outputs.MANIFEST_JSON }}
+          IS_TESTING: ${{ steps.version_info.outputs.IS_TESTING }}
+          PLUGIN_VERSION: ${{ steps.version_info.outputs.VERSION }}
         with:
           github-token: ${{ steps.app_token.outputs.token }}
           script: |
-            github.rest.repos.createDispatchEvent({
-              owner: "${{ github.repository_owner }}",
+            const manifest = JSON.parse(process.env.MANIFEST_JSON);
+            const isTesting = process.env.IS_TESTING === 'true';
+            const ref = context.ref.replace('refs/tags/', '');
+            const version = process.env.PLUGIN_VERSION;
+
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
               repo: "repo",
               event_type: "new-release",
               client_payload: {
-                "tag": "${{ github.ref_name }}",
-                "is_testing": ${{ steps.version_info.outputs.IS_TESTING }},
-                "api_level": "${{ fromJSON(steps.load_packager_manifest.outputs.MANIFEST_JSON).DalamudApiLevel }}",
-                "asset_url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip"
+                "tag": ref,
+                "is_testing": isTesting,
+                "api_level": manifest.DalamudApiLevel,
+                "asset_url": `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${ref}/LaciSynchroni_v${version}.zip`
               },
             })
