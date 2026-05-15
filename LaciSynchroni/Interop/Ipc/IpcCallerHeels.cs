@@ -8,6 +8,7 @@ namespace LaciSynchroni.Interop.Ipc;
 
 public sealed class IpcCallerHeels : IIpcCaller
 {
+    private readonly IDalamudPluginInterface _pi;
     private readonly ILogger<IpcCallerHeels> _logger;
     private readonly SyncMediator _syncMediator;
     private readonly DalamudUtilService _dalamudUtil;
@@ -19,6 +20,7 @@ public sealed class IpcCallerHeels : IIpcCaller
 
     public IpcCallerHeels(ILogger<IpcCallerHeels> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil, SyncMediator syncMediator)
     {
+        _pi = pi;
         _logger = logger;
         _syncMediator = syncMediator;
         _dalamudUtil = dalamudUtil;
@@ -76,13 +78,24 @@ public sealed class IpcCallerHeels : IIpcCaller
 
     public void CheckAPI()
     {
+        bool apiAvailable = false;
         try
         {
-            APIAvailable = _heelsGetApiVersion.InvokeFunc() is { Item1: 2, Item2: >= 1 };
+            bool pluginAvailable =
+                (_pi.InstalledPlugins
+                    .FirstOrDefault(p => string.Equals(p.InternalName, "SimpleHeels", StringComparison.OrdinalIgnoreCase))
+                    ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(0, 11, 1, 1);
+
+            apiAvailable = pluginAvailable &&
+                (_heelsGetApiVersion.InvokeFunc() is { Item1: 2, Item2: >= 5 });
         }
         catch
         {
-            APIAvailable = false;
+            apiAvailable = false;
+        }
+        finally
+        {
+            APIAvailable = apiAvailable;
         }
     }
 
