@@ -108,6 +108,6 @@ jobs:
                 "tag": "${{ github.ref_name }}",
                 "is_testing": ${{ steps.version_info.outputs.IS_TESTING }},
                 "api_level": "${{ fromJSON(steps.load_packager_manifest.outputs.MANIFEST_JSON).DalamudApiLevel }}",
-                "asset_url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LaciSynchroni_v${{ steps.version_info.outcome.VERSION }}.zip"
+                "asset_url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip"
               },
             })
