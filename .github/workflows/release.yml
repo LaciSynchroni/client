@@ -60,7 +60,7 @@ jobs:
         with:
           upload-release-assets: false
           format: spdx-json
-          file: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}.zip
+          path: ./bin/LaciSynchroni
           output-file: ./bin/LaciSynchroni/LaciSynchroni_v${{ steps.version_info.outputs.VERSION }}_sbom.spdx.json
 
       - name: Generate artifact attestation
