@@ -82,7 +82,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: Laci Synchroni ${{ github.ref_name }}
+          name: Laci Synchroni ${{ steps.version_info.outputs.VERSION }}
           draft: false
           prerelease: ${{ steps.version_info.outputs.IS_TESTING == 'true' }}
           files: |
@@ -117,7 +117,7 @@ jobs:
               repo: "repo",
               event_type: "new-release",
               client_payload: {
-                "tag": ref,
+                "tag": version,
                 "is_testing": isTesting,
                 "api_level": manifest.DalamudApiLevel,
                 "asset_url": `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${ref}/LaciSynchroni_v${version}.zip`
