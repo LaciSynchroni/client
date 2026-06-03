@@ -213,7 +213,7 @@ public sealed class GameObjectHandler : DisposableMediatorSubscriberBase, IHighP
             }
             bool equipDiff = false;
 
-            if (((DrawObject*)DrawObjectAddress)->Object.GetObjectType() == ObjectType.CharacterBase
+            if (((DrawObject*)DrawObjectAddress)->Object.GetObjectType() == FFXIVClientStructs.FFXIV.Client.Graphics.Scene.ObjectType.CharacterBase
                 && ((CharacterBase*)DrawObjectAddress)->GetModelType() == CharacterBase.ModelType.Human)
             {
                 var classJob = chara->CharacterData.ClassJob;
@@ -249,8 +249,8 @@ public sealed class GameObjectHandler : DisposableMediatorSubscriberBase, IHighP
 
             bool customizeDiff = false;
 
-            if (((DrawObject*)DrawObjectAddress)->Object.GetObjectType() == ObjectType.CharacterBase
-                && ((CharacterBase*)DrawObjectAddress)->GetModelType() == CharacterBase.ModelType.Human)
+            if (((DrawObject*)DrawObjectAddress)->Object.GetObjectType() == FFXIVClientStructs.FFXIV.Client.Graphics.Scene.ObjectType.CharacterBase
+                && ((CharacterBase*)DrawObjectAddress)->GetModelType() == CharacterBase.ModelType.Human) 
             {
                 var gender = ((Human*)DrawObjectAddress)->Customize.Sex;
                 var raceId = ((Human*)DrawObjectAddress)->Customize.Race;
