@@ -4,11 +4,12 @@ namespace LaciSynchroni.FileCache;
 
 public class FileCacheEntity
 {
-    public FileCacheEntity(string sha1hash, string path, string lastModifiedDateTicks, long? size = null, long? compressedSize = null)
+    public FileCacheEntity(string sha1Hash, string blake3Hash, string path, string lastModifiedDateTicks, long? size = null, long? compressedSize = null)
     {
         Size = size;
         CompressedSize = compressedSize;
-        Sha1Hash = sha1hash;
+        Sha1Hash = sha1Hash;
+        Blake3Hash = blake3Hash;
         PrefixedFilePath = path;
         LastModifiedDateTicks = lastModifiedDateTicks;
     }
