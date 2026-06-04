@@ -105,10 +105,10 @@ public sealed class FileCacheManager : IHostedService
 
             try
             {
-                var computedHash = Crypto.GetFileHash(fileCache.ResolvedFilepath);
-                if (!string.Equals(computedHash, fileCache.Hash, StringComparison.Ordinal))
+                var computedHash = Crypto.GetSHA1FileHash(fileCache.ResolvedFilepath);
+                if (!string.Equals(computedHash, fileCache.Sha1Hash, StringComparison.Ordinal))
                 {
-                    _logger.LogInformation("Failed to validate {File}, got hash {ActualHash}, expected hash {ExpectedHash}", fileCache.ResolvedFilepath, computedHash, fileCache.Hash);
+                    _logger.LogInformation("Failed to validate {File}, got hash {ActualHash}, expected hash {ExpectedHash}", fileCache.ResolvedFilepath, computedHash, fileCache.Sha1Hash);
                     brokenEntities.Add(fileCache);
                 }
             }
@@ -121,7 +121,7 @@ public sealed class FileCacheManager : IHostedService
 
         foreach (var brokenEntity in brokenEntities)
         {
-            RemoveHashedFile(brokenEntity.Hash, brokenEntity.PrefixedFilePath);
+            RemoveHashedFile(brokenEntity.Sha1Hash, brokenEntity.PrefixedFilePath);
 
             try
             {
@@ -237,14 +237,14 @@ public sealed class FileCacheManager : IHostedService
     public void UpdateHashedFile(FileCacheEntity fileCache, bool computeProperties = true)
     {
         _logger.LogTrace("Updating hash for {path}", fileCache.ResolvedFilepath);
-        var oldHash = fileCache.Hash;
+        var oldHash = fileCache.Sha1Hash;
         var prefixedPath = fileCache.PrefixedFilePath;
         if (computeProperties)
         {
             var fi = new FileInfo(fileCache.ResolvedFilepath);
             fileCache.Size = fi.Length;
             fileCache.CompressedSize = null;
-            fileCache.Hash = Crypto.GetFileHash(fileCache.ResolvedFilepath);
+            fileCache.Sha1Hash = Crypto.GetSHA1FileHash(fileCache.ResolvedFilepath);
             fileCache.LastModifiedDateTicks = fi.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture);
         }
         RemoveHashedFile(oldHash, prefixedPath);
@@ -298,10 +298,10 @@ public sealed class FileCacheManager : IHostedService
     {
         try
         {
-            RemoveHashedFile(fileCache.Hash, fileCache.PrefixedFilePath);
+            RemoveHashedFile(fileCache.Sha1Hash, fileCache.PrefixedFilePath);
             var extensionPath = fileCache.ResolvedFilepath.ToUpper(CultureInfo.InvariantCulture) + "." + ext;
             File.Move(fileCache.ResolvedFilepath, extensionPath, overwrite: true);
-            var newHashedEntity = new FileCacheEntity(fileCache.Hash, fileCache.PrefixedFilePath + "." + ext, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
+            var newHashedEntity = new FileCacheEntity(fileCache.Sha1Hash, fileCache.PrefixedFilePath + "." + ext, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
             newHashedEntity.SetResolvedFilePath(extensionPath);
             AddHashedFile(newHashedEntity);
             _logger.LogTrace("Migrated from {oldPath} to {newPath}", fileCache.ResolvedFilepath, newHashedEntity.ResolvedFilepath);
@@ -317,9 +317,9 @@ public sealed class FileCacheManager : IHostedService
 
     private void AddHashedFile(FileCacheEntity fileCache)
     {
-        if (!_fileCaches.TryGetValue(fileCache.Hash, out var entries) || entries is null)
+        if (!_fileCaches.TryGetValue(fileCache.Sha1Hash, out var entries) || entries is null)
         {
-            _fileCaches[fileCache.Hash] = entries = [];
+            _fileCaches[fileCache.Sha1Hash] = entries = [];
         }
 
         if (!entries.Exists(u => string.Equals(u.PrefixedFilePath, fileCache.PrefixedFilePath, StringComparison.OrdinalIgnoreCase)))
@@ -331,7 +331,7 @@ public sealed class FileCacheManager : IHostedService
 
     private FileCacheEntity? CreateFileCacheEntity(FileInfo fileInfo, string prefixedPath, string? hash = null)
     {
-        hash ??= Crypto.GetFileHash(fileInfo.FullName);
+        hash ??= Crypto.GetSHA1FileHash(fileInfo.FullName);
         var entity = new FileCacheEntity(hash, prefixedPath, fileInfo.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture), fileInfo.Length);
         entity = ReplacePathPrefixes(entity);
         AddHashedFile(entity);
@@ -371,7 +371,7 @@ public sealed class FileCacheManager : IHostedService
         var file = new FileInfo(fileCache.ResolvedFilepath);
         if (!file.Exists)
         {
-            RemoveHashedFile(fileCache.Hash, fileCache.PrefixedFilePath);
+            RemoveHashedFile(fileCache.Sha1Hash, fileCache.PrefixedFilePath);
             return null;
         }
 

@@ -622,7 +622,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
             foreach (var entity in entitiesToRemove)
             {
-                _fileDbManager.RemoveHashedFile(entity.Hash, entity.PrefixedFilePath);
+                _fileDbManager.RemoveHashedFile(entity.Sha1Hash, entity.PrefixedFilePath);
             }
 
             _fileDbManager.WriteOutFullCsv();

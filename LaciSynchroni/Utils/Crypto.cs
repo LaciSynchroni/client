@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using Blake3;
 
 namespace LaciSynchroni.Utils;
 
@@ -11,10 +12,16 @@ public static class Crypto
     private static readonly Dictionary<string, string> _hashListSHA256 = new(StringComparer.Ordinal);
     private static readonly SHA256CryptoServiceProvider _sha256CryptoProvider = new();
 
-    public static string GetFileHash(this string filePath)
+    public static string GetSHA1FileHash(this string filePath)
     {
-        using SHA1CryptoServiceProvider cryptoProvider = new();
-        return BitConverter.ToString(cryptoProvider.ComputeHash(File.ReadAllBytes(filePath))).Replace("-", "", StringComparison.Ordinal);
+        return Convert.ToHexString(SHA1.HashData(File.ReadAllBytes(filePath)));
+    }
+
+    public static string GetBlake3FileHash(this string filePath)
+    {
+        using var hasher = Blake3.Hasher.New();
+        hasher.Update(File.ReadAllBytes(filePath));
+        return hasher.Finalize().ToString();
     }
 
     public static string GetHash256(this (string, ushort) playerToHash)

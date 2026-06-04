@@ -659,11 +659,11 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         try
         {
             var entry = _fileDbManager.CreateCacheEntry(filePath);
-            if (entry != null && !string.Equals(entry.Hash, fileHash, StringComparison.OrdinalIgnoreCase))
+            if (entry != null && !string.Equals(entry.Sha1Hash, fileHash, StringComparison.OrdinalIgnoreCase))
             {
-                Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entry.Hash, fileHash);
+                Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entry.Sha1Hash, fileHash);
                 File.Delete(filePath);
-                _fileDbManager.RemoveHashedFile(entry.Hash, entry.PrefixedFilePath);
+                _fileDbManager.RemoveHashedFile(entry.Sha1Hash, entry.PrefixedFilePath);
             }
         }
         catch (Exception ex)
