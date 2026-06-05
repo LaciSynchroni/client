@@ -7,11 +7,13 @@ using LaciSynchroni.FileCache;
 using LaciSynchroni.PlayerData.Handlers;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
+using LaciSynchroni.Utils;
 using LaciSynchroni.WebAPI.Files.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace LaciSynchroni.WebAPI.Files;
@@ -478,13 +480,24 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
             try
             {
+                String? finalFilename;
                 var fileExtension = fileReplacement.First(f => string.Equals(f.Hash, directDownload.Hash, StringComparison.OrdinalIgnoreCase)).GamePaths[0].Split(".")[^1];
-                var finalFilename = _fileDbManager.GetCacheFilePath(directDownload.Hash, fileExtension);
-                Logger.LogDebug("Decompressing direct download {Hash} from {CompressedFile} to {FinalFile}", directDownload.Hash, tempFilename, finalFilename);
+                String sha1Hash;
                 byte[] compressedBytes = await File.ReadAllBytesAsync(tempFilename).ConfigureAwait(false);
                 var decompressedBytes = LZ4Wrapper.Unwrap(compressedBytes);
+                if (directDownload.Hash.Length == 40)
+                {
+                    sha1Hash = directDownload.Hash;
+                    finalFilename = _fileDbManager.GetCacheFilePath(directDownload.Hash, fileExtension);
+                }
+                else
+                {
+                    sha1Hash = Convert.ToHexString(SHA1.HashData(decompressedBytes));
+                    finalFilename = _fileDbManager.GetCacheFilePath(sha1Hash, fileExtension);
+                }
+                Logger.LogDebug("Decompressing direct download {Hash} from {CompressedFile} to {FinalFile}", directDownload.Hash, tempFilename, finalFilename);
                 await _fileCompactor.WriteAllBytesAsync(finalFilename, decompressedBytes, CancellationToken.None).ConfigureAwait(false);
-                PersistFileToStorage(directDownload.Hash, finalFilename);
+                PersistFileToStorage(sha1Hash, finalFilename);
                 Logger.LogDebug("Finished direct download of {Hash}.", directDownload.Hash);
             }
             catch (Exception ex)
@@ -659,9 +672,18 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         try
         {
             var entry = _fileDbManager.CreateCacheEntry(filePath);
-            if (entry != null && !string.Equals(entry.Sha1Hash, fileHash, StringComparison.OrdinalIgnoreCase))
+            String entryHash = "";
+            if (fileHash.Length == 40)
             {
-                Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entry.Sha1Hash, fileHash);
+                entryHash = entry.Sha1Hash;
+            }
+            else if (fileHash.Length == 64)
+            {
+                entryHash = entry.Blake3Hash;
+            }
+            if (entry != null && !string.Equals(entryHash, fileHash, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entryHash, fileHash);
                 File.Delete(filePath);
                 _fileDbManager.RemoveHashedFile(entry.Sha1Hash, entry.Blake3Hash, entry.PrefixedFilePath);
             }

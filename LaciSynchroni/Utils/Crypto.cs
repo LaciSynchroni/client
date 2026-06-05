@@ -21,7 +21,7 @@ public static class Crypto
     {
         using var hasher = Blake3.Hasher.New();
         hasher.Update(File.ReadAllBytes(filePath));
-        return hasher.Finalize().ToString();
+        return hasher.Finalize().ToString().ToUpper();
     }
 
     public static string GetHash256(this (string, ushort) playerToHash)
