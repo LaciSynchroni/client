@@ -663,7 +663,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             {
                 Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entry.Sha1Hash, fileHash);
                 File.Delete(filePath);
-                _fileDbManager.RemoveHashedFile(entry.Sha1Hash, entry.PrefixedFilePath);
+                _fileDbManager.RemoveHashedFile(entry.Sha1Hash, entry.Blake3Hash, entry.PrefixedFilePath);
             }
         }
         catch (Exception ex)

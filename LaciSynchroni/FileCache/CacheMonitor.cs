@@ -536,7 +536,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         if (ct.IsCancellationRequested) return;
 
         // scan files from database
-        var threadCount = Math.Clamp((int)(Environment.ProcessorCount / 2.0f), 2, 8);
+        var threadCount = 1;
 
         List<FileCacheEntity> entitiesToRemove = [];
         List<FileCacheEntity> entitiesToUpdate = [];
@@ -622,7 +622,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
             foreach (var entity in entitiesToRemove)
             {
-                _fileDbManager.RemoveHashedFile(entity.Sha1Hash, entity.PrefixedFilePath);
+                _fileDbManager.RemoveHashedFile(entity.Sha1Hash, entity.Blake3Hash, entity.PrefixedFilePath);
             }
 
             _fileDbManager.WriteOutFullCsv();
