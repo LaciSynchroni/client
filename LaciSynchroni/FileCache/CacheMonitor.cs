@@ -536,7 +536,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         if (ct.IsCancellationRequested) return;
 
         // scan files from database
-        var threadCount = 1;
+        var threadCount = Math.Clamp((int)(Environment.ProcessorCount / 2.0f), 2, 8);
 
         List<FileCacheEntity> entitiesToRemove = [];
         List<FileCacheEntity> entitiesToUpdate = [];
