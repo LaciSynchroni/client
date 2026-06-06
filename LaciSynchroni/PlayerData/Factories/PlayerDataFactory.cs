@@ -228,7 +228,7 @@ public class PlayerDataFactory
         foreach (var file in toCompute)
         {
             ct.ThrowIfCancellationRequested();
-            file.Hash = computedPaths[file.ResolvedPath]?.Hash ?? string.Empty;
+            file.Hash = computedPaths[file.ResolvedPath]?.Sha1Hash ?? string.Empty;
         }
         var removed = fragment.FileReplacements.RemoveWhere(f => !f.IsFileSwap && string.IsNullOrEmpty(f.Hash));
         if (removed > 0)

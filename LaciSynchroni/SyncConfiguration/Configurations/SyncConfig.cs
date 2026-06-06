@@ -61,4 +61,8 @@ public class SyncConfig : ISyncConfiguration
     public int Version { get; set; } = 1;
     public NotificationLocation WarningNotification { get; set; } = NotificationLocation.Both;
     public bool UseFocusTarget { get; set; } = false;
+    public bool BetaEnableBlake3 { get; set; }
+    public bool BetaBlake3HashingDone { get; set; }
+
+    public bool IsAllowedToConnectBlake3() => BetaEnableBlake3 && BetaBlake3HashingDone;
 }

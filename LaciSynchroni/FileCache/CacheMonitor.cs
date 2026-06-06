@@ -1,4 +1,5 @@
-﻿using LaciSynchroni.Interop.Ipc;
+﻿using Dalamud.Utility;
+using LaciSynchroni.Interop.Ipc;
 using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.SyncConfiguration;
@@ -19,6 +20,8 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     private readonly IpcManager _ipcManager;
     private readonly PerformanceCollectorService _performanceCollector;
     private long _currentFileProgress = 0;
+    private long _currentUpdateProgress = 0;
+    private bool Blake3Enabled => _configService.Current.BetaEnableBlake3;
     private CancellationTokenSource _scanCancellationTokenSource = new();
     private readonly CancellationTokenSource _periodicCalculationTokenSource = new();
     public static readonly IImmutableList<string> AllowedFileExtensions = [".mdl", ".tex", ".mtrl", ".tmb", ".pap", ".avfx", ".atex", ".sklb", ".eid", ".phyb", ".pbd", ".scd", ".skp", ".shpk"];
@@ -88,11 +91,13 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     }
 
     public long CurrentFileProgress => _currentFileProgress;
+    public long CurrentUpdateProgress => _currentUpdateProgress;
     public long FileCacheSize { get; set; }
     public long FileCacheDriveFree { get; set; }
     public ConcurrentDictionary<string, int> HaltScanLocks { get; set; } = new(StringComparer.Ordinal);
     public bool IsScanRunning => CurrentFileProgress > 0 || TotalFiles > 0;
     public long TotalFiles { get; private set; }
+    public long TotalUpdateCount { get; private set; }
     public long TotalFilesStorage { get; private set; }
 
     public void HaltScan(string source)
@@ -571,7 +576,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
                         {
                             lock (sync) { allScannedFiles[validatedCacheResult.FileCache.ResolvedFilepath] = true; }
                         }
-                        if (validatedCacheResult.State == FileState.RequireUpdate)
+                        if (validatedCacheResult.State == FileState.RequireUpdate || (Blake3Enabled && workload.Blake3Hash.IsNullOrEmpty()))
                         {
                             Logger.LogTrace("To update: {path}", validatedCacheResult.FileCache.ResolvedFilepath);
                             lock (sync) { entitiesToUpdate.Add(validatedCacheResult.FileCache); }
@@ -613,21 +618,23 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             return;
         }
 
+        TotalUpdateCount = entitiesToUpdate.Count + entitiesToRemove.Count;
         if (entitiesToUpdate.Any() || entitiesToRemove.Any())
         {
             foreach (var entity in entitiesToUpdate)
             {
                 _fileDbManager.UpdateHashedFile(entity);
+                Interlocked.Increment(ref _currentUpdateProgress);
             }
 
             foreach (var entity in entitiesToRemove)
             {
-                _fileDbManager.RemoveHashedFile(entity.Hash, entity.PrefixedFilePath);
+                _fileDbManager.RemoveHashedFile(entity.Sha1Hash, entity.Blake3Hash, entity.PrefixedFilePath);
+                Interlocked.Increment(ref _currentUpdateProgress);
             }
-
-            _fileDbManager.WriteOutFullCsv();
         }
-
+        _fileDbManager.WriteOutFullCsv();
+        
         Logger.LogTrace("Scanner validated existing db files");
 
         if (!_ipcManager.Penumbra.APIAvailable)
@@ -677,6 +684,12 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         _currentFileProgress = 0;
         entitiesToRemove.Clear();
         allScannedFiles.Clear();
+
+        if (_configService.Current.BetaEnableBlake3)
+        {
+            _configService.Current.BetaBlake3HashingDone = true;
+            _configService.Save();
+        }
 
         if (!_configService.Current.InitialScanComplete)
         {

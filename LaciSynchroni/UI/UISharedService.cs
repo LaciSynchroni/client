@@ -614,14 +614,24 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGui.SameLine();
         if (_cacheMonitor.IsScanRunning)
         {
+            var isCollecting = _cacheMonitor.TotalFiles == 1;
             ImGui.AlignTextToFramePadding();
 
             ImGui.TextUnformatted("Scan is running");
             ImGui.TextUnformatted("Current Progress:");
-            ImGui.SameLine();
-            ImGui.TextUnformatted(_cacheMonitor.TotalFiles == 1
-                ? "Collecting files"
-                : $"Processing {_cacheMonitor.CurrentFileProgress}/{_cacheMonitor.TotalFilesStorage} from storage ({_cacheMonitor.TotalFiles} scanned in)");
+            if (isCollecting)
+            {
+               ImGui.TextUnformatted("Collecting files"); 
+            }
+            else
+            {
+                ImGui.TextUnformatted($"Processing {_cacheMonitor.CurrentFileProgress}/{_cacheMonitor.TotalFilesStorage} from storage ({_cacheMonitor.TotalFiles} scanned in)");
+                if (_cacheMonitor.TotalUpdateCount > 0)
+                {
+                    ImGui.TextUnformatted(
+                        $"Updating {_cacheMonitor.CurrentUpdateProgress}/{_cacheMonitor.TotalUpdateCount} in storage.");
+                }
+            }
             AttachToolTip("Note: it is possible to have more files in storage than scanned in, " +
                 "this is due to the scanner normally ignoring those files but the game loading them in and using them on your character, so they get " +
                 "added to the local storage.");

@@ -1,4 +1,6 @@
-﻿using K4os.Compression.LZ4.Legacy;
+﻿using Dalamud.Game.ClientState.JobGauge.Enums;
+using Dalamud.Utility;
+using K4os.Compression.LZ4.Legacy;
 using LaciSynchroni.Interop.Ipc;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.SyncConfiguration;
@@ -8,8 +10,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Threading;
 using System.Text;
+using System.Threading;
 
 namespace LaciSynchroni.FileCache;
 
@@ -21,12 +23,16 @@ public sealed class FileCacheManager : IHostedService
     private readonly SyncConfigService _configService;
     private readonly SyncMediator _syncMediator;
     private readonly string _csvPath;
-    private readonly ConcurrentDictionary<string, List<FileCacheEntity>> _fileCaches = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, List<FileCacheEntity>> _sha1FileCaches = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, List<FileCacheEntity>> _blake3FileCaches = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _getCachesByPathsSemaphore = new(1, 1);
     private readonly Lock _fileWriteLock = new();
     private readonly IpcManager _ipcManager;
     private readonly ILogger<FileCacheManager> _logger;
+    private readonly List<FileCacheEntity> _blake3HashesRequired = new();
     public string CacheFolder => _configService.Current.CacheFolder;
+
+    public bool Blake3Active => _configService.Current.IsAllowedToConnectBlake3();
 
     public FileCacheManager(ILogger<FileCacheManager> logger, IpcManager ipcManager, SyncConfigService configService, SyncMediator syncMediator)
     {
@@ -61,11 +67,31 @@ public sealed class FileCacheManager : IHostedService
         return CreateFileCacheEntity(fi, prefixedPath);
     }
 
-    public List<FileCacheEntity> GetAllFileCaches() => _fileCaches.Values.SelectMany(v => v).ToList();
+    public List<FileCacheEntity> GetAllFileCaches() => _sha1FileCaches.Values.SelectMany(v => v).ToList();
+
+    public ConcurrentDictionary<string, List<FileCacheEntity>> GetFileCachesForHash(string hash)
+    {
+        var len = hash.Length;
+        if (len == 40)
+        {
+            return _sha1FileCaches;
+        }
+        else if (len == 64)
+        {
+            return _blake3FileCaches;
+        }
+        else
+        {
+            _logger.LogError("Unknown hash type, length {0}", len);
+            return new();
+        }
+    }
 
     public List<FileCacheEntity> GetAllFileCachesByHash(string hash, bool ignoreCacheEntries = false, bool validate = true)
     {
         List<FileCacheEntity> output = [];
+        var _fileCaches = GetFileCachesForHash(hash);
+
         if (_fileCaches.TryGetValue(hash, out var fileCacheEntities))
         {
             foreach (var fileCache in fileCacheEntities.Where(c => !ignoreCacheEntries || !c.IsCacheEntry).ToList())
@@ -86,7 +112,7 @@ public sealed class FileCacheManager : IHostedService
     {
         _syncMediator.Publish(new HaltScanMessage(nameof(ValidateLocalIntegrity)));
         _logger.LogInformation("Validating local storage");
-        var cacheEntries = _fileCaches.SelectMany(v => v.Value).Where(v => v.IsCacheEntry).ToList();
+        var cacheEntries = _sha1FileCaches.SelectMany(v => v.Value).Where(v => v.IsCacheEntry).ToList();
         List<FileCacheEntity> brokenEntities = [];
         int i = 0;
         foreach (var fileCache in cacheEntries)
@@ -105,10 +131,10 @@ public sealed class FileCacheManager : IHostedService
 
             try
             {
-                var computedHash = Crypto.GetFileHash(fileCache.ResolvedFilepath);
-                if (!string.Equals(computedHash, fileCache.Hash, StringComparison.Ordinal))
+                var computedHash = Crypto.GetSHA1FileHash(fileCache.ResolvedFilepath);
+                if (!string.Equals(computedHash, fileCache.Sha1Hash, StringComparison.Ordinal))
                 {
-                    _logger.LogInformation("Failed to validate {File}, got hash {ActualHash}, expected hash {ExpectedHash}", fileCache.ResolvedFilepath, computedHash, fileCache.Hash);
+                    _logger.LogInformation("Failed to validate {File}, got hash {ActualHash}, expected hash {ExpectedHash}", fileCache.ResolvedFilepath, computedHash, fileCache.Sha1Hash);
                     brokenEntities.Add(fileCache);
                 }
             }
@@ -121,7 +147,7 @@ public sealed class FileCacheManager : IHostedService
 
         foreach (var brokenEntity in brokenEntities)
         {
-            RemoveHashedFile(brokenEntity.Hash, brokenEntity.PrefixedFilePath);
+            RemoveHashedFile(brokenEntity.Sha1Hash, brokenEntity.Blake3Hash, brokenEntity.PrefixedFilePath);
 
             try
             {
@@ -151,6 +177,7 @@ public sealed class FileCacheManager : IHostedService
 
     public FileCacheEntity? GetFileCacheByHash(string hash)
     {
+        var _fileCaches = GetFileCachesForHash(hash);
         if (_fileCaches.TryGetValue(hash, out var hashes))
         {
             var item = hashes.OrderBy(p => p.PrefixedFilePath.Contains(PenumbraPrefix) ? 0 : 1).FirstOrDefault();
@@ -163,7 +190,7 @@ public sealed class FileCacheManager : IHostedService
     {
         var cleanedPath = path.Replace("/", "\\", StringComparison.OrdinalIgnoreCase).ToLowerInvariant()
             .Replace(_ipcManager.Penumbra.ModDirectory!.ToLowerInvariant(), "", StringComparison.OrdinalIgnoreCase);
-        var entry = _fileCaches.SelectMany(v => v.Value).FirstOrDefault(f => f.ResolvedFilepath.EndsWith(cleanedPath, StringComparison.OrdinalIgnoreCase));
+        var entry = _sha1FileCaches.SelectMany(v => v.Value).FirstOrDefault(f => f.ResolvedFilepath.EndsWith(cleanedPath, StringComparison.OrdinalIgnoreCase));
 
         if (entry == null)
         {
@@ -191,7 +218,7 @@ public sealed class FileCacheManager : IHostedService
 
             Dictionary<string, FileCacheEntity?> result = new(StringComparer.OrdinalIgnoreCase);
 
-            var dict = _fileCaches.SelectMany(f => f.Value)
+            var dict = _sha1FileCaches.SelectMany(f => f.Value)
                 .ToDictionary(d => d.PrefixedFilePath, d => d, StringComparer.OrdinalIgnoreCase);
 
             foreach (var entry in cleanedPaths)
@@ -220,16 +247,27 @@ public sealed class FileCacheManager : IHostedService
         }
     }
 
-    public void RemoveHashedFile(string hash, string prefixedFilePath)
+    public void RemoveHashedFile(string sha1Hash, string blake3Hash, string prefixedFilePath)
     {
-        if (_fileCaches.TryGetValue(hash, out var caches))
+        if (_sha1FileCaches.TryGetValue(sha1Hash, out var caches))
         {
             var removedCount = caches?.RemoveAll(c => string.Equals(c.PrefixedFilePath, prefixedFilePath, StringComparison.Ordinal));
-            _logger.LogTrace("Removed from DB: {count} file(s) with hash {hash} and file cache {path}", removedCount, hash, prefixedFilePath);
+            _logger.LogTrace("Removed from DB: {count} file(s) with hash {hash} and file cache {path}", removedCount, sha1Hash, prefixedFilePath);
 
             if (caches?.Count == 0)
             {
-                _fileCaches.Remove(hash, out var entity);
+                _sha1FileCaches.Remove(sha1Hash, out var entity);
+            }
+        }
+
+        if (Blake3Active && _blake3FileCaches.TryGetValue(blake3Hash, out caches))
+        {
+            var removedCount = caches?.RemoveAll(c => string.Equals(c.PrefixedFilePath, prefixedFilePath, StringComparison.Ordinal));
+            _logger.LogTrace("Removed from DB: {count} file(s) with hash {hash} and file cache {path}", removedCount, blake3Hash, prefixedFilePath);
+
+            if (caches?.Count == 0)
+            {
+                _sha1FileCaches.Remove(blake3Hash, out var entity);
             }
         }
     }
@@ -237,17 +275,20 @@ public sealed class FileCacheManager : IHostedService
     public void UpdateHashedFile(FileCacheEntity fileCache, bool computeProperties = true)
     {
         _logger.LogTrace("Updating hash for {path}", fileCache.ResolvedFilepath);
-        var oldHash = fileCache.Hash;
+        var oldSha1Hash = fileCache.Sha1Hash;
+        var oldBlake3Hash = fileCache.Blake3Hash;
         var prefixedPath = fileCache.PrefixedFilePath;
         if (computeProperties)
         {
             var fi = new FileInfo(fileCache.ResolvedFilepath);
+            var hashes = Crypto.GetFileHashes(fileCache.ResolvedFilepath, _configService.Current.BetaEnableBlake3);
             fileCache.Size = fi.Length;
             fileCache.CompressedSize = null;
-            fileCache.Hash = Crypto.GetFileHash(fileCache.ResolvedFilepath);
+            fileCache.Sha1Hash = hashes.Item1;
+            fileCache.Blake3Hash = hashes.Item2;
             fileCache.LastModifiedDateTicks = fi.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture);
         }
-        RemoveHashedFile(oldHash, prefixedPath);
+        RemoveHashedFile(oldSha1Hash, oldBlake3Hash, prefixedPath);
         AddHashedFile(fileCache);
     }
 
@@ -272,7 +313,7 @@ public sealed class FileCacheManager : IHostedService
         lock (_fileWriteLock)
         {
             StringBuilder sb = new();
-            foreach (var entry in _fileCaches.SelectMany(k => k.Value).OrderBy(f => f.PrefixedFilePath, StringComparer.OrdinalIgnoreCase))
+            foreach (var entry in _sha1FileCaches.SelectMany(k => k.Value).OrderBy(f => f.PrefixedFilePath, StringComparer.OrdinalIgnoreCase))
             {
                 sb.AppendLine(entry.CsvEntry);
             }
@@ -298,10 +339,10 @@ public sealed class FileCacheManager : IHostedService
     {
         try
         {
-            RemoveHashedFile(fileCache.Hash, fileCache.PrefixedFilePath);
+            RemoveHashedFile(fileCache.Sha1Hash, fileCache.Blake3Hash, fileCache.PrefixedFilePath);
             var extensionPath = fileCache.ResolvedFilepath.ToUpper(CultureInfo.InvariantCulture) + "." + ext;
             File.Move(fileCache.ResolvedFilepath, extensionPath, overwrite: true);
-            var newHashedEntity = new FileCacheEntity(fileCache.Hash, fileCache.PrefixedFilePath + "." + ext, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
+            var newHashedEntity = new FileCacheEntity(fileCache.Sha1Hash, fileCache.Blake3Hash, fileCache.PrefixedFilePath + "." + ext, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
             newHashedEntity.SetResolvedFilePath(extensionPath);
             AddHashedFile(newHashedEntity);
             _logger.LogTrace("Migrated from {oldPath} to {newPath}", fileCache.ResolvedFilepath, newHashedEntity.ResolvedFilepath);
@@ -317,9 +358,9 @@ public sealed class FileCacheManager : IHostedService
 
     private void AddHashedFile(FileCacheEntity fileCache)
     {
-        if (!_fileCaches.TryGetValue(fileCache.Hash, out var entries) || entries is null)
+        if (!_sha1FileCaches.TryGetValue(fileCache.Sha1Hash, out var entries) || entries is null)
         {
-            _fileCaches[fileCache.Hash] = entries = [];
+            _sha1FileCaches[fileCache.Sha1Hash] = entries = [];
         }
 
         if (!entries.Exists(u => string.Equals(u.PrefixedFilePath, fileCache.PrefixedFilePath, StringComparison.OrdinalIgnoreCase)))
@@ -327,12 +368,26 @@ public sealed class FileCacheManager : IHostedService
             //_logger.LogTrace("Adding to DB: {hash} => {path}", fileCache.Hash, fileCache.PrefixedFilePath);
             entries.Add(fileCache);
         }
+
+        if (!fileCache.Blake3Hash.IsNullOrEmpty())
+        {
+            if (!_blake3FileCaches.TryGetValue(fileCache.Blake3Hash, out entries) || entries is null)
+            {
+                _blake3FileCaches[fileCache.Blake3Hash] = entries = [];
+            }
+
+            if (!entries.Exists(u => string.Equals(u.PrefixedFilePath, fileCache.PrefixedFilePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                //_logger.LogTrace("Adding to DB: {hash} => {path}", fileCache.Hash, fileCache.PrefixedFilePath);
+                entries.Add(fileCache);
+            }
+        }
     }
 
-    private FileCacheEntity? CreateFileCacheEntity(FileInfo fileInfo, string prefixedPath, string? hash = null)
+    private FileCacheEntity? CreateFileCacheEntity(FileInfo fileInfo, string prefixedPath)
     {
-        hash ??= Crypto.GetFileHash(fileInfo.FullName);
-        var entity = new FileCacheEntity(hash, prefixedPath, fileInfo.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture), fileInfo.Length);
+        var hashes = Crypto.GetFileHashes(fileInfo.FullName, _configService.Current.BetaEnableBlake3);
+        var entity = new FileCacheEntity(hashes.Item1, hashes.Item2, prefixedPath, fileInfo.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture), fileInfo.Length);
         entity = ReplacePathPrefixes(entity);
         AddHashedFile(entity);
         lock (_fileWriteLock)
@@ -371,7 +426,7 @@ public sealed class FileCacheManager : IHostedService
         var file = new FileInfo(fileCache.ResolvedFilepath);
         if (!file.Exists)
         {
-            RemoveHashedFile(fileCache.Hash, fileCache.PrefixedFilePath);
+            RemoveHashedFile(fileCache.Sha1Hash, fileCache.Blake3Hash, fileCache.PrefixedFilePath);
             return null;
         }
 
@@ -454,13 +509,31 @@ public sealed class FileCacheManager : IHostedService
             _logger.LogInformation("Found {Amount} files in {Path}", entries.Length, _csvPath);
 
             Dictionary<string, bool> processedFiles = new(StringComparer.OrdinalIgnoreCase);
+
+            var cacheNeedsMigration = false;
+            // Only do partial migrations when we actually did the initial re-scan
+            var blake3SupportEnabled = _configService.Current.IsAllowedToConnectBlake3();
+
             foreach (var entry in entries)
             {
                 var splittedEntry = entry.Split(CsvSplit, StringSplitOptions.None);
+                var isUnmigratedEntry = false;
                 try
                 {
-                    var hash = splittedEntry[0];
-                    if (hash.Length != 40) throw new InvalidOperationException("Expected Hash length of 40, received " + hash.Length);
+                    var sha1Hash = splittedEntry[0];
+                    if (sha1Hash.Length != 40) throw new InvalidOperationException("Expected Hash length of 40, received " + sha1Hash.Length);
+                    var blake3Hash = "";
+                    if (blake3SupportEnabled)
+                    {
+                        if (splittedEntry.Length == 5)
+                        {
+                            cacheNeedsMigration = true;
+                            isUnmigratedEntry = true;
+                        }
+                        blake3Hash = isUnmigratedEntry ? "" : splittedEntry[5];
+                        if (blake3Hash.Length is not 64) throw new InvalidOperationException("Expected Hash length of 64, received " + blake3Hash.Length);
+                    }
+                   
                     var path = splittedEntry[1];
                     var time = splittedEntry[2];
 
@@ -485,7 +558,12 @@ public sealed class FileCacheManager : IHostedService
                             compressed = resultCompressed;
                         }
                     }
-                    AddHashedFile(ReplacePathPrefixes(new FileCacheEntity(hash, path, time, size, compressed)));
+                    var file = ReplacePathPrefixes(new FileCacheEntity(sha1Hash, blake3Hash, path, time, size, compressed));
+                    if (isUnmigratedEntry)
+                    {
+                        _blake3HashesRequired.Add(file);
+                    }
+                    AddHashedFile(file);
                 }
                 catch (Exception ex)
                 {
@@ -493,7 +571,7 @@ public sealed class FileCacheManager : IHostedService
                 }
             }
 
-            if (processedFiles.Count != entries.Length)
+            if (processedFiles.Count != entries.Length || cacheNeedsMigration)
             {
                 WriteOutFullCsv();
             }
@@ -501,7 +579,45 @@ public sealed class FileCacheManager : IHostedService
 
         _logger.LogInformation("Started FileCacheManager");
 
+        if (_blake3HashesRequired.Count > 0)
+        {
+            var thread = new Thread(UpdateBlake3Hashes);
+            thread.Start(_blake3HashesRequired);
+        }
+
         return Task.CompletedTask;
+    }
+
+    private void UpdateBlake3Hashes(object? entities)
+    {    // TODO consider what to do with this
+        // if (entities is null)
+        // {
+        //     return;
+        // }
+        // var entitiesList = (List<FileCacheEntity>)entities;
+        // var count = 0;
+        // foreach (var entity in entitiesList)
+        // {
+        //     entity.Blake3Hash = Crypto.GetBlake3FileHash(entity.ResolvedFilepath);
+        //
+        //     if (!_blake3FileCaches.TryGetValue(entity.Blake3Hash, out var entries) || entries is null)
+        //     {
+        //         _blake3FileCaches[entity.Blake3Hash] = entries = [];
+        //     }
+        //
+        //     if (!entries.Exists(u => string.Equals(u.PrefixedFilePath, entity.PrefixedFilePath, StringComparison.OrdinalIgnoreCase)))
+        //     {
+        //         //_logger.LogTrace("Adding to DB: {hash} => {path}", fileCache.Hash, fileCache.PrefixedFilePath);
+        //         entries.Add(entity);
+        //     }
+        //     count++;
+        //     if (count == 25)
+        //     {
+        //         WriteOutFullCsv();
+        //         count = 0;
+        //     }
+        // }
+        // WriteOutFullCsv();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
