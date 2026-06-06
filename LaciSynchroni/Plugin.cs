@@ -28,6 +28,7 @@ using Microsoft.Extensions.Logging;
 using NReco.Logging.File;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Reflection;
 
@@ -177,6 +178,10 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 }
                 httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, clientCapabilities.ClientVersion));
                 httpClient.DefaultRequestHeaders.Add(ClientCapabilitiesDto.ClientCapabilitiesHeader, clientCapabilities.ToHeaderValue());
+
+                // Requests HTTP/3 by default, but allow downgrading if needed (using the RequestVersionOrLower policy, which is default)
+                httpClient.DefaultRequestVersion = HttpVersion.Version30;
+                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, versionString));
                 return httpClient;
             });
 
