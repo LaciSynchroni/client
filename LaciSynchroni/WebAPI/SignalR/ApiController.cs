@@ -234,6 +234,10 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
 
     private SyncHubClient GetOrCreateForServer(ServerIndex serverIndex)
     {
+        if (_syncClients.TryGetValue(serverIndex, out var client))
+        {
+            client.Dispose();
+        }
         return _syncClients[serverIndex] = CreateNewClient(serverIndex);
     }
 
