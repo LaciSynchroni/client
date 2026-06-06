@@ -688,6 +688,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         if (_configService.Current.BetaEnableBlake3)
         {
             _configService.Current.BetaBlake3HashingDone = true;
+            _configService.Save();
         }
 
         if (!_configService.Current.InitialScanComplete)
