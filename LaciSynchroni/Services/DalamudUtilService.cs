@@ -21,7 +21,9 @@ using LaciSynchroni.Utils;
 using Lumina.Excel.Sheets;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Action = System.Action;
@@ -146,6 +148,12 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     {
         return _pluginInterface.InstalledPlugins.FirstOrDefault(x => string.Equals(x.InternalName, _pluginInterface.InternalName, StringComparison.Ordinal))?.Name
                ?? _pluginInterface.InternalName;
+    }
+
+    public static string GetPluginVersionString()
+    {
+        var ver = Assembly.GetExecutingAssembly().GetName().Version!;
+        return string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
     }
 
     public string PluginInternalName => _pluginInterface.InternalName;

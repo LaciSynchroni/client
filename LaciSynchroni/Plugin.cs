@@ -169,8 +169,6 @@ public sealed class Plugin : IAsyncDalamudPlugin
             collection.AddSingleton((s) =>
             {
                 var httpClient = new HttpClient();
-                var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-                var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
                 var config = s.GetRequiredService<SyncConfigService>();
                 if (config.Current.DebugExtendedUploadTimeout)
                 {
@@ -180,7 +178,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
 
                 // Requests HTTP/3 by default, but allow downgrading if needed (using the RequestVersionOrLower policy, which is default)
                 httpClient.DefaultRequestVersion = HttpVersion.Version30;
-                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, versionString));
+                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, DalamudUtilService.GetPluginVersionString()));
                 return httpClient;
             });
 

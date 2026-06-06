@@ -130,8 +130,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         };
 
         _drawFolders = GetDrawFolders().ToList();
-        var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-        var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
+        var versionString = DalamudUtilService.GetPluginVersionString();
         var sb = new StringBuilder().Append("Laci Synchroni ");
 
 #if DEBUG

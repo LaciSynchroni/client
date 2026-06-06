@@ -94,8 +94,7 @@ public class LaciPlugin : MediatorSubscriberBase, IHostedService
         _serverConfigurationManager.RemoveDeletedServers();
         
         var pluginName = _dalamudUtil.GetPluginName();
-        var version = Assembly.GetExecutingAssembly().GetName().Version!;
-        var versionString = string.Create(CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}");
+        var versionString = DalamudUtilService.GetPluginVersionString();
         Logger.LogInformation("Launching {Name} {Version}", pluginName, versionString);
         Mediator.Publish(new EventMessage(new Event(GetType().Name, EventSeverity.Informational,
             $"Starting {pluginName} {versionString}")));
