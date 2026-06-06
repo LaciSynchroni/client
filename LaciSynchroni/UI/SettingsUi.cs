@@ -576,6 +576,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.DrawHelpText("Unless you have been asked to enable this, please leave it unchecked." + UiSharedService.TooltipSeparator
             + "This may cause communication issues with servers. Any change to this setting requires a plugin restart.");
 
+        DrawBlake3Support();
         DrawRenderLocks();
 
 
@@ -2119,6 +2120,41 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _uiShared.CreateTabItem("Service Settings", DrawServerConfiguration);
                 _uiShared.CreateTabItem("Debug", DrawDebug);
             }
+        }
+    }
+
+    private void DrawBlake3Support()
+    {
+                
+        bool enableBlake3 = _configService.Current.BetaEnableBlake3;
+        bool reHashingDone = _configService.Current.BetaBlake3HashingDone;
+        bool initialScanDone = _configService.Current.InitialScanComplete;
+        // Some checks might be running in background after boot, don't allow changing while that happens
+        using (ImRaii.Disabled(_cacheMonitor.IsScanRunning))
+        {
+            if (ImGui.Checkbox("(BETA) Enable BLAKE3 hash support", ref enableBlake3))
+            {
+                _configService.Current.BetaEnableBlake3 = enableBlake3;
+                if (!enableBlake3)
+                {
+                    _configService.Current.BetaBlake3HashingDone = false;
+                }
+                _configService.Save();
+            }
+            _uiShared.DrawHelpText("Enabling this will result both SHA1 and BLAKE3 hash calculation, allowing compatibility with BLAKE3 based services.");
+        }
+
+        if (enableBlake3 && initialScanDone)
+        {
+            if (!reHashingDone)
+            {
+                UiSharedService.TextWrapped("You need to re-scan your Penumbra folder to enable BLAKE3 support. The button below will start that process.");
+            }
+            else
+            {
+                UiSharedService.TextWrapped("BLAKE3 hashing has been done. If you experience any issues, consider re-scanning your Penumbra here.");
+            }
+            _uiShared.DrawFileScanState();
         }
     }
 

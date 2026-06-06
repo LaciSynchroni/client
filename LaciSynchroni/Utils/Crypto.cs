@@ -17,11 +17,18 @@ public static class Crypto
         return Convert.ToHexString(SHA1.HashData(File.ReadAllBytes(filePath)));
     }
 
-    public static string GetBlake3FileHash(this string filePath)
+    public static (string, string) GetFileHashes(string filePath, bool withBlake3)
     {
-        using var hasher = Blake3.Hasher.New();
-        hasher.Update(File.ReadAllBytes(filePath));
-        return hasher.Finalize().ToString().ToUpper();
+        var bytes = File.ReadAllBytes(filePath);
+        var sha1 = Convert.ToHexString(SHA1.HashData(bytes));
+        var blake3 = "";
+        if (withBlake3)
+        {
+            using var hasher = Blake3.Hasher.New();
+            hasher.Update(File.ReadAllBytes(filePath));
+            blake3 = hasher.Finalize().ToString().ToUpper();
+        }
+        return (sha1, blake3);
     }
 
     public static string GetHash256(this (string, ushort) playerToHash)

@@ -21,6 +21,14 @@ internal class SyncHubClientLL : SyncHubClient
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
         base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient)
     {
-        ApiVersion = 37;
+        if (syncConfigService.Current.IsAllowedToConnectBlake3 )
+        {
+            // Blake3 is required to access API 37
+            ApiVersion = 37;
+        }
+        else
+        {
+            ApiVersion = 36;
+        }
     }
 }
