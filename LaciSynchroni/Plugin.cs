@@ -28,6 +28,7 @@ using Microsoft.Extensions.Logging;
 using NReco.Logging.File;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Reflection;
 
@@ -168,15 +169,16 @@ public sealed class Plugin : IAsyncDalamudPlugin
             collection.AddSingleton((s) =>
             {
                 var httpClient = new HttpClient();
-                var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-                var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
                 var config = s.GetRequiredService<SyncConfigService>();
                 if (config.Current.DebugExtendedUploadTimeout)
                 {
                     httpClient.Timeout = new TimeSpan(0, 10, 0);
                     pluginLog.Warning("Extended upload timeout set!");
                 }
-                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, versionString));
+
+                // Requests HTTP/3 by default, but allow downgrading if needed (using the RequestVersionOrLower policy, which is default)
+                httpClient.DefaultRequestVersion = HttpVersion.Version30;
+                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(pluginInterface.InternalName, DalamudUtilService.GetPluginVersionString()));
                 return httpClient;
             });
 
