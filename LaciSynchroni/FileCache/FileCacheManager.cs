@@ -82,7 +82,6 @@ public sealed class FileCacheManager : IHostedService
         }
         else
         {
-            _logger.LogError("Unknown hash type, length {0}", len);
             return new();
         }
     }
