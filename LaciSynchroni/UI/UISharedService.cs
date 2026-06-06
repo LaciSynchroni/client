@@ -610,7 +610,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public void DrawFileScanState()
     {
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("File Scanner Status");
+        ImGui.TextUnformatted("File Scanner Status:");
         ImGui.SameLine();
         if (_cacheMonitor.IsScanRunning)
         {
@@ -629,7 +629,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 if (_cacheMonitor.TotalUpdateCount > 0)
                 {
                     ImGui.TextUnformatted(
-                        $"Updating {_cacheMonitor.CurrentUpdateProgress}/{_cacheMonitor.TotalUpdateCount} in storage.");
+                        $"Updating {_cacheMonitor.CurrentUpdateProgress}/{_cacheMonitor.TotalUpdateCount} files in storage.");
                 }
             }
             AttachToolTip("Note: it is possible to have more files in storage than scanned in, " +

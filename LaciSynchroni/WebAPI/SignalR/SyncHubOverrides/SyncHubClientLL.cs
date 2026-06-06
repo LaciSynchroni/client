@@ -1,16 +1,10 @@
-﻿using LaciSynchroni.Common.Dto.User;
-using LaciSynchroni.PlayerData.Pairs;
+﻿using LaciSynchroni.PlayerData.Pairs;
 using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
-using Microsoft.AspNetCore.SignalR.Client;
+using LaciSynchroni.SyncConfiguration.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
 internal class SyncHubClientLL : SyncHubClient
@@ -28,6 +22,10 @@ internal class SyncHubClientLL : SyncHubClient
         }
         else
         {
+            var serverName = serverConfigurationManager.GetServerNameByIndex(serverIndex);
+            mediator.Publish(new NotificationMessage("BLAKE3 Support Disabled",
+                $"BLAKE3 support is needed to connect to {serverName}. Please go to Settings -> Debug and enable BLAKE3 Support to connect to this service.",
+                NotificationType.Error));
             ApiVersion = 36;
         }
     }

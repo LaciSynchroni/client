@@ -617,7 +617,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             Logger.LogWarning("Penumbra not available");
             return;
         }
-
+        
         TotalUpdateCount = entitiesToUpdate.Count + entitiesToRemove.Count;
         if (entitiesToUpdate.Any() || entitiesToRemove.Any())
         {
@@ -625,15 +625,17 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             {
                 _fileDbManager.UpdateHashedFile(entity);
                 Interlocked.Increment(ref _currentUpdateProgress);
+                WriteCsvFileIfNeeded();
             }
 
             foreach (var entity in entitiesToRemove)
             {
                 _fileDbManager.RemoveHashedFile(entity.Sha1Hash, entity.Blake3Hash, entity.PrefixedFilePath);
                 Interlocked.Increment(ref _currentUpdateProgress);
+                WriteCsvFileIfNeeded();
             }
         }
-        _fileDbManager.WriteOutFullCsv();
+        WriteCsvFileIfNeeded(true);
         
         Logger.LogTrace("Scanner validated existing db files");
 
@@ -697,6 +699,16 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             _configService.Save();
             StartFileWatcher(_configService.Current.CacheFolder);
             StartPenumbraWatcher(penumbraDir);
+        }
+    }
+
+    private void WriteCsvFileIfNeeded(bool done = false)
+    {
+        // Save every 1000 files or so for larger modlists. This way, we can pick up again from the last scan
+        var isNeededByProgress = _currentUpdateProgress % 1000 == 0;
+        if (isNeededByProgress || done)
+        {
+            _fileDbManager.WriteOutFullCsv();
         }
     }
 }

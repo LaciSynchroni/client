@@ -2125,12 +2125,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
     private void DrawBlake3Support()
     {
-                
+
+        bool scanRunning = _cacheMonitor.IsScanRunning;
         bool enableBlake3 = _configService.Current.BetaEnableBlake3;
         bool reHashingDone = _configService.Current.BetaBlake3HashingDone;
         bool initialScanDone = _configService.Current.InitialScanComplete;
+        _uiShared.BigText("BLAKE 3 Support");
         // Some checks might be running in background after boot, don't allow changing while that happens
-        using (ImRaii.Disabled(_cacheMonitor.IsScanRunning))
+        using (ImRaii.Disabled(scanRunning))
         {
             if (ImGui.Checkbox("(BETA) Enable BLAKE3 hash support", ref enableBlake3))
             {
@@ -2141,18 +2143,31 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 }
                 _configService.Save();
             }
-            _uiShared.DrawHelpText("Enabling this will result both SHA1 and BLAKE3 hash calculation, allowing compatibility with BLAKE3 based services.");
+
+            if (scanRunning)
+            {
+                _uiShared.DrawHelpText(
+                    "Enabling is currently not possible due to an ongoing cache scan. You can monitor the progess in the Storage tab.");
+            }
+            else
+            {
+                _uiShared.DrawHelpText(
+                    "Enabling this will result both SHA1 and BLAKE3 hash calculation, allowing compatibility with BLAKE3 based services.");
+            }
         }
 
+        // check for intialScanDone just in case someone opens this UI during onboarding
         if (enableBlake3 && initialScanDone)
         {
             if (!reHashingDone)
             {
+                _uiShared.IconText(FontAwesomeIcon.ExclamationTriangle, ImGuiColors.DalamudYellow);
+                ImGui.SameLine();
                 UiSharedService.TextWrapped("You need to re-scan your Penumbra folder to enable BLAKE3 support. The button below will start that process.");
             }
             else
             {
-                UiSharedService.TextWrapped("BLAKE3 hashing has been done. If you experience any issues, consider re-scanning your Penumbra here.");
+                UiSharedService.ColorTextWrapped("BLAKE3 hashing has been done. If you experience any issues, consider re-scanning your Penumbra here.", ImGuiColors.DalamudGrey);
             }
             _uiShared.DrawFileScanState();
         }
@@ -2165,7 +2180,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             "Render locks are utilized in scenarios where you have more than one server connected. " +
             "One render lock should exist for each target Laci draws on.");
         UiSharedService.TextWrapped(
-            "To force swap a lock for debug purposes, release the lock here. Then, pause and enable the pair" +
+            "To force swap a lock for debug purposes, release the lock here. Then, pause and enable the pair " +
             "for the server you want to lock to exist for.");
         
         var currentLocks = _concurrentPairLockService.GetCurrentRenderLocks().ToList();
