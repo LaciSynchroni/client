@@ -32,7 +32,7 @@ public sealed class FileCacheManager : IHostedService
     private readonly List<FileCacheEntity> _blake3HashesRequired = new();
     public string CacheFolder => _configService.Current.CacheFolder;
 
-    public bool Blake3Active => _configService.Current.IsAllowedToConnectBlake3;
+    public bool Blake3Active => _configService.Current.IsAllowedToConnectBlake3();
 
     public FileCacheManager(ILogger<FileCacheManager> logger, IpcManager ipcManager, SyncConfigService configService, SyncMediator syncMediator)
     {
@@ -512,7 +512,7 @@ public sealed class FileCacheManager : IHostedService
 
             var cacheNeedsMigration = false;
             // Only do partial migrations when we actually did the initial re-scan
-            var blake3SupportEnabled = _configService.Current.IsAllowedToConnectBlake3;
+            var blake3SupportEnabled = _configService.Current.IsAllowedToConnectBlake3();
 
             foreach (var entry in entries)
             {
@@ -531,9 +531,7 @@ public sealed class FileCacheManager : IHostedService
                             isUnmigratedEntry = true;
                         }
                         blake3Hash = isUnmigratedEntry ? "" : splittedEntry[5];
-                        // If the len is 0, it's either unmigrated or simply hasn't been generated yet, so no point crashing out here, but if it exists, it's corrupt.
-                        if (blake3Hash.Length == 0) _logger.LogWarning("Expected Hash length of 64, received {0}, marking file for rehash", blake3Hash.Length);
-                        else if (blake3Hash.Length != 64) throw new InvalidOperationException("Expected Hash length of 64, hash is not empty, received " + blake3Hash.Length);
+                        if (blake3Hash.Length is not 64) throw new InvalidOperationException("Expected Hash length of 64, received " + blake3Hash.Length);
                     }
                    
                     var path = splittedEntry[1];
