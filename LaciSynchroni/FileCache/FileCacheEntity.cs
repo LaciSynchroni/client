@@ -15,7 +15,7 @@ public class FileCacheEntity
     }
 
     public long? CompressedSize { get; set; }
-    public string CsvEntry => $"{Sha1Hash}{FileCacheManager.CsvSplit}{Blake3Hash}{FileCacheManager.CsvSplit}{PrefixedFilePath}{FileCacheManager.CsvSplit}{LastModifiedDateTicks}{FileCacheManager.CsvSplit}{Size ?? -1}{FileCacheManager.CsvSplit}{CompressedSize ?? -1}";
+    public string CsvEntry => $"{Sha1Hash}{FileCacheManager.CsvSplit}{PrefixedFilePath}{FileCacheManager.CsvSplit}{LastModifiedDateTicks}{FileCacheManager.CsvSplit}{Size ?? -1}{FileCacheManager.CsvSplit}{CompressedSize ?? -1}{FileCacheManager.CsvSplit}{Blake3Hash}";
     public string Sha1Hash { get; set; }
     public string Blake3Hash { get; set; } 
     public bool IsCacheEntry => PrefixedFilePath.StartsWith(FileCacheManager.CachePrefix, StringComparison.OrdinalIgnoreCase);

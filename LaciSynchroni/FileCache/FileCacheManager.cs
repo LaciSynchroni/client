@@ -520,12 +520,12 @@ public sealed class FileCacheManager : IHostedService
                 {
                     var sha1Hash = splittedEntry[0];
                     if (sha1Hash.Length != 40) throw new InvalidOperationException("Expected Hash length of 40, received " + sha1Hash.Length);
-                    var blake3Hash = isUnmigratedEntry ? "" : splittedEntry[1];
+                    var blake3Hash = isUnmigratedEntry ? "" : splittedEntry[5];
                     // If the len is 0, it's either unmigrated or simply hasn't been generated yet, so no point crashing out here, but if it exists, it's corrupt.
                     if (blake3Hash.Length == 0) _logger.LogWarning("Expected Hash length of 64, received {0}, marking file for rehash", blake3Hash.Length);
                     else if (blake3Hash.Length != 64) throw new InvalidOperationException("Expected Hash length of 64, hash is not empty, received " + blake3Hash.Length);
-                    var path = isUnmigratedEntry ? splittedEntry[1] : splittedEntry[2];
-                    var time = isUnmigratedEntry ? splittedEntry[2] : splittedEntry[3];
+                    var path = splittedEntry[1];
+                    var time = splittedEntry[2];
 
                     if (processedFiles.ContainsKey(path))
                     {
@@ -539,11 +539,11 @@ public sealed class FileCacheManager : IHostedService
                     long compressed = -1;
                     if (splittedEntry.Length > 3)
                     {
-                        if (long.TryParse(isUnmigratedEntry ? splittedEntry[3] : splittedEntry[4], CultureInfo.InvariantCulture, out long result))
+                        if (long.TryParse(splittedEntry[3], CultureInfo.InvariantCulture, out long result))
                         {
                             size = result;
                         }
-                        if (long.TryParse(isUnmigratedEntry ? splittedEntry[4] : splittedEntry[5], CultureInfo.InvariantCulture, out long resultCompressed))
+                        if (long.TryParse(splittedEntry[4], CultureInfo.InvariantCulture, out long resultCompressed))
                         {
                             compressed = resultCompressed;
                         }
