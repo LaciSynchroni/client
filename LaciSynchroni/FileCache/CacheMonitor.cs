@@ -20,6 +20,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     private readonly IpcManager _ipcManager;
     private readonly PerformanceCollectorService _performanceCollector;
     private long _currentFileProgress = 0;
+    private long _currentStartTime = DateTime.UtcNow.Ticks;
     private long _currentUpdateProgress = 0;
     private bool Blake3Enabled => _configService.Current.BetaEnableBlake3;
     private CancellationTokenSource _scanCancellationTokenSource = new();
@@ -91,6 +92,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     }
 
     public long CurrentFileProgress => _currentFileProgress;
+    public long CurrentStartTime => _currentStartTime;
     public long CurrentUpdateProgress => _currentUpdateProgress;
     public long FileCacheSize { get; set; }
     public long FileCacheDriveFree { get; set; }
@@ -357,6 +359,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public void InvokeScan()
     {
         TotalFiles = 0;
+        _currentStartTime = DateTime.UtcNow.Ticks;
         _currentFileProgress = 0;
         _scanCancellationTokenSource = _scanCancellationTokenSource?.CancelRecreate() ?? new CancellationTokenSource();
         var token = _scanCancellationTokenSource.Token;
@@ -563,20 +566,21 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
                 {
                     try
                     {
-                        if (ct.IsCancellationRequested) return;
-
-                        if (!_ipcManager.Penumbra.APIAvailable)
-                        {
-                            Logger.LogWarning("Penumbra not available");
-                            return;
-                        }
+                        if (DoNotContinue(ct)) return;
 
                         var validatedCacheResult = _fileDbManager.ValidateFileCacheEntity(workload);
+                        if (Blake3Enabled && workload.Blake3Hash.IsNullOrEmpty())
+                        {
+                            // No BLAKE3 hash is treated as a deletion. We remove the original file from the file database. This results in a re-scan of the file in the later process.
+                            lock (sync) { entitiesToRemove.Add(validatedCacheResult.FileCache); }
+                            continue;
+                        }
+
                         if (validatedCacheResult.State != FileState.RequireDeletion)
                         {
                             lock (sync) { allScannedFiles[validatedCacheResult.FileCache.ResolvedFilepath] = true; }
                         }
-                        if (validatedCacheResult.State == FileState.RequireUpdate || (Blake3Enabled && workload.Blake3Hash.IsNullOrEmpty()))
+                        if (validatedCacheResult.State == FileState.RequireUpdate)
                         {
                             Logger.LogTrace("To update: {path}", validatedCacheResult.FileCache.ResolvedFilepath);
                             lock (sync) { entitiesToUpdate.Add(validatedCacheResult.FileCache); }
@@ -608,79 +612,42 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             Thread.Sleep(1000);
         }
 
-        if (ct.IsCancellationRequested) return;
-
-        Logger.LogTrace("Threads exited");
-
-        if (!_ipcManager.Penumbra.APIAvailable)
-        {
-            Logger.LogWarning("Penumbra not available");
-            return;
-        }
+        if (DoNotContinue(ct)) return;
         
         TotalUpdateCount = entitiesToUpdate.Count + entitiesToRemove.Count;
+        // Both update and delete ops should be relatively fast to execute, so we don't do them in parallel.
+        // This only takes time if you had your plugin offline for long periods of time.
         if (entitiesToUpdate.Any() || entitiesToRemove.Any())
         {
             foreach (var entity in entitiesToUpdate)
             {
                 _fileDbManager.UpdateHashedFile(entity);
                 Interlocked.Increment(ref _currentUpdateProgress);
-                WriteCsvFileIfNeeded();
             }
 
             foreach (var entity in entitiesToRemove)
             {
                 _fileDbManager.RemoveHashedFile(entity.Sha1Hash, entity.Blake3Hash, entity.PrefixedFilePath);
                 Interlocked.Increment(ref _currentUpdateProgress);
-                WriteCsvFileIfNeeded();
             }
         }
-        WriteCsvFileIfNeeded(true);
+        _fileDbManager.WriteOutFullCsv();
         
         Logger.LogTrace("Scanner validated existing db files");
 
-        if (!_ipcManager.Penumbra.APIAvailable)
-        {
-            Logger.LogWarning("Penumbra not available");
-            return;
-        }
-
-        if (ct.IsCancellationRequested) return;
+        if (DoNotContinue(ct)) return;
 
         // scan new files
-        if (allScannedFiles.Any(c => !c.Value))
+        // This also takes care of BLAKE3 addition (since previously, the file was deleted from cache map)
+        var filesToReScan = allScannedFiles.Where(c => !c.Value).Select(c => c.Key).ToList();
+        if (filesToReScan.Count > 0)
         {
-            Parallel.ForEach(allScannedFiles.Where(c => !c.Value).Select(c => c.Key),
-                new ParallelOptions()
-                {
-                    MaxDegreeOfParallelism = threadCount,
-                    CancellationToken = ct
-                }, (cachePath) =>
-                {
-                    if (ct.IsCancellationRequested) return;
-
-                    if (!_ipcManager.Penumbra.APIAvailable)
-                    {
-                        Logger.LogWarning("Penumbra not available");
-                        return;
-                    }
-
-                    try
-                    {
-                        var entry = _fileDbManager.CreateFileEntry(cachePath);
-                        if (entry == null) _ = _fileDbManager.CreateCacheEntry(cachePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning(ex, "Failed adding {file}", cachePath);
-                    }
-
-                    Interlocked.Increment(ref _currentFileProgress);
-                });
-
-            Logger.LogTrace("Scanner added {notScanned} new files to db", allScannedFiles.Count(c => !c.Value));
+            var paralleOptions = new ParallelOptions() { MaxDegreeOfParallelism = threadCount, CancellationToken = ct };
+            _currentStartTime = DateTime.UtcNow.Ticks;
+            Parallel.ForEach(filesToReScan, paralleOptions, cachePath => ScanSingleFile(cachePath, ct));
+            Logger.LogTrace("Scanner added {NotScanned} new files to db", filesToReScan.Count);
         }
-
+      
         Logger.LogDebug("Scan complete");
         TotalFiles = 0;
         _currentFileProgress = 0;
@@ -702,13 +669,35 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         }
     }
 
-    private void WriteCsvFileIfNeeded(bool done = false)
+    private void ScanSingleFile(string cachePath, CancellationToken ct)
     {
-        // Save every 1000 files or so for larger modlists. This way, we can pick up again from the last scan
-        var isNeededByProgress = _currentUpdateProgress % 1000 == 0;
-        if (isNeededByProgress || done)
+        if (DoNotContinue(ct)) return;
+        try
         {
-            _fileDbManager.WriteOutFullCsv();
+            var entry = _fileDbManager.CreateFileEntry(cachePath);
+            if (entry == null) _ = _fileDbManager.CreateCacheEntry(cachePath);
         }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed adding {file}", cachePath);
+        }
+        Interlocked.Increment(ref _currentFileProgress);
+    }
+
+    private bool DoNotContinue(CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested)
+        {
+            Logger.LogTrace("Threads exited");
+            return true;
+        }
+  
+        if (!_ipcManager.Penumbra.APIAvailable)
+        {
+            // At any point in time, penumbra might become unavailable. Best to check on every file
+            Logger.LogWarning("Penumbra not available");
+            return true;
+        }
+        return false;
     }
 }
