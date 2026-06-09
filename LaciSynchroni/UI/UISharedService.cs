@@ -631,6 +631,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                     ImGui.TextUnformatted(
                         $"Updating {_cacheMonitor.CurrentUpdateProgress}/{_cacheMonitor.TotalUpdateCount} files in storage.");
                 }
+            
+                var timePassed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - _cacheMonitor.CurrentStartTime);
+                if (timePassed.TotalSeconds > 0)
+                {
+                    var velocity = _cacheMonitor.CurrentFileProgress / timePassed.TotalSeconds;
+                    ImGui.TextUnformatted($"Time passed: {timePassed.TotalSeconds.ToString("#.##")} seconds @ {velocity.ToString("#.##")} updates/second");    
+                }
+               
             }
             AttachToolTip("Note: it is possible to have more files in storage than scanned in, " +
                 "this is due to the scanner normally ignoring those files but the game loading them in and using them on your character, so they get " +

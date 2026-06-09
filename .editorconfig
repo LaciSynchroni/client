@@ -236,3 +236,7 @@ dotnet_diagnostic.MA0026.severity = warning
 dotnet_diagnostic.MA0046.severity = suggestion
 dotnet_diagnostic.MA0051.severity = suggestion
 dotnet_diagnostic.MA0011.severity = suggestion
+# We really don't need 5 million warnings about "Use PascalCase for named placeholders". Legacy codebase, treat it as such.
+dotnet_diagnostic.S6678.severity = none
+# Same for commented out code. It's fiiiiine.
+dotnet_diagnostic.S125.severity = none
