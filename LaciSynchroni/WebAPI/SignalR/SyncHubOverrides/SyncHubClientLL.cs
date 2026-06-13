@@ -3,7 +3,6 @@ using LaciSynchroni.Services;
 using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.Services.ServerConfiguration;
 using LaciSynchroni.SyncConfiguration;
-using LaciSynchroni.SyncConfiguration.Models;
 using Microsoft.Extensions.Logging;
 
 namespace LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
@@ -13,7 +12,7 @@ internal class SyncHubClientLL : SyncHubClient
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
         DalamudUtilService dalamudUtilService,
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
-        base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient)
+        base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient, true)
     {
         if (syncConfigService.Current.IsAllowedToConnectBlake3())
         {
@@ -22,10 +21,8 @@ internal class SyncHubClientLL : SyncHubClient
         }
         else
         {
-            var serverName = serverConfigurationManager.GetServerNameByIndex(serverIndex);
-            mediator.Publish(new NotificationMessage("BLAKE3 Support Disabled",
-                $"BLAKE3 support is needed to connect to {serverName}. Please go to Settings -> Debug and enable BLAKE3 Support to connect to this service.",
-                NotificationType.Error));
+            // Keep on 36 - first connect will prompt blake3 migration, which will trigger a re-create and then a bump to 37
+            // LEAVE THIS VERSION - even if API bumps past 37. Allows us to easily control connect.
             ApiVersion = 36;
         }
     }
