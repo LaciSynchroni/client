@@ -48,6 +48,16 @@ public class PopupHandler : WindowMediatorSubscriberBase
             _currentHandler = _handlers.OfType<CensusPopupHandler>().Single();
             IsOpen = true;
         });
+        
+        Mediator.Subscribe<OpenBlake3PopupMessage>(this, (msg) =>
+        {
+            var handler = _handlers.OfType<Blake3RequiredPopupHandler>().Single();
+            handler.ForIndex(msg.ServerIndex);
+            _openPopup = true;
+            _currentHandler = handler;
+            IsOpen = true;
+        });
+        
         _uiSharedService = uiSharedService;
         DisableWindowSounds = true;
     }

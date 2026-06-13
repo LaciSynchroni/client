@@ -72,6 +72,7 @@ public record RemoveWindowMessage(WindowMediatorSubscriberBase Window) : Message
 public record RefreshUiMessage : MessageBase;
 public record OpenBanUserPopupMessage(Pair PairToBan, GroupFullInfoDto GroupFullInfoDto) : MessageBase;
 public record OpenCensusPopupMessage() : MessageBase;
+public record OpenBlake3PopupMessage(int ServerIndex) : MessageBase;
 public record OpenSyncshellAdminPanel(GroupFullInfoDto GroupInfo, int ServerIndex) : MessageBase;
 public record OpenPermissionWindow(Pair Pair) : MessageBase;
 public record DownloadLimitChangedMessage() : SameThreadMessage;
@@ -91,5 +92,6 @@ public record GPoseLobbyReceiveCharaData(int ServerIndex, CharaDataDownloadDto C
 public record GPoseLobbyReceivePoseData(UserData UserData, PoseData PoseData) : MessageBase;
 public record GPoseLobbyReceiveWorldData(UserData UserData, WorldData WorldData) : MessageBase;
 public record OpenCharaDataHubWithFilterMessage(UserData UserData) : MessageBase;
+public record ConnectServiceMessage(int ServerIndex) : MessageBase;
 #pragma warning restore S2094
 #pragma warning restore MA0048 // File name must match type name
