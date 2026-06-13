@@ -22,6 +22,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     private long _currentFileProgress = 0;
     private long _currentStartTime = DateTime.UtcNow.Ticks;
     private long _currentUpdateProgress = 0;
+    private int _serverToConnectAfterScan = -1;
     private bool Blake3Enabled => _configService.Current.BetaEnableBlake3;
     private CancellationTokenSource _scanCancellationTokenSource = new();
     private readonly CancellationTokenSource _periodicCalculationTokenSource = new();
@@ -358,6 +359,12 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
     public void InvokeScan()
     {
+        InvokeScan(serverToConnectAfterScan: null);
+    }
+    
+    public void InvokeScan(int? serverToConnectAfterScan)
+    {
+        _serverToConnectAfterScan = serverToConnectAfterScan ?? -1;
         TotalFiles = 0;
         _currentStartTime = DateTime.UtcNow.Ticks;
         _currentFileProgress = 0;
@@ -654,7 +661,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         entitiesToRemove.Clear();
         allScannedFiles.Clear();
 
-        if (_configService.Current.BetaEnableBlake3)
+        if (_configService.Current.BetaEnableBlake3 && !_configService.Current.BetaBlake3HashingDone)
         {
             _configService.Current.BetaBlake3HashingDone = true;
             _configService.Save();
@@ -667,6 +674,13 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             StartFileWatcher(_configService.Current.CacheFolder);
             StartPenumbraWatcher(penumbraDir);
         }
+        
+        if (_serverToConnectAfterScan != -1)
+        {
+            Mediator.Publish(new ConnectServiceMessage(_serverToConnectAfterScan));
+        }
+
+        _serverToConnectAfterScan = -1;
     }
 
     private void ScanSingleFile(string cachePath, CancellationToken ct)

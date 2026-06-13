@@ -45,6 +45,8 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     // Potentially, we can move _server out of this class and always use _serverConfigurationManager.
     private readonly ServerConfigurationManager _serverConfigurationManager;
 
+    private readonly bool _requiresBlake3;
+
 
     // SignalR hub connection, one is maintained per server
     protected HubConnection? _connection;
@@ -72,7 +74,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     public SyncHubClient(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
         DalamudUtilService dalamudUtilService,
-        ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) : base(
+        ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient, bool requiresBlake3) : base(
         loggerFactory.CreateLogger(nameof(SyncHubClient) + serverIndex + "Mediator"), mediator)
     {
         ServerIndex = serverIndex;
@@ -82,6 +84,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
         _multiConnectTokenService = multiConnectTokenService;
         _syncConfigService = syncConfigService;
         _httpClient = httpClient;
+        _requiresBlake3 = requiresBlake3;
         _pairManager = pairManager;
         _dalamudUtil = dalamudUtilService;
         _serverConfigurationManager = serverConfigurationManager;
@@ -95,6 +98,14 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     public async Task CreateConnectionsAsync()
     {
         if (!await VerifyCensus().ConfigureAwait(false))
+        {
+            return;
+        }
+
+        // Doing this during the actual connect has two advantages:
+        // - the auto create of the client during auto connect doesn't trigger this
+        // - We can re-use this for other services
+        if (!VerifyBlake3())
         {
             return;
         }

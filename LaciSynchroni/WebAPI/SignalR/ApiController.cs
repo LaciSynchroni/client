@@ -75,6 +75,10 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
         // - the plugin framework updates the first time and the user is logged in
         // - the user manually logged in
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => AutoConnectClients());
+        Mediator.Subscribe<ConnectServiceMessage>(this, msg =>
+        {
+            _ = Task.Run(() => Task.FromResult(CreateConnectionsAsync(msg.ServerIndex)));
+        });
     }
 
     public ServerState GetServerState(ServerIndex index)
@@ -222,7 +226,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase
                     _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
             default:
                 return new SyncHubClient(serverIndex, _serverConfigManager, _pairManager, _dalamudUtil,
-                    _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient);
+                    _loggerFactory, _loggerProvider, Mediator, _multiConnectTokenService, _syncConfigService, _httpClient, false);
         }
     }
 

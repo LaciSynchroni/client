@@ -13,7 +13,6 @@ using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
-using System.Text.RegularExpressions;
 
 namespace LaciSynchroni.UI;
 
@@ -28,9 +27,6 @@ public partial class IntroUi : WindowMediatorSubscriberBase
     private readonly LocalHttpServer _httpServer;
     private int _currentLanguage;
     private bool _readFirstPage;
-
-    private string _timeoutLabel = string.Empty;
-    private Task? _timeoutTask;
     private string[]? _tosParagraphs;
 
     private string _customServerUri = string.Empty;
@@ -65,8 +61,6 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         });
     }
 
-    private int _prevIdx = -1;
-
     protected override void DrawInternal()
     {
         if (_uiShared.IsInGpose) return;
@@ -87,7 +81,6 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             if (ImGui.Button("Next##toAgreement"))
             {
                 _readFirstPage = true;
-                _timeoutTask = Task.CompletedTask;
             }
         }
         else if (!_configService.Current.AcceptedAgreement && _readFirstPage)
@@ -129,17 +122,12 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             UiSharedService.TextWrapped(_tosParagraphs![4]);
 
             ImGui.Separator();
-            if (_timeoutTask?.IsCompleted ?? true)
+            if (ImGui.Button(Strings.ToS.AgreeLabel + "##toSetup"))
             {
-                if (ImGui.Button(Strings.ToS.AgreeLabel + "##toSetup"))
-                {
-                    _configService.Current.AcceptedAgreement = true;
-                    _configService.Save();
-                }
-            }
-            else
-            {
-                UiSharedService.TextWrapped(_timeoutLabel);
+                _configService.Current.AcceptedAgreement = true;
+                // We need to set this at some point during the setup, might as well set it here
+                _configService.Current.BetaEnableBlake3 = true;
+                _configService.Save();
             }
         }
         else if (_configService.Current.AcceptedAgreement
@@ -166,6 +154,14 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                                           "Otherwise on the next launch a full re-scan of the file cache database will be initiated.", ImGuiColors.DalamudYellow);
                 UiSharedService.ColorTextWrapped("Warning: if the scan is hanging and does nothing for a long time, chances are high your Penumbra folder is not set up properly.", ImGuiColors.DalamudYellow);
                 _uiShared.DrawCacheDirectorySetting();
+                
+                var enableBlake3 = _configService.Current.BetaEnableBlake3;
+                if (ImGui.Checkbox("Enable BLAKE3 Support", ref enableBlake3))
+                {
+                    _configService.Current.BetaEnableBlake3 = enableBlake3;
+                    _configService.Save();
+                }
+                _uiShared.DrawHelpText("BLAKE3 support is needed to connect to certain services. By default, it's active. The performance impact per-file is minimal, but can be noticeable during the initial scan. It's recommended to leave this active.");
             }
 
             if (!_cacheMonitor.IsScanRunning && !string.IsNullOrEmpty(_configService.Current.CacheFolder) && _uiShared.HasValidPenumbraModPath && Directory.Exists(_configService.Current.CacheFolder))
@@ -258,7 +254,4 @@ public partial class IntroUi : WindowMediatorSubscriberBase
 
         _tosParagraphs = [Strings.ToS.Paragraph1, Strings.ToS.Paragraph2, Strings.ToS.Paragraph3, Strings.ToS.Paragraph4, Strings.ToS.Paragraph6];
     }
-
-    [GeneratedRegex("^([A-F0-9]{2})+")]
-    private static partial Regex HexRegex();
 }

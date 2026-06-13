@@ -244,6 +244,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
             collection.AddScoped<WindowMediatorSubscriberBase, PopupHandler>();
             collection.AddScoped<IPopupHandler, BanUserPopupHandler>();
             collection.AddScoped<IPopupHandler, CensusPopupHandler>();
+            collection.AddScoped<IPopupHandler, Blake3RequiredPopupHandler>();
             collection.AddScoped<CacheCreationService>();
             collection.AddScoped<PlayerDataFactory>();
             collection.AddScoped<VisibleUserDataDistributor>();

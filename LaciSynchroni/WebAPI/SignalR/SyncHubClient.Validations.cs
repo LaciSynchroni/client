@@ -32,6 +32,17 @@ public partial class SyncHubClient
         return true;
     }
 
+    private bool VerifyBlake3()
+    {
+        if (_requiresBlake3 && !_syncConfigService.Current.IsAllowedToConnectBlake3())
+        {
+            Mediator.Publish(new OpenBlake3PopupMessage(ServerIndex));
+            return false;
+        }
+
+        return true;
+    }
+
     private async Task<bool> VerifyFullPause()
     {
         if (ServerToUse?.FullPause ?? true)
