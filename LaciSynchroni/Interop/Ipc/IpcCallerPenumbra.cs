@@ -110,7 +110,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
                     ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 6, 1, 6);
 
             apiAvailable = pluginAvailable &&
-                (_penumbraApiVersion.Invoke() is { Breaking: 5, Features: 15 });
+                (_penumbraApiVersion.Invoke() is { Breaking: 5, Features: >= 15 });
         }
         catch
         {
