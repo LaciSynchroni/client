@@ -17,7 +17,7 @@ internal class SyncHubClientLL : SyncHubClient
         if (syncConfigService.Current.IsAllowedToConnectBlake3())
         {
             // Blake3 is required to access API 37
-            ApiVersion = 37;
+            ApiVersion = 38;
         }
         else
         {
