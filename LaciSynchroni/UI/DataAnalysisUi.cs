@@ -613,7 +613,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                     }
                 }
 
-                var unconvertedTextures = _characterAnalyzer.UnconvertedTextureCount;
+                var unconvertedTextures = kvp.Value.Values.Count(f => f.IsTextureConversionAllowed());
                 if (unconvertedTextures > 0)
                 {
                     UiSharedService.ColorTextWrapped($"You have {unconvertedTextures} texture(s) that are not compressed. Consider converting them to BC7 to reduce their size.",
