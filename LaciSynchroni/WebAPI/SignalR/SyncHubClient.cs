@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace LaciSynchroni.WebAPI;
 
@@ -354,6 +355,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
                 options.AccessTokenProvider = () => _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct);
                 options.Transports = transportType;
                 options.Headers.Add(ClientCapabilitiesDto.ClientCapabilitiesHeader, clientCapabilities.ToHeaderValue());
+                options.Headers.Add("User-Agent", new ProductInfoHeaderValue(_dalamudUtil.GetPluginName(), DalamudUtilService.GetPluginVersionString()).ToString());
             })
             .AddMessagePackProtocol(opt =>
             {

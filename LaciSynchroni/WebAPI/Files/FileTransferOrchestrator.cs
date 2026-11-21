@@ -1,14 +1,13 @@
-﻿using LaciSynchroni.Services.Mediator;
+﻿using LaciSynchroni.Services;
+using LaciSynchroni.Services.Mediator;
 using LaciSynchroni.SyncConfiguration;
 using LaciSynchroni.SyncConfiguration.Models;
 using LaciSynchroni.WebAPI.Files.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
-using System.Threading;
 
 namespace LaciSynchroni.WebAPI.Files;
 
@@ -34,9 +33,7 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
         _syncConfig = syncConfig;
         _httpClient = httpClient;
         _multiConnectTokenService = multiConnectTokenService;
-        var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-        var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("LaciSynchroni", versionString));
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("LaciSynchroni", DalamudUtilService.GetPluginVersionString()));
 
         _availableDownloadSlots = syncConfig.Current.ParallelDownloads;
         _downloadSemaphore = new(_availableDownloadSlots, _availableDownloadSlots);

@@ -1,3 +1,4 @@
+using LaciSynchroni.Services;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
@@ -25,8 +26,6 @@ public record ClientCapabilitiesDto(
 
     public static ClientCapabilitiesDto GetDefault()
     {
-        var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-        var versionString = string.Create(CultureInfo.InvariantCulture, $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}");
-        return new ClientCapabilitiesDto(versionString);
+        return new ClientCapabilitiesDto(DalamudUtilService.GetPluginVersionString());
     }
 }
