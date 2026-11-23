@@ -455,6 +455,15 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     }
 
 
+    /// <summary>
+    /// Registers the handler for incoming character data. Called once per hub connection.
+    /// Service-specific clients override this when their wire format differs from the common DTO.
+    /// </summary>
+    protected virtual void RegisterUserReceiveCharacterData()
+    {
+        OnUserReceiveCharacterData((dto) => _ = Client_UserReceiveCharacterData(dto));
+    }
+
     private void InitializeApiHooks()
     {
         if (_connection == null) return;
@@ -466,7 +475,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
         OnUserSendOffline((dto) => _ = Client_UserSendOffline(dto));
         OnUserAddClientPair((dto) => _ = Client_UserAddClientPair(dto));
-        OnUserReceiveCharacterData((dto) => _ = Client_UserReceiveCharacterData(dto));
+        if (!_initialized) RegisterUserReceiveCharacterData();
         OnUserRemoveClientPair(dto => _ = Client_UserRemoveClientPair(dto));
         OnUserSendOnline(dto => _ = Client_UserSendOnline(dto));
         OnUserUpdateOtherPairPermissions(dto => _ = Client_UserUpdateOtherPairPermissions(dto));
