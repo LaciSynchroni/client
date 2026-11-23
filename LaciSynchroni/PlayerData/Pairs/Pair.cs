@@ -1,4 +1,5 @@
 ﻿using Dalamud.Game.Gui.ContextMenu;
+using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using LaciSynchroni.Common.Data;
 using LaciSynchroni.Common.Data.Enum;
@@ -73,14 +74,14 @@ public class Pair
         var reapplyDataSeString = seStringBuilder2.AddText("Reapply last data").Build();
         var cyclePauseState = seStringBuilder3.AddText("Cycle pause state").Build();
         var changePermissions = seStringBuilder4.AddText("Change Permissions").Build();
-        var prefixChar = GetContextMenuPrefixChar();
+        var prefix = GetContextMenuPrefix();
         var prefixColor = GetContextMenuPrefixColor();
         args.AddMenuItem(new MenuItem()
         {
             Name = openProfileSeString,
             OnClicked = (a) => _mediator.Publish(new ProfileOpenStandaloneMessage(this)),
             UseDefaultPrefix = false,
-            PrefixChar = prefixChar,
+            Prefix = prefix,
             PrefixColor = prefixColor
         });
 
@@ -89,7 +90,7 @@ public class Pair
             Name = reapplyDataSeString,
             OnClicked = (a) => ApplyLastReceivedData(forced: true),
             UseDefaultPrefix = false,
-            PrefixChar = prefixChar,
+            Prefix = prefix,
             PrefixColor = prefixColor
         });
 
@@ -98,7 +99,7 @@ public class Pair
             Name = changePermissions,
             OnClicked = (a) => _mediator.Publish(new OpenPermissionWindow(this)),
             UseDefaultPrefix = false,
-            PrefixChar = prefixChar,
+            Prefix = prefix,
             PrefixColor = prefixColor
         });
 
@@ -107,32 +108,36 @@ public class Pair
             Name = cyclePauseState,
             OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(ServerIndex, UserData)),
             UseDefaultPrefix = false,
-            PrefixChar = prefixChar,
+            Prefix = prefix,
             PrefixColor = prefixColor
         });
     }
 
     /// <summary>
-    /// First letter of this pair's server name, so the context menu entries of each server can be told apart.
-    /// Falls back to 'M' when the name doesn't start with A-Z, as the game only has boxed-letter icons for those.
+    /// Icon shown before this pair's context menu entries, so the entries of each server can be told apart.
+    /// Uses the server's "DTR notification icon" when one is set; otherwise the boxed first letter of the
+    /// server name, falling back to a boxed 'M' when the name doesn't start with A-Z.
     /// </summary>
-    private char GetContextMenuPrefixChar()
+    private SeIconChar GetContextMenuPrefix()
     {
         try
         {
-            var name = _serverConfigurationManager.GetServerNameByIndex(ServerIndex);
+            var server = _serverConfigurationManager.GetServerByIndex(ServerIndex);
+            if (server.ServerIcon is { } icon) return (SeIconChar)icon;
+
+            var name = server.ServerName;
             if (!string.IsNullOrWhiteSpace(name))
             {
                 var first = char.ToUpperInvariant(name.TrimStart()[0]);
-                if (first is >= 'A' and <= 'Z') return first;
+                if (first is >= 'A' and <= 'Z') return SeIconChar.BoxedLetterA + (first - 'A');
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not get server name for context menu prefix of server {index}", ServerIndex);
+            _logger.LogDebug(ex, "Could not get server config for context menu prefix of server {index}", ServerIndex);
         }
 
-        return 'M';
+        return SeIconChar.BoxedLetterM;
     }
 
     /// <summary>
