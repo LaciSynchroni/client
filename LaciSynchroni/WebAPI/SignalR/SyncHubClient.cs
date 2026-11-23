@@ -355,7 +355,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
                 options.AccessTokenProvider = () => _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct);
                 options.Transports = transportType;
                 options.Headers.Add(ClientCapabilitiesDto.ClientCapabilitiesHeader, clientCapabilities.ToHeaderValue());
-                options.Headers.Add("User-Agent", new ProductInfoHeaderValue(_dalamudUtil.GetPluginName(), DalamudUtilService.GetPluginVersionString()).ToString());
+                options.Headers.Add("User-Agent", new ProductInfoHeaderValue(_dalamudUtil.GetPluginName().Replace(" ", "", StringComparison.Ordinal), DalamudUtilService.GetPluginVersionString()).ToString());
             })
             .AddMessagePackProtocol(opt =>
             {
