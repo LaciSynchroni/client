@@ -73,13 +73,15 @@ public class Pair
         var reapplyDataSeString = seStringBuilder2.AddText("Reapply last data").Build();
         var cyclePauseState = seStringBuilder3.AddText("Cycle pause state").Build();
         var changePermissions = seStringBuilder4.AddText("Change Permissions").Build();
+        var prefixChar = GetContextMenuPrefixChar();
+        var prefixColor = GetContextMenuPrefixColor();
         args.AddMenuItem(new MenuItem()
         {
             Name = openProfileSeString,
             OnClicked = (a) => _mediator.Publish(new ProfileOpenStandaloneMessage(this)),
             UseDefaultPrefix = false,
-            PrefixChar = 'M',
-            PrefixColor = 526
+            PrefixChar = prefixChar,
+            PrefixColor = prefixColor
         });
 
         args.AddMenuItem(new MenuItem()
@@ -87,8 +89,8 @@ public class Pair
             Name = reapplyDataSeString,
             OnClicked = (a) => ApplyLastReceivedData(forced: true),
             UseDefaultPrefix = false,
-            PrefixChar = 'M',
-            PrefixColor = 526
+            PrefixChar = prefixChar,
+            PrefixColor = prefixColor
         });
 
         args.AddMenuItem(new MenuItem()
@@ -96,8 +98,8 @@ public class Pair
             Name = changePermissions,
             OnClicked = (a) => _mediator.Publish(new OpenPermissionWindow(this)),
             UseDefaultPrefix = false,
-            PrefixChar = 'M',
-            PrefixColor = 526
+            PrefixChar = prefixChar,
+            PrefixColor = prefixColor
         });
 
         args.AddMenuItem(new MenuItem()
@@ -105,9 +107,44 @@ public class Pair
             Name = cyclePauseState,
             OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(ServerIndex, UserData)),
             UseDefaultPrefix = false,
-            PrefixChar = 'M',
-            PrefixColor = 526
+            PrefixChar = prefixChar,
+            PrefixColor = prefixColor
         });
+    }
+
+    /// <summary>
+    /// First letter of this pair's server name, so the context menu entries of each server can be told apart.
+    /// Falls back to 'M' when the name doesn't start with A-Z, as the game only has boxed-letter icons for those.
+    /// </summary>
+    private char GetContextMenuPrefixChar()
+    {
+        try
+        {
+            var name = _serverConfigurationManager.GetServerNameByIndex(ServerIndex);
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var first = char.ToUpperInvariant(name.TrimStart()[0]);
+                if (first is >= 'A' and <= 'Z') return first;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not get server name for context menu prefix of server {index}", ServerIndex);
+        }
+
+        return 'M';
+    }
+
+    /// <summary>
+    /// UIColor row for the context menu prefix: green if this pair's server holds the render lock for the character,
+    /// red if another server holds it, and the default blue if no server holds it.
+    /// </summary>
+    private ushort GetContextMenuPrefixColor()
+    {
+        const ushort Green = 811, Red = 809, Blue = 526;
+        var owner = CachedPlayer?.RenderLockOwner ?? -1;
+        if (owner < 0) return Blue;
+        return owner == ServerIndex ? Green : Red;
     }
 
     public void ApplyData(OnlineUserCharaDataDto data)
