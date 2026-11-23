@@ -147,6 +147,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         : ((GameObject*)_charaHandler!.Address)->EntityId;
     public string? PlayerName { get; private set; }
     public string PlayerNameHash => Pair.Ident;
+    /// <summary>Server index currently holding the render lock for this player, or -1 if none. Read-only.</summary>
+    public int RenderLockOwner => _concurrentPairLockService.PeekRenderLock(PlayerNameHash);
 
     public void ApplyCharacterData(Guid applicationBase, CharacterData characterData, bool forceApplyCustomization = false)
     {

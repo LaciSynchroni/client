@@ -22,6 +22,16 @@ namespace LaciSynchroni.Services
             }
         }
 
+        /// <summary>
+        /// Returns the server index holding the render lock for this player, or -1 if none does.
+        /// Unlike <see cref="GetRenderLock"/>, this never acquires the lock.
+        /// </summary>
+        public int PeekRenderLock(PlayerNameHash? playerNameHash)
+        {
+            if (playerNameHash.IsNullOrWhitespace()) return -1;
+            return _renderLocks.TryGetValue(playerNameHash, out var lockData) ? lockData.Index : -1;
+        }
+
         public bool ReleaseRenderLock(PlayerNameHash? playerNameHash, ServerIndex? serverIndex)
         {
             if (serverIndex is null || playerNameHash.IsNullOrWhitespace()) return false;
