@@ -787,6 +787,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     private IEnumerable<IDrawFolder> GetDrawFolders()
     {
         List<IDrawFolder> drawFolders = [];
+        drawFolders.Add(_drawEntityFactory.CreateRequestsFolder());
 
         var allPairs = _pairManager.PairsWithGroups
             .ToDictionary(k => k.Key, k => k.Value);

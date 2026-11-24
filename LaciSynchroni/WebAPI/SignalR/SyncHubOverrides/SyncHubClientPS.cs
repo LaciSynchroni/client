@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
-internal class SyncHubClientPS : SyncHubClient
+internal partial class SyncHubClientPS : SyncHubClient
 {
     public SyncHubClientPS(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
@@ -24,7 +24,10 @@ internal class SyncHubClientPS : SyncHubClient
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
         base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient, false)
     {
-        ApiVersion = 40;    
+        ApiVersion = 40;
+        _pairManagerPS = pairManager;
+        _serverConfigurationManagerPS = serverConfigurationManager;
+        SubscribeToRequestActions();
     }
 
     public override async Task UserAddPair(UserDto user)
@@ -51,6 +54,8 @@ internal class SyncHubClientPS : SyncHubClient
         _connection!.On<PsOnlineUserCharaDataDto>(nameof(Client_UserReceiveCharacterData), dto => _ = ReceivePsCharacterData(dto));
         // In addition to the base handler, forget the data of users that go offline
         _connection!.On<UserDto>(nameof(Client_UserSendOffline), dto => _lastFullCharacterData.TryRemove(dto.User.UID, out _));
+
+        RegisterRequestHandlers();
     }
 
     private Task ReceivePsCharacterData(PsOnlineUserCharaDataDto dto)
