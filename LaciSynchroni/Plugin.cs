@@ -240,6 +240,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
                 s.GetRequiredService<UiSharedService>(),
                 s.GetRequiredService<PerformanceCollectorService>()));
             collection.AddScoped<WindowMediatorSubscriberBase, EventViewerUI>();
+            collection.AddPendingRequestsProviders();
             collection.AddScoped<WindowMediatorSubscriberBase, CharaDataHubUi>();
 
             collection.AddScoped<WindowMediatorSubscriberBase, EditProfileUi>((s) => new EditProfileUi(s.GetRequiredService<ILogger<EditProfileUi>>(),

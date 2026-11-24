@@ -28,13 +28,14 @@ public class DrawEntityFactory
     private readonly TagHandler _tagHandler;
     private readonly IdDisplayHandler _uidDisplayHandler;
     private readonly SyncConfigService _configService;
+    private readonly IReadOnlyList<IPendingRequestsProvider> _pendingRequestsProviders;
 
     public DrawEntityFactory(ILogger<DrawEntityFactory> logger, ApiController apiController, IdDisplayHandler uidDisplayHandler,
         SelectTagForPairUi selectTagForPairUi, SyncMediator mediator,
         TagHandler tagHandler, SelectPairForTagUi selectPairForTagUi,
         ServerConfigurationManager serverConfigurationManager, UiSharedService uiSharedService,
         PlayerPerformanceConfigService playerPerformanceConfigService, CharaDataManager charaDataManager,
-        SyncConfigService configService)
+        SyncConfigService configService, IEnumerable<IPendingRequestsProvider> pendingRequestsProviders)
     {
         _logger = logger;
         _apiController = apiController;
@@ -48,6 +49,7 @@ public class DrawEntityFactory
         _playerPerformanceConfigService = playerPerformanceConfigService;
         _charaDataManager = charaDataManager;
         _configService = configService;
+        _pendingRequestsProviders = pendingRequestsProviders.ToList();
     }
 
     public DrawFolderGroup CreateDrawGroupFolder(GroupFullInfoWithServer groupFullInfoDto,
@@ -81,6 +83,11 @@ public class DrawEntityFactory
 
         return new DrawCustomTag(specialTag, drawPairs,
             allPairs, _tagHandler, _uiSharedService);
+    }
+
+    public IDrawFolder CreateRequestsFolder()
+    {
+        return new DrawRequestsFolder(_pendingRequestsProviders, _tagHandler, _uiSharedService);
     }
 
     public DrawUserPair CreateDrawPair(string id, Pair user, List<GroupFullInfoDto> groups, GroupFullInfoDto? currentGroup)

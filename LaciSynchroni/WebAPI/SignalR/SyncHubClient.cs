@@ -355,7 +355,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
                 options.AccessTokenProvider = () => _multiConnectTokenService.GetOrUpdateToken(ServerIndex, ct);
                 options.Transports = transportType;
                 options.Headers.Add(ClientCapabilitiesDto.ClientCapabilitiesHeader, clientCapabilities.ToHeaderValue());
-                options.Headers.Add("User-Agent", new ProductInfoHeaderValue(_dalamudUtil.GetPluginName(), DalamudUtilService.GetPluginVersionString()).ToString());
+                options.Headers.Add("User-Agent", new ProductInfoHeaderValue(_dalamudUtil.GetPluginName().Replace(" ", "", StringComparison.Ordinal), DalamudUtilService.GetPluginVersionString()).ToString());
             })
             .AddMessagePackProtocol(opt =>
             {
@@ -455,6 +455,15 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
     }
 
 
+    /// <summary>
+    /// Registers the handler for incoming character data. Called once per hub connection.
+    /// Service-specific clients override this when their wire format differs from the common DTO.
+    /// </summary>
+    protected virtual void RegisterUserReceiveCharacterData()
+    {
+        OnUserReceiveCharacterData((dto) => _ = Client_UserReceiveCharacterData(dto));
+    }
+
     private void InitializeApiHooks()
     {
         if (_connection == null) return;
@@ -466,7 +475,7 @@ public partial class SyncHubClient : DisposableMediatorSubscriberBase, IServerHu
 
         OnUserSendOffline((dto) => _ = Client_UserSendOffline(dto));
         OnUserAddClientPair((dto) => _ = Client_UserAddClientPair(dto));
-        OnUserReceiveCharacterData((dto) => _ = Client_UserReceiveCharacterData(dto));
+        if (!_initialized) RegisterUserReceiveCharacterData();
         OnUserRemoveClientPair(dto => _ = Client_UserRemoveClientPair(dto));
         OnUserSendOnline(dto => _ = Client_UserSendOnline(dto));
         OnUserUpdateOtherPairPermissions(dto => _ = Client_UserUpdateOtherPairPermissions(dto));
