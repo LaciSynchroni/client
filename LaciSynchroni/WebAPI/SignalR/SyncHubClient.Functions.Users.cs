@@ -50,7 +50,7 @@ public partial class SyncHubClient
         return await _connection!.InvokeAsync<List<UserFullPairDto>>(nameof(UserGetPairedClients)).ConfigureAwait(false);
     }
 
-    public async Task<UserProfileDto> UserGetProfile(UserDto dto)
+    public virtual async Task<UserProfileDto> UserGetProfile(UserDto dto)
     {
         if (!IsConnected) return new UserProfileDto(dto.User, Disabled: false, IsNSFW: null, ProfilePictureBase64: null, Description: null);
         return await _connection!.InvokeAsync<UserProfileDto>(nameof(UserGetProfile), dto).ConfigureAwait(false);
@@ -97,7 +97,7 @@ public partial class SyncHubClient
             }, new(StringComparer.Ordinal))).ConfigureAwait(false);
     }
 
-    public async Task UserSetProfile(UserProfileDto userDescription)
+    public virtual async Task UserSetProfile(UserProfileDto userDescription)
     {
         if (!IsConnected) return;
         await _connection!.InvokeAsync(nameof(UserSetProfile), userDescription).ConfigureAwait(false);
