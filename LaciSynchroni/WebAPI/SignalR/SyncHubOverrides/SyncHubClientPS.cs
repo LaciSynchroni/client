@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
-internal class SyncHubClientPS : SyncHubClient
+internal partial class SyncHubClientPS : SyncHubClient
 {
     public SyncHubClientPS(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,

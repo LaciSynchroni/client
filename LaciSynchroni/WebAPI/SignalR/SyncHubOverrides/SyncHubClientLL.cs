@@ -6,7 +6,7 @@ using LaciSynchroni.SyncConfiguration;
 using Microsoft.Extensions.Logging;
 
 namespace LaciSynchroni.WebAPI.SignalR.SyncHubOverrides;
-internal class SyncHubClientLL : SyncHubClient
+internal partial class SyncHubClientLL : SyncHubClient
 {
     public SyncHubClientLL(int serverIndex,
         ServerConfigurationManager serverConfigurationManager, PairManager pairManager,
@@ -14,6 +14,10 @@ internal class SyncHubClientLL : SyncHubClient
         ILoggerFactory loggerFactory, ILoggerProvider loggerProvider, SyncMediator mediator, MultiConnectTokenService multiConnectTokenService, SyncConfigService syncConfigService, HttpClient httpClient) :
         base(serverIndex, serverConfigurationManager, pairManager, dalamudUtilService, loggerFactory, loggerProvider, mediator, multiConnectTokenService, syncConfigService, httpClient, true)
     {
+        _llServerConfigurationManager = serverConfigurationManager;
+        _llTokenService = multiConnectTokenService;
+        _llHttpClient = httpClient;
+
         if (syncConfigService.Current.IsAllowedToConnectBlake3())
         {
             // Blake3 is required to access API 37
